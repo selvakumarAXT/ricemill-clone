@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import userService from '../services/userService';
+import branchService from '../services/branchService';
+import FormInput from '../components/common/FormInput';
+import DialogBox from '../components/common/DialogBox';
+import Button from '../components/common/Button';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -12,6 +17,7 @@ const UserManagement = () => {
     email: '',
     password: '',
     role: 'employee',
+    branch_id: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -20,6 +26,7 @@ const UserManagement = () => {
 
   useEffect(() => {
     fetchUsers();
+    fetchBranches();
   }, []);
 
   const fetchUsers = async () => {
@@ -31,6 +38,24 @@ const UserManagement = () => {
       setError(error.response?.data?.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      // Only super admins can see all branches
+      if (user?.isSuperAdmin) {
+        const response = await branchService.getAllBranches();
+        setBranches(response.data);
+      } else {
+        // Regular admins can only see their own branch
+        const response = await branchService.getMyBranch();
+        if (response.data) {
+          setBranches([response.data]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch branches:', err);
     }
   };
 
@@ -94,6 +119,7 @@ const UserManagement = () => {
         email: user.email,
         password: '',
         role: user.role,
+        branch_id: user.branch_id?._id || '',
       });
     } else {
       setEditingUser(null);
@@ -102,6 +128,7 @@ const UserManagement = () => {
         email: '',
         password: '',
         role: 'employee',
+        branch_id: '',
       });
     }
     setShowModal(true);
@@ -131,12 +158,9 @@ const UserManagement = () => {
               Manage system users and their permissions
             </p>
           </div>
-          <button
-            onClick={() => openModal()}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
+          <Button onClick={() => openModal()} variant="primary">
             Add New User
-          </button>
+          </Button>
         </div>
 
           {/* Alerts */}
@@ -171,6 +195,9 @@ const UserManagement = () => {
                       Role
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Branch
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -200,32 +227,29 @@ const UserManagement = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <button
+                        <div className="text-sm text-gray-500">
+                          {user.branch_id ? `${user.branch_id.name} (${user.branch_id.code})` : 'No Branch'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Button
                           onClick={() => handleToggleStatus(user._id, user.isActive)}
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}
+                          variant={user.isActive ? 'success' : 'danger'}
                         >
                           {user.isActive ? 'Active' : 'Inactive'}
-                        </button>
+                        </Button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => openModal(user)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-3"
-                        >
+                        <Button onClick={() => openModal(user)} variant="primary">
                           Edit
-                        </button>
+                        </Button>
                         {user._id !== user?._id && (
-                          <button
-                            onClick={() => handleDelete(user._id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
+                          <Button onClick={() => handleDelete(user._id)} variant="danger">
                             Delete
-                          </button>
+                          </Button>
                         )}
                       </td>
                     </tr>
@@ -238,97 +262,79 @@ const UserManagement = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+        <DialogBox
+          isOpen={showModal}
+          onClose={closeModal}
+          onSubmit={handleSubmit}
+          title={editingUser ? 'Edit User' : 'Create New User'}
+          submitText={editingUser ? 'Update' : 'Create'}
+          cancelText="Cancel"
+          error={error}
+          success={success}
+        >
+          <div className="space-y-4">
+            <FormInput label="Name" name="name" value={formData.name} onChange={handleInputChange} required />
+
+            <FormInput label="Email" name="email" value={formData.email} onChange={handleInputChange} required disabled={editingUser} />
+
+            <FormInput
+              label={editingUser ? 'New Password (leave blank to keep current)' : 'Password'}
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              required={!editingUser}
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Role</label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                required
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              >
+                <option value="employee">Employee</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
 
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            {/* Branch selection - only show for super admin */}
+            {user?.isSuperAdmin && branches.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Branch</label>
+                <select
+                  name="branch_id"
+                  value={formData.branch_id}
+                  onChange={handleInputChange}
+                  required
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                >
+                  <option value="">Select a branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.name} ({branch.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <form onSubmit={handleSubmit}>
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    {editingUser ? 'Edit User' : 'Create New User'}
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Name</label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Email</label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        disabled={editingUser}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        {editingUser ? 'New Password (leave blank to keep current)' : 'Password'}
-                      </label>
-                      <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required={!editingUser}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Role</label>
-                      <select
-                        name="role"
-                        value={formData.role}
-                        onChange={handleInputChange}
-                        required
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      >
-                        <option value="employee">Employee</option>
-                        <option value="manager">Manager</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button
-                    type="submit"
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  >
-                    {editingUser ? 'Update' : 'Create'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
+            {/* Show current branch for non-super admin */}
+            {!user?.isSuperAdmin && branches.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Branch</label>
+                <input
+                  type="text"
+                  value={branches[0] ? `${branches[0].name} (${branches[0].code})` : 'No Branch'}
+                  disabled
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 sm:text-sm"
+                />
+              </div>
+            )}
           </div>
-        </div>
+        </DialogBox>
       )}
     </>
   );

@@ -26,8 +26,19 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['employee', 'manager', 'admin'],
-    default: 'employee'
+    enum: ['superadmin', 'admin', 'accountant', 'qc', 'sales'],
+    default: 'sales'
+  },
+  branch_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    required: function() {
+      return this.role !== 'superadmin';
+    }
+  },
+  isSuperAdmin: {
+    type: Boolean,
+    default: false
   },
   isActive: {
     type: Boolean,

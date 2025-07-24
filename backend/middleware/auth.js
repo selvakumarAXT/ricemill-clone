@@ -26,8 +26,10 @@ exports.protect = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Get user from database
-    req.user = await User.findById(decoded.id);
+    // Get user from database with branch information
+    req.user = await User.findById(decoded.id)
+      .select('-password')
+      .populate('branch_id', 'name code isActive');
 
     if (!req.user) {
       return res.status(401).json({

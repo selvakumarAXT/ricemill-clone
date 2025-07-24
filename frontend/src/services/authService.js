@@ -1,13 +1,14 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5001/api/auth';
+const API_URL = 'http://localhost:3001/api/auth';
 
-// Create axios instance
 const api = axios.create({
   baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -16,41 +17,65 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+    }
+    return Promise.reject(error);
+  }
+);
+
 const authService = {
-  // Login user
   login: async (userData) => {
-    const response = await api.post('/login', userData);
-    return response;
+    try {
+      const response = await api.post('/login', userData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || error.message || 'Login failed';
+    }
   },
 
-  // Register user
   register: async (userData) => {
-    const response = await api.post('/register', userData);
-    return response;
+    try {
+      const response = await api.post('/register', userData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || error.message || 'Registration failed';
+    }
   },
 
-  // Forgot password
   forgotPassword: async (email) => {
-    const response = await api.post('/forgot-password', { email });
-    return response;
+    try {
+      const response = await api.post('/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || error.message || 'Failed to send reset email';
+    }
   },
 
-  // Change password
   changePassword: async (passwordData) => {
-    const response = await api.post('/change-password', passwordData);
-    return response;
+    try {
+      const response = await api.post('/change-password', passwordData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || error.message || 'Password change failed';
+    }
   },
 
-  // Get current user
   getMe: async () => {
-    const response = await api.get('/me');
-    return response;
+    try {
+      const response = await api.get('/me');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || error.message || 'Failed to get user data';
+    }
   },
 
-  // Logout
   logout: () => {
     localStorage.removeItem('token');
   },
 };
 
-export default authService; 
+export default authService;

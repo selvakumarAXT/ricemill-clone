@@ -1,10 +1,11 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5001/api/users';
+const API_URL = 'http://localhost:3001/api/users';
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true, // Ensure credentials (cookies, etc.) are sent with requests
 });
 
 // Add token to requests

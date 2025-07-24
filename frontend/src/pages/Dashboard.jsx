@@ -7,10 +7,6 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const { user, isLoading } = useSelector((state) => state.auth);
 
-  useEffect(() => {
-    dispatch(getMe());
-  }, [dispatch]);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
