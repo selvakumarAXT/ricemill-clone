@@ -18,10 +18,15 @@ api.interceptors.request.use((config) => {
 });
 
 const userService = {
-  // Get all users (admin only)
-  getAllUsers: async () => {
-    const response = await api.get('/');
-    return response;
+  // Get all users, optionally filtered by branchId (for superadmin)
+  getAllUsers: async (branchId = '') => {
+    try {
+      const params = branchId ? { branchId } : {};
+      const response = await api.get('/', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   },
 
   // Get single user

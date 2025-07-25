@@ -98,7 +98,16 @@ exports.sendTokenResponse = (user, statusCode, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin,
+      branch_id: user.branch_id?._id || user.branch_id || null,
+      isSuperAdmin: user.isSuperAdmin,
+      isActive: user.isActive,
+      branch: user.branch_id && typeof user.branch_id === 'object' ? {
+        id: user.branch_id._id,
+        name: user.branch_id.name,
+        code: user.branch_id.code
+      } : null
     }
   });
 }; 

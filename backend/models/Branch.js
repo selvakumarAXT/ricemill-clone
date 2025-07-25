@@ -13,7 +13,7 @@ const branchSchema = new mongoose.Schema({
     unique: true,
     uppercase: true,
     trim: true,
-    match: [/^[A-Z0-9]{3,10}$/, 'Branch code must be 3-10 uppercase alphanumeric characters']
+    // match: [/^[A-Z0-9]{3,10}$/, 'Branch code must be 3-10 uppercase alphanumeric characters']
   },
   address: {
     street: String,

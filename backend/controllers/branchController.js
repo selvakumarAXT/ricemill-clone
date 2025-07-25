@@ -6,6 +6,12 @@ const asyncHandler = require('express-async-handler');
 // @route   GET /api/branches
 // @access  Private (Super Admin only)
 exports.getAllBranches = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'superadmin' ) {
+    return res.status(403).json({
+      success: false,
+      message: 'You are not authorized to access this resource'
+    });
+  }
   const branches = await Branch.find({})
     .populate('manager', 'name email')
     .sort({ createdAt: -1 });
@@ -21,6 +27,12 @@ exports.getAllBranches = asyncHandler(async (req, res) => {
 // @route   GET /api/branches/:id
 // @access  Private (Super Admin or Branch Admin)
 exports.getBranch = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'You are not authorized to access this resource'
+    });
+  }
   const branch = await Branch.findById(req.params.id)
     .populate('manager', 'name email role');
 
@@ -41,6 +53,12 @@ exports.getBranch = asyncHandler(async (req, res) => {
 // @route   POST /api/branches
 // @access  Private (Super Admin only)
 exports.createBranch = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'superadmin') {
+    return res.status(403).json({
+      success: false,
+      message: 'You are not authorized to access this resource'
+    });
+  }
   const {
     name,
     code,
@@ -96,7 +114,10 @@ exports.createBranch = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    data: populatedBranch
+    data: {
+      ...populatedBranch.toObject(),
+      id: populatedBranch._id
+    }
   });
 });
 
@@ -104,6 +125,12 @@ exports.createBranch = asyncHandler(async (req, res) => {
 // @route   PUT /api/branches/:id
 // @access  Private (Super Admin only)
 exports.updateBranch = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'superadmin' ) {
+    return res.status(403).json({
+      success: false,
+      message: 'You are not authorized to access this resource'
+    });
+  }
   let branch = await Branch.findById(req.params.id);
 
   if (!branch) {
@@ -175,6 +202,12 @@ exports.updateBranch = asyncHandler(async (req, res) => {
 // @route   DELETE /api/branches/:id
 // @access  Private (Super Admin only)
 exports.deleteBranch = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'superadmin' ) {
+    return res.status(403).json({
+      success: false,
+      message: 'You are not authorized to access this resource'
+    });
+  }
   const branch = await Branch.findById(req.params.id);
 
   if (!branch) {

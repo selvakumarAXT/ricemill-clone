@@ -6,7 +6,7 @@ const { applyBranchFilter } = require('../middleware/branchFilter');
 // @route   GET /api/users
 // @access  Private/Admin
 exports.getAllUsers = async (req, res) => {
-  if (req.user.role !== 'superadmin') {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
   try {
@@ -22,10 +22,27 @@ exports.getAllUsers = async (req, res) => {
       .populate('branch_id', 'name code')
       .sort({ createdAt: -1 });
     
+    // Transform users to include branch_id and branch name/code
+    const usersWithBranch = users.map(user => ({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin,
+      branch_id: user.branch_id?._id || user.branch_id || null,
+      isSuperAdmin: user.isSuperAdmin,
+      isActive: user.isActive,
+      branch: user.branch_id && typeof user.branch_id === 'object' ? {
+        id: user.branch_id._id,
+        name: user.branch_id.name,
+        code: user.branch_id.code
+      } : null
+    }));
     res.status(200).json({
       success: true,
-      count: users.length,
-      users
+      count: usersWithBranch.length,
+      users: usersWithBranch
     });
   } catch (error) {
     res.status(400).json({
@@ -39,7 +56,7 @@ exports.getAllUsers = async (req, res) => {
 // @route   GET /api/users/:id
 // @access  Private/Admin
 exports.getUser = async (req, res) => {
-  if (req.user.role !== 'superadmin') {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
   try {
@@ -68,7 +85,7 @@ exports.getUser = async (req, res) => {
 // @route   POST /api/users
 // @access  Private/Admin
 exports.createUser = async (req, res) => {
-  if (req.user.role !== 'superadmin') {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
   try {

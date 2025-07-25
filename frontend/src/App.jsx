@@ -1,10 +1,10 @@
+import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import { useEffect } from "react";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { getMe } from "./store/slices/authSlice";
 import store from "./store";
@@ -74,6 +74,16 @@ function AppContent() {
     }
   }, [dispatch, token, user]);
 
+  // Add a wrapper to inject selectedBranchId from Layout to children
+  const LayoutWithBranch = ({ children }) => {
+    const [selectedBranchId, setSelectedBranchId] = useState("");
+    return (
+      <Layout selectedBranchId={selectedBranchId} setSelectedBranchId={setSelectedBranchId}>
+        {React.cloneElement(children, { selectedBranchId })}
+      </Layout>
+    );
+  };
+
   return (
     <Router>
       <Routes>
@@ -92,9 +102,9 @@ function AppContent() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Layout>
+              <LayoutWithBranch>
                 <Dashboard />
-              </Layout>
+              </LayoutWithBranch>
             </ProtectedRoute>
           }
         />
@@ -103,9 +113,9 @@ function AppContent() {
           path="/users"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <Layout>
+              <LayoutWithBranch>
                 <UserManagement />
-              </Layout>
+              </LayoutWithBranch>
             </ProtectedRoute>
           }
         />
@@ -114,9 +124,9 @@ function AppContent() {
           path="/production"
           element={
             <ProtectedRoute allowedRoles={["admin", "manager"]}>
-              <Layout>
+              <LayoutWithBranch>
                 <Production />
-              </Layout>
+              </LayoutWithBranch>
             </ProtectedRoute>
           }
         />
@@ -125,9 +135,9 @@ function AppContent() {
           path="/inventory"
           element={
             <ProtectedRoute>
-              <Layout>
+              <LayoutWithBranch>
                 <Inventory />
-              </Layout>
+              </LayoutWithBranch>
             </ProtectedRoute>
           }
         />
@@ -136,9 +146,9 @@ function AppContent() {
           path="/reports"
           element={
             <ProtectedRoute allowedRoles={["admin", "manager"]}>
-              <Layout>
+              <LayoutWithBranch>
                 <Reports />
-              </Layout>
+              </LayoutWithBranch>
             </ProtectedRoute>
           }
         />
@@ -147,9 +157,9 @@ function AppContent() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <Layout>
+              <LayoutWithBranch>
                 <Settings />
-              </Layout>
+              </LayoutWithBranch>
             </ProtectedRoute>
           }
         />
@@ -158,9 +168,9 @@ function AppContent() {
           path="/branch-management"
           element={
             <ProtectedRoute allowedRoles={["superadmin"]}>
-              <Layout>
+              <LayoutWithBranch>
                 <BranchManagement />
-              </Layout>
+              </LayoutWithBranch>
             </ProtectedRoute>
           }
         />

@@ -2,13 +2,14 @@ const User = require('../models/User');
 const { sendTokenResponse } = require('../middleware/auth');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const Branch = require('../models/Branch');
 
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, branch_id } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -19,17 +20,49 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Validate branch if provided
+    let userBranchId = branch_id;
+    if (userBranchId) {
+      const branch = await Branch.findById(userBranchId);
+      if (!branch || !branch.isActive) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or inactive branch'
+        });
+      }
+    }
+
     // Create user
     const user = await User.create({
       name,
       email,
       password,
-      role: role || 'employee'
+      role: role || 'employee',
+      branch_id: userBranchId
     });
+
+    // Populate branch info for response
+    const populatedUser = await User.findById(user._id).populate('branch_id', 'name code');
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully'
+      message: 'User registered successfully',
+      user: {
+        id: populatedUser._id,
+        name: populatedUser.name,
+        email: populatedUser.email,
+        role: populatedUser.role,
+        createdAt: populatedUser.createdAt,
+        lastLogin: populatedUser.lastLogin,
+        branch_id: populatedUser.branch_id?._id || populatedUser.branch_id || null,
+        isSuperAdmin: populatedUser.isSuperAdmin,
+        isActive: populatedUser.isActive,
+        branch: populatedUser.branch_id && typeof populatedUser.branch_id === 'object' ? {
+          id: populatedUser.branch_id._id,
+          name: populatedUser.branch_id.name,
+          code: populatedUser.branch_id.code
+        } : null
+      }
     });
   } catch (error) {
     res.status(400).json({
@@ -86,7 +119,9 @@ exports.login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    sendTokenResponse(user, 200, res);
+    // Populate branch info for response
+    const populatedUser = await User.findById(user._id).populate('branch_id', 'name code');
+    sendTokenResponse(populatedUser, 200, res);
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -100,7 +135,7 @@ exports.login = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).populate('branch_id', 'name code');
 
     res.status(200).json({
       success: true,
@@ -110,7 +145,15 @@ exports.getMe = async (req, res) => {
         email: user.email,
         role: user.role,
         createdAt: user.createdAt,
-        lastLogin: user.lastLogin
+        lastLogin: user.lastLogin,
+        branch_id: user.branch_id?._id || user.branch_id || null,
+        isSuperAdmin: user.isSuperAdmin,
+        isActive: user.isActive,
+        branch: user.branch_id && typeof user.branch_id === 'object' ? {
+          id: user.branch_id._id,
+          name: user.branch_id.name,
+          code: user.branch_id.code
+        } : null
       }
     });
   } catch (error) {

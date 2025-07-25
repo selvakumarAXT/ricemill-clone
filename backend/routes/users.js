@@ -13,7 +13,7 @@ const router = express.Router();
 
 // Only superadmin can access user management
 router.use(protect);
-router.use(authorize('superadmin'));
+router.use(authorize('superadmin','admin'));
 
 router.route('/')
   .get(getAllUsers)

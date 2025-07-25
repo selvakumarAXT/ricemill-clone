@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 
-const Navbar = ({ toggleSidebar }) => {
+const Navbar = ({ toggleSidebar, branches = [], selectedBranchId, onBranchChange }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { user } = useSelector((state) => state.auth);
 
@@ -32,6 +32,21 @@ const Navbar = ({ toggleSidebar }) => {
 
           {/* Right side - Search and user menu */}
           <div className="flex items-center space-x-4">
+            {/* Branch Switcher for Superadmin */}
+            {user?.isSuperAdmin && branches.length > 0 && (
+              <select
+                className="border rounded px-2 py-1 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500"
+                value={selectedBranchId || ''}
+                onChange={e => onBranchChange && onBranchChange(e.target.value)}
+              >
+                <option value="">All Branches</option>
+                {branches.map(branch => (
+                  <option key={branch._id} value={branch._id}>
+                    {branch.name} ({branch.code})
+                  </option>
+                ))}
+              </select>
+            )}
             {/* Search bar */}
             <div className="hidden md:block">
               <div className="relative">

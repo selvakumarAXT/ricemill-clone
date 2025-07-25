@@ -1,17 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
+import FormSelect from '../common/FormSelect';
 
-const Sidebar = ({ isOpen, toggleSidebar }) => {
+const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBranchChange }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const [branchesOpen, setBranchesOpen] = useState(false);
+
+  // Set selectedBranchId to user's branch by default for non-superadmin
+  // (Assume onBranchChange is a setter from parent, and selectedBranchId is controlled)
+  useEffect(() => {
+    // On mount, restore selected branch from localStorage if present and valid
+    if (user?.role === 'superadmin' && branches.length > 0) {
+      const savedBranchId = localStorage.getItem('selectedBranchId');
+      if (savedBranchId === 'all') {
+        onBranchChange && onBranchChange('');
+      } else if (savedBranchId && branches.some(b => b._id === savedBranchId)) {
+        onBranchChange && onBranchChange(savedBranchId);
+      }
+    }
+    // For non-superadmin, set to user's branch
+    if (user && user.role !== 'superadmin' && user.branch && user.branch._id && selectedBranchId !== user.branch._id) {
+      onBranchChange && onBranchChange(user.branch._id);
+    }
+    // eslint-disable-next-line
+  }, [user, branches.length]);
 
   const handleLogout = () => {
     dispatch(logout());
     navigate('/signin');
+  };
+
+  const handleBranchSelect = (branchId) => {
+    if (branchId === '') {
+      localStorage.setItem('selectedBranchId', 'all');
+    } else {
+      localStorage.setItem('selectedBranchId', branchId);
+    }
+    onBranchChange && onBranchChange(branchId);
   };
 
   const menuItems = [
@@ -78,7 +108,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       roles: ['admin', 'manager', 'employee']
     },
     // Branch Management (superadmin only)
-    ...(user?.role === 'superadmin' ? [
+    ...(user?.isSuperAdmin  ? [
       {
         name: 'Branch Management',
         path: '/branch-management',
@@ -109,7 +139,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+        className={`fixed inset-y-0 left-0 z-30 w-80 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -128,7 +158,54 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         <nav className="mt-5 px-2">
           <div className="space-y-1">
-            {filteredMenuItems.map((item) => {
+            {/* Branches tree for superadmin */}
+            {user?.role === "superadmin" && branches.length > 0 && (
+              <div>
+                <button
+                  className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors duration-150"
+                  onClick={() => setBranchesOpen((open) => !open)}
+                >
+                  <span className="mr-2">🌳</span>
+                  Branches
+                  <span className="ml-auto">{branchesOpen ? '▼' : '▶'}</span>
+                </button>
+                {branchesOpen && (
+                  <ul className="ml-6 mt-1 space-y-1">
+                    <li key="all-branches">
+                      <button
+                        className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${!selectedBranchId ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+                        onClick={() => handleBranchSelect('')}
+                      >
+                        All Branches
+                      </button>
+                    </li>
+                    {branches.map(branch => (
+                      <li key={branch._id}>
+                        <button
+                          className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${selectedBranchId === branch._id ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+                          onClick={() => handleBranchSelect(branch._id)}
+                        >
+                          {branch.name} ({branch.code})
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {/* Show only the user's branch for non-superadmin */}
+            {!user?.isSuperAdmin && user?.branch && (
+              <div className="mb-2">
+                <button
+                  className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 bg-indigo-600 text-white`}
+                  disabled
+                >
+                  {user.branch.name} ({user.branch.code})
+                </button>
+              </div>
+            )}
+            {/* Only show other menu items if a branch is selected or not superadmin */}
+            {(user?.isSuperAdmin || user?.branch) && filteredMenuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Link
@@ -167,9 +244,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   {user?.branch_id && (
                     <p className="text-xs text-gray-500">{user.branch_id.name}</p>
                   )}
+                  {/* Branch select for superadmin */}
+                 
                 </div>
+                
               </div>
-              
+         
               <button
                 onClick={handleLogout}
                 className="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150"

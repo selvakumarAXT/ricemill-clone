@@ -5,35 +5,48 @@ import branchService from '../services/branchService';
 import FormInput from '../components/common/FormInput';
 import DialogBox from '../components/common/DialogBox';
 import Button from '../components/common/Button';
+import UserTable from '../components/UserTable';
+import FormSelect from '../components/common/FormSelect';
 
-const UserManagement = () => {
+const ROLES = [
+  { value: 'admin', label: 'Branch Admin' },
+  { value: 'accountant', label: 'Accountant' },
+  { value: 'qc', label: 'QC Officer' },
+  { value: 'sales', label: 'Sales Staff' },
+];
+
+const UserManagement = ({ selectedBranchId }) => {
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'employee',
-    branch_id: '',
-  });
+  const [userForm, setUserForm] = useState({ name: '', email: '', password: '', role: 'sales', branch_id: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // Filters for UserTable
+  const [userFilter, setUserFilter] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('');
+  const [userBranchFilter, setUserBranchFilter] = useState('');
 
   const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    fetchUsers();
-    fetchBranches();
-  }, []);
+    if (user?.isSuperAdmin) {
+      fetchBranches();
+      fetchUsers(selectedBranchId);
+    } else if (user?.branch?.id) {
+      // No need to fetch branches for non-superadmin, use user.branch
+      fetchUsers(user.branch.id);
+    }
+    // eslint-disable-next-line
+  }, [selectedBranchId, user]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (branchId) => {
     try {
       setLoading(true);
-      const response = await userService.getAllUsers();
-      setUsers(response.data.users);
+      const response = await userService.getAllUsers(branchId);
+      setUsers(response.users);
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to fetch users');
     } finally {
@@ -43,92 +56,90 @@ const UserManagement = () => {
 
   const fetchBranches = async () => {
     try {
-      // Only super admins can see all branches
       if (user?.isSuperAdmin) {
         const response = await branchService.getAllBranches();
         setBranches(response.data);
-      } else {
-        // Regular admins can only see their own branch
-        const response = await branchService.getMyBranch();
-        if (response.data) {
-          setBranches([response.data]);
-        }
       }
+      // else: do not set branches for non-superadmin
     } catch (err) {
       console.error('Failed to fetch branches:', err);
     }
   };
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+  // Filtering logic (same as BranchManagement)
+  const filteredUsers = users
+    .filter(u => u.role !== 'superadmin')
+    .filter(u => u.id !== user?.id)
+    .filter(u => {
+      const q = userFilter.toLowerCase();
+      const matchesText = (
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.role?.toLowerCase().includes(q) ||
+        (u.branch_id && (
+          u.branch_id.name?.toLowerCase().includes(q) ||
+          u.branch_id.code?.toLowerCase().includes(q)
+        ))
+      );
+      const matchesRole = userRoleFilter ? u.role === userRoleFilter : true;
+      const matchesBranch = userBranchFilter ? (u.branch_id && u.branch_id._id === userBranchFilter) : true;
+      return matchesText && matchesRole && matchesBranch;
     });
+
+  const handleUserFormChange = (e) => {
+    setUserForm({ ...userForm, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const saveUser = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-
+    setLoading(true);
     try {
       if (editingUser) {
-        // Update user
-        await userService.updateUser(editingUser._id, formData);
+        await userService.updateUser(editingUser._id, userForm);
         setSuccess('User updated successfully');
       } else {
-        // Create new user
-        await userService.createUser(formData);
+        await userService.createUser(userForm);
         setSuccess('User created successfully');
       }
-      
       fetchUsers();
       closeModal();
     } catch (error) {
       setError(error.response?.data?.message || 'Operation failed');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await userService.deleteUser(userId);
-        setSuccess('User deleted successfully');
-        fetchUsers();
-      } catch (error) {
-        setError(error.response?.data?.message || 'Failed to delete user');
-      }
-    }
-  };
-
-  const handleToggleStatus = async (userId, currentStatus) => {
+  const deleteUser = async (userId) => {
+    setLoading(true);
     try {
-      await userService.updateUser(userId, { isActive: !currentStatus });
-      setSuccess('User status updated successfully');
-      fetchUsers();
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to update user status');
+      await userService.deleteUser(userId);
+      setUsers((prev) => prev.filter(u => u._id !== userId));
+    } finally {
+      setLoading(false);
     }
   };
 
-  const openModal = (user = null) => {
-    if (user) {
-      setEditingUser(user);
-      setFormData({
-        name: user.name,
-        email: user.email,
+  const openUserModal = (editUser = null) => {
+    if (editUser) {
+      setEditingUser(editUser);
+      setUserForm({
+        name: editUser.name,
+        email: editUser.email,
         password: '',
-        role: user.role,
-        branch_id: user.branch_id?._id || '',
+        role: editUser.role,
+        branch_id: editUser.branch_id || editUser.branch?.id || '',
       });
     } else {
       setEditingUser(null);
-      setFormData({
+      setUserForm({
         name: '',
         email: '',
         password: '',
-        role: 'employee',
-        branch_id: '',
+        role: 'sales',
+        branch_id: user?.isSuperAdmin ? '' : (user?.branch?.id || ''),
       });
     }
     setShowModal(true);
@@ -139,204 +150,85 @@ const UserManagement = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingUser(null);
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      role: 'employee',
-    });
+    setUserForm({ name: '', email: '', password: '', role: 'sales', branch_id: '' });
   };
 
   return (
-    <>
-      <div>
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-            <p className="mt-2 text-gray-600">
-              Manage system users and their permissions
-            </p>
-          </div>
-          <Button onClick={() => openModal()} variant="primary">
-            Add New User
-          </Button>
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+          <p className="mt-2 text-gray-600">
+            Manage system users and their permissions
+          </p>
         </div>
-
-          {/* Alerts */}
-          {error && (
-            <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-              {success}
-            </div>
-          )}
-
-          {/* Users Table */}
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
-            </div>
-          ) : (
-            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Branch
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Last Login
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user._id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                          user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {user.branch_id ? `${user.branch_id.name} (${user.branch_id.code})` : 'No Branch'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Button
-                          onClick={() => handleToggleStatus(user._id, user.isActive)}
-                          variant={user.isActive ? 'success' : 'danger'}
-                        >
-                          {user.isActive ? 'Active' : 'Inactive'}
-                        </Button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Button onClick={() => openModal(user)} variant="primary">
-                          Edit
-                        </Button>
-                        {user._id !== user?._id && (
-                          <Button onClick={() => handleDelete(user._id)} variant="danger">
-                            Delete
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+      </div>
+      {error && (
+        <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
         </div>
-
-      {/* Modal */}
+      )}
+      {success && (
+        <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+          {success}
+        </div>
+      )}
+      <UserTable
+        users={filteredUsers}
+        branches={branches}
+        roles={ROLES}
+        userFilter={user?.isSuperAdmin ? userFilter : ''}
+        userRoleFilter={user?.isSuperAdmin ? userRoleFilter : ''}
+        userBranchFilter={user?.isSuperAdmin ? userBranchFilter : ''}
+        setUserFilter={user?.isSuperAdmin ? setUserFilter : undefined}
+        setUserRoleFilter={user?.isSuperAdmin ? setUserRoleFilter : undefined}
+        setUserBranchFilter={user?.isSuperAdmin ? setUserBranchFilter : undefined}
+        openUserModal={openUserModal}
+        deleteUser={deleteUser}
+      />
       {showModal && (
         <DialogBox
           isOpen={showModal}
           onClose={closeModal}
-          onSubmit={handleSubmit}
+          onSubmit={saveUser}
           title={editingUser ? 'Edit User' : 'Create New User'}
           submitText={editingUser ? 'Update' : 'Create'}
           cancelText="Cancel"
           error={error}
           success={success}
         >
-          <div className="space-y-4">
-            <FormInput label="Name" name="name" value={formData.name} onChange={handleInputChange} required />
-
-            <FormInput label="Email" name="email" value={formData.email} onChange={handleInputChange} required disabled={editingUser} />
-
-            <FormInput
-              label={editingUser ? 'New Password (leave blank to keep current)' : 'Password'}
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              required={!editingUser}
-            />
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Role</label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                required
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              >
-                <option value="employee">Employee</option>
-                <option value="manager">Manager</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-
-            {/* Branch selection - only show for super admin */}
-            {user?.isSuperAdmin && branches.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Branch</label>
-                <select
-                  name="branch_id"
-                  value={formData.branch_id}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                >
-                  <option value="">Select a branch</option>
-                  {branches.map((branch) => (
-                    <option key={branch._id} value={branch._id}>
-                      {branch.name} ({branch.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <form onSubmit={saveUser} className="space-y-4">
+            <FormInput label="Name" name="name" value={userForm.name} onChange={handleUserFormChange} required icon="user" />
+            <FormInput label="Email" name="email" value={userForm.email} onChange={handleUserFormChange} required icon="user" />
+            {!editingUser && (
+              <FormInput label="Password" name="password" value={userForm.password} onChange={handleUserFormChange} required type="password" icon="lock" />
             )}
-
-            {/* Show current branch for non-super admin */}
-            {!user?.isSuperAdmin && branches.length > 0 && (
+            <FormSelect label="Role" name="role" value={userForm.role} onChange={handleUserFormChange} required>
+              {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </FormSelect>
+            {user?.isSuperAdmin ? (
+              <FormSelect label="Branch" name="branch_id" value={userForm.branch_id} onChange={handleUserFormChange} required>
+                <option value="">Select Branch</option>
+                {branches.map(b => <option key={b._id} value={b._id}>{b.name} ({b.code})</option>)}
+              </FormSelect>
+            ) : (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Branch</label>
                 <input
                   type="text"
-                  value={branches[0] ? `${branches[0].name} (${branches[0].code})` : 'No Branch'}
+                  value={user?.branch ? `${user.branch.name} (${user.branch.code})` : 'No Branch'}
                   disabled
                   className="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 sm:text-sm"
                 />
               </div>
             )}
-          </div>
+            <div className="flex justify-end">
+              <Button type="submit" variant="primary" icon="save">{editingUser ? 'Update' : 'Create'}</Button>
+            </div>
+          </form>
         </DialogBox>
       )}
-    </>
+    </div>
   );
 };
 

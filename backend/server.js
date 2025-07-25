@@ -41,6 +41,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/branches', require('./routes/branches'));
+app.use('/api/production', require('./routes/production'));
 // app.use('/api/checkstacks', require('./routes/checkstacks'));
 // app.use('/api/holds', require('./routes/holds'));
 // app.use('/api/delivers', require('./routes/delivers'));

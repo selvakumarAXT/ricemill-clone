@@ -99,28 +99,28 @@ const users = [
     email: 'admin@ricemill.com',
     password: 'Admin123!',
     role: 'admin',
-    branchCode: 'MUM001'
+    branch_id: '6881e5650c814be58cff43b1'
   },
   {
     name: 'Mumbai Accountant',
     email: 'accountant@ricemill.com',
     password: 'Accountant123!',
     role: 'accountant',
-    branchCode: 'MUM001'
+    branch_id: '6881e5650c814be58cff43b1'
   },
   {
     name: 'Mumbai QC Officer',
     email: 'qc@ricemill.com',
     password: 'QC123!',
     role: 'qc',
-    branchCode: 'MUM001'
+    branch_id: '6881e5650c814be58cff43b1'
   },
   {
     name: 'Mumbai Sales Staff',
     email: 'sales@ricemill.com',
     password: 'Sales123!',
     role: 'sales',
-    branchCode: 'MUM001'
+    branch_id: '6881e5650c814be58cff43b1'
   },
   // Delhi Branch
   {
@@ -128,28 +128,28 @@ const users = [
     email: 'admin.delhi@ricemill.com',
     password: 'Admin123!',
     role: 'admin',
-    branchCode: 'DEL001'
+    branch_id: '6881e5650c814be58cff43b2'
   },
   {
     name: 'Delhi Accountant',
     email: 'accountant.delhi@ricemill.com',
     password: 'Accountant123!',
     role: 'accountant',
-    branchCode: 'DEL001'
+    branch_id: '6881e5650c814be58cff43b2'
   },
   {
     name: 'Delhi QC Officer',
     email: 'qc.delhi@ricemill.com',
     password: 'QC123!',
     role: 'qc',
-    branchCode: 'DEL001'
+    branch_id: '6881e5650c814be58cff43b2'
   },
   {
     name: 'Delhi Sales Staff',
     email: 'sales.delhi@ricemill.com',
     password: 'Sales123!',
     role: 'sales',
-    branchCode: 'DEL001'
+    branch_id: '6881e5650c814be58cff43b2'
   },
   // Bangalore Branch
   {
@@ -157,28 +157,28 @@ const users = [
     email: 'admin.blr@ricemill.com',
     password: 'Admin123!',
     role: 'admin',
-    branchCode: 'BLR001'
+    branch_id: '6881e5650c814be58cff43b3'
   },
   {
     name: 'Bangalore Accountant',
     email: 'accountant.blr@ricemill.com',
     password: 'Accountant123!',
     role: 'accountant',
-    branchCode: 'BLR001'
+    branch_id: '6881e5650c814be58cff43b3'
   },
   {
     name: 'Bangalore QC Officer',
     email: 'qc.blr@ricemill.com',
     password: 'QC123!',
     role: 'qc',
-    branchCode: 'BLR001'
+    branch_id: '6881e5650c814be58cff43b3'
   },
   {
     name: 'Bangalore Sales Staff',
     email: 'sales.blr@ricemill.com',
     password: 'Sales123!',
     role: 'sales',
-    branchCode: 'BLR001'
+    branch_id: '6881e5650c814be58cff43b3'
   }
 ];
 
@@ -205,13 +205,13 @@ const seedDatabase = async () => {
     // Process users and assign branch_id
     const usersToCreate = [];
     for (const userData of users) {
-      const { branchCode, ...userFields } = userData;
+      const { branch_id, ...userFields } = userData;
       
       // Don't hash password here - let the User model's pre-save hook handle it
       
       // Assign branch_id if not super admin
-      if (!userFields.isSuperAdmin && branchCode) {
-        userFields.branch_id = branchMap[branchCode];
+      if (!userFields.isSuperAdmin && branch_id) {
+        userFields.branch_id = branch_id;
       }
       
       usersToCreate.push(userFields);

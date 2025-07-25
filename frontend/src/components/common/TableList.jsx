@@ -1,4 +1,7 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import DialogBox from './DialogBox';
+import WarningBox from './WarningBox';
+import Button from './Button';
 
 function downloadCSV(data, columns, filename = 'export.csv') {
   const header = columns.map(col => col.label || col).join(',');
@@ -38,6 +41,7 @@ const TableList = ({
   loading = false,
   empty = 'No data',
   tableWidth = '100%', // NEW: allow custom width
+  getDeleteWarning,
 }) => {
   const [expanded, setExpanded] = useState(null); // index of expanded row
   const [page, setPage] = useState(1);
@@ -48,6 +52,9 @@ const TableList = ({
   const resizingCol = useRef(null);
   const startX = useRef(0);
   const startWidth = useRef(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [rowToDelete, setRowToDelete] = useState(null);
+  const [deleteHandler, setDeleteHandler] = useState(null);
 
   // Normalize columns to objects
   const normColumns = columns.map((col, idx) =>
@@ -138,6 +145,26 @@ const TableList = ({
   if (loading) return <div className="p-4 text-center text-gray-500">Loading...</div>;
   if (!data.length) return <div className="p-4 text-center text-gray-500">{empty}</div>;
 
+  // Helper to wrap delete actions
+  const handleDeleteClick = (row, i, handler) => {
+    setRowToDelete({ row, i });
+    setDeleteHandler(() => handler);
+    setShowDeleteDialog(true);
+  };
+  const confirmDelete = () => {
+    if (deleteHandler && rowToDelete) {
+      deleteHandler(rowToDelete.row, rowToDelete.i);
+    }
+    setShowDeleteDialog(false);
+    setRowToDelete(null);
+    setDeleteHandler(null);
+  };
+  const cancelDelete = () => {
+    setShowDeleteDialog(false);
+    setRowToDelete(null);
+    setDeleteHandler(null);
+  };
+
   return (
     <div className={`w-full max-w-full overflow-x-auto ${className} relative`}>
       {/* Column controls */}
@@ -202,7 +229,37 @@ const TableList = ({
                       {col.renderCell ? col.renderCell(row, i) : renderRow(row, i)[col.idx]}
                     </td>
                   ))}
-                  {actions && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{actions(row, i)}</td>}
+                  {actions && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{
+                    // Intercept delete buttons in actions
+                    (() => {
+                      const rendered = actions(row, i);
+                      // If it's a fragment or array, map children
+                      if (Array.isArray(rendered)) {
+                        return rendered.map((child, idx) =>
+                          child && child.props && child.props.icon === 'delete'
+                            ? React.cloneElement(child, {
+                                onClick: (e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(row, i, child.props.onClick);
+                                },
+                                key: child.key || `action-${idx}`
+                              })
+                            : child && React.isValidElement(child)
+                              ? React.cloneElement(child, { key: child.key || `action-${idx}` })
+                              : child
+                        );
+                      } else if (rendered && rendered.props && rendered.props.icon === 'delete') {
+                        return React.cloneElement(rendered, {
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(row, i, rendered.props.onClick);
+                          },
+                          key: rendered.key || 'action-delete'
+                        });
+                      }
+                      return rendered;
+                    })()
+                  }</td>}
                 </tr>
                 {renderDetail && expanded === i && (
                   <tr key={`detail-${row.id || row._id || (page - 1) * pageSize + i}`}>
@@ -241,6 +298,20 @@ const TableList = ({
             Next
           </button>
         </div>
+      )}
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && (
+        <DialogBox title="Delete Confirmation" onClose={cancelDelete}>
+          <WarningBox>
+            {typeof getDeleteWarning === 'function'
+              ? getDeleteWarning(rowToDelete?.row)
+              : getDeleteWarning || 'Deleting this item will remove all its data. This action cannot be undone. Are you sure you want to continue?'}
+          </WarningBox>
+          <div className="flex justify-end gap-2">
+            <Button onClick={cancelDelete} variant="secondary" icon="close">Cancel</Button>
+            <Button onClick={confirmDelete} variant="danger" icon="delete">Delete</Button>
+          </div>
+        </DialogBox>
       )}
     </div>
   );
