@@ -19,10 +19,10 @@ exports.getAllUsers = async (req, res) => {
 
     const users = await query
       .select('-password')
-      .populate('branch_id', 'name code')
+      .populate('branch_id', 'name millCode')
       .sort({ createdAt: -1 });
     
-    // Transform users to include branch_id and branch name/code
+    // Transform users to include branch_id and branch name/millCode
     const usersWithBranch = users.map(user => ({
       id: user._id,
       name: user.name,
@@ -36,7 +36,7 @@ exports.getAllUsers = async (req, res) => {
       branch: user.branch_id && typeof user.branch_id === 'object' ? {
         id: user.branch_id._id,
         name: user.branch_id.name,
-        code: user.branch_id.code
+        millCode: user.branch_id.millCode
       } : null
     }));
     res.status(200).json({
@@ -131,7 +131,7 @@ exports.createUser = async (req, res) => {
     // Get populated user data
     const populatedUser = await User.findById(user._id)
       .select('-password')
-      .populate('branch_id', 'name code');
+      .populate('branch_id', 'name millCode');
     
     res.status(201).json({
       success: true,

@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import branchService from '../../services/branchService';
+import { setCurrentBranchId, setAvailableBranches } from '../../store/slices/branchSlice';
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { currentBranchId } = useSelector((state) => state.branch);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   // Branch switcher state
   const [branches, setBranches] = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -26,21 +28,27 @@ const Layout = ({ children }) => {
       if (user?.role === "superadmin") {
         try {
           const res = await branchService.getAllBranches();
-          setBranches(res.data || []);
+          const branchesData = res.data || [];
+          setBranches(branchesData);
+          dispatch(setAvailableBranches(branchesData));
         } catch (err) {
           setBranches([]);
+          dispatch(setAvailableBranches([]));
         }
       } else if (user?.branch) {
-        setBranches([user.branch]);
+        const branchesData = [user.branch];
+        setBranches(branchesData);
+        dispatch(setAvailableBranches(branchesData));
       } else {
         setBranches([]);
+        dispatch(setAvailableBranches([]));
       }
     };
     fetchBranches();
-  }, [user]);
+  }, [user, dispatch]);
 
   const handleBranchChange = (branchId) => {
-    setSelectedBranchId(branchId);
+    dispatch(setCurrentBranchId(branchId));
   };
 
   // Restore toggleSidebar function
@@ -55,16 +63,13 @@ const Layout = ({ children }) => {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} branches={branches} selectedBranchId={selectedBranchId} onBranchChange={handleBranchChange} />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} branches={branches} selectedBranchId={currentBranchId} onBranchChange={handleBranchChange} />
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         {/* Navbar */}
         <Navbar
           toggleSidebar={toggleSidebar}
-          branches={branches}
-          selectedBranchId={selectedBranchId}
-          onBranchChange={handleBranchChange}
         />
 
         {/* Page content */}

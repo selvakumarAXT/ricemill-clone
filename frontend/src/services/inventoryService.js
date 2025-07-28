@@ -16,10 +16,10 @@ api.interceptors.request.use((config) => {
 });
 
 const inventoryService = {
-  // Get all inventory, optionally filtered by branchId (for superadmin)
-  getAllInventory: async (branchId = '') => {
+  // Get all inventory, optionally filtered by branch_id (for superadmin)
+  getAllInventory: async (branch_id = '') => {
     try {
-      const params = branchId ? { branchId } : {};
+      const params = branch_id ? { branch_id } : {};
       const response = await api.get('/', { params });
       return response.data;
     } catch (error) {

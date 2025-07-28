@@ -1,12 +1,11 @@
 import TableList from './common/TableList';
 import Button from './common/Button';
-import CommonSearchField from './common/CommonSearchField';
-import FormSelect from './common/FormSelect';
+import TableFilters from './common/TableFilters';
+import BranchFilter from './common/BranchFilter';
 import { useSelector } from 'react-redux';
 
 const UserTable = ({
   users,
-  branches,
   roles = [],
   userFilter,
   userRoleFilter,
@@ -18,6 +17,7 @@ const UserTable = ({
   deleteUser,
 }) => {
   const { user } = useSelector((state) => state.auth);
+  const { currentBranchId } = useSelector((state) => state.branch);
   // Filtered users logic can be handled outside or inside this component
   const filteredUsers = users.filter(u => u.id !== user?.id);
   return (
@@ -26,30 +26,21 @@ const UserTable = ({
         <h2 className="text-xl font-semibold">Users</h2>
         <Button onClick={() => openUserModal()} variant="primary" icon="add">New User</Button>
       </div>
-      <div className=" flex flex-wrap gap-2 items-center">
-        <CommonSearchField
-          value={userFilter}
-          onChange={e => setUserFilter(e.target.value)}
-          placeholder="Search users..."
+      <div className="flex items-center gap-4 mt-4">
+        <TableFilters
+          searchValue={userFilter}
+          searchPlaceholder="Search users..."
+          onSearchChange={e => setUserFilter(e.target.value)}
+          selectValue={userRoleFilter}
+          selectOptions={roles}
+          onSelectChange={e => setUserRoleFilter(e.target.value)}
+          selectPlaceholder="All Roles"
+          showSelect={true}
         />
-        <FormSelect
-          value={userRoleFilter}
-          onChange={e => setUserRoleFilter(e.target.value)}
-        >
-          <option value="">All Roles</option>
-          {roles.map(r => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </FormSelect>
-        {user?.isSuperAdmin && (
-          <FormSelect
-            value={userBranchFilter}
-            onChange={e => setUserBranchFilter(e.target.value)}
-          >
-            <option value="">All Branches</option>
-            {branches && branches.map(b => <option key={b._id} value={b._id}>{b.name} ({b.code})</option>)}
-          </FormSelect>
-        )}
+        <BranchFilter
+          value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : userBranchFilter}
+          onChange={e => setUserBranchFilter(e.target.value)}
+        />
       </div>
       <TableList
         columns={["Name", "Email", "Role", "Branch"]}
@@ -58,7 +49,7 @@ const UserTable = ({
           u.name,
           u.email,
           u.role,
-          u.branch ? `${u.branch.name} (${u.branch.code})` : '',
+          u.branch ? `${u.branch.name} (${u.branch.millCode})` : '',
         ]}
         actions={u => [
           <Button key="edit" onClick={() => openUserModal(u)} variant="info" icon="edit">Edit</Button>,
@@ -70,7 +61,7 @@ const UserTable = ({
           <div className="p-4">
             <p><strong>Email:</strong> {u.email}</p>
             <p><strong>Role:</strong> {u.role}</p>
-            <p><strong>Branch:</strong> {u.branch ? `${u.branch.name} (${u.branch.code})` : 'N/A'}</p>
+            <p><strong>Branch:</strong> {u.branch ? `${u.branch.name} (${u.branch.millCode})` : 'N/A'}</p>
             <p><strong>Created At:</strong> {new Date(u.createdAt).toLocaleDateString()}</p>
             {user?.id !== u.id && (
               <Button key="delete-detail" onClick={() => deleteUser(u.id)} variant="danger" icon="delete">Delete</Button>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
+import { setCurrentBranchId } from '../../store/slices/branchSlice';
 import FormSelect from '../common/FormSelect';
 
 const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBranchChange }) => {
@@ -9,26 +10,17 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { currentBranchId } = useSelector((state) => state.branch);
   const [branchesOpen, setBranchesOpen] = useState(false);
 
-  // Set selectedBranchId to user's branch by default for non-superadmin
-  // (Assume onBranchChange is a setter from parent, and selectedBranchId is controlled)
+  // Set currentBranchId to user's branch by default for non-superadmin
   useEffect(() => {
-    // On mount, restore selected branch from localStorage if present and valid
-    if (user?.role === 'superadmin' && branches.length > 0) {
-      const savedBranchId = localStorage.getItem('selectedBranchId');
-      if (savedBranchId === 'all') {
-        onBranchChange && onBranchChange('');
-      } else if (savedBranchId && branches.some(b => b._id === savedBranchId)) {
-        onBranchChange && onBranchChange(savedBranchId);
-      }
-    }
-    // For non-superadmin, set to user's branch
-    if (user && user.role !== 'superadmin' && user.branch && user.branch._id && selectedBranchId !== user.branch._id) {
-      onBranchChange && onBranchChange(user.branch._id);
+    // For non-superadmin, set to user's branch if not already set
+    if (user && user.role !== 'superadmin' && user.branch && user.branch._id && currentBranchId !== user.branch._id) {
+      dispatch(setCurrentBranchId(user.branch._id));
     }
     // eslint-disable-next-line
-  }, [user, branches.length]);
+  }, [user, currentBranchId, dispatch]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -36,12 +28,12 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
   };
 
   const handleBranchSelect = (branchId) => {
-    if (branchId === '') {
-      localStorage.setItem('selectedBranchId', 'all');
-    } else {
-      localStorage.setItem('selectedBranchId', branchId);
-    }
-    onBranchChange && onBranchChange(branchId);
+    dispatch(setCurrentBranchId(branchId));
+    
+    // Refresh the page after a short delay to ensure state is updated
+    // setTimeout(() => {
+    //   window.location.reload();
+    // }, 100);
   };
 
   const menuItems = [
@@ -54,7 +46,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
         </svg>
       ),
-      roles: ['admin', 'manager', 'employee']
+      roles: ['admin', 'manager', ]
     },
     {
       name: 'User Management',
@@ -77,6 +69,26 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
       roles: ['admin', 'manager']
     },
     {
+      name: 'Paddy Entry',
+      path: '/paddy-entries',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+        </svg>
+      ),
+      roles: ['admin', 'manager','superadmin']
+    },
+    {
+      name: 'Gunny Management',
+      path: '/gunny-management',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+      ),
+      roles: ['admin', 'manager', 'superadmin']
+    },
+    {
       name: 'Inventory',
       path: '/inventory',
       icon: (
@@ -84,7 +96,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       ),
-      roles: ['admin', 'manager', 'employee']
+      roles: ['admin', 'manager',]
     },
     {
       name: 'Reports',
@@ -105,10 +117,11 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       ),
-      roles: ['admin', 'manager', 'employee']
+      roles: ['admin', 'manager',]
     },
+
     // Branch Management (superadmin only)
-    ...(user?.isSuperAdmin  ? [
+    ...(user?.isSuperAdmin ? [
       {
         name: 'Branch Management',
         path: '/branch-management',
@@ -120,7 +133,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
         ),
         roles: ['superadmin']
       }
-    ] : []),
+    ] : [])
   ];
 
   const filteredMenuItems = menuItems.filter(item => 
@@ -159,7 +172,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
         <nav className="mt-5 px-2">
           <div className="space-y-1">
             {/* Branches tree for superadmin */}
-            {user?.role === "superadmin" && branches.length > 0 && (
+            {user?.isSuperAdmin && branches.length > 0 && (
               <div>
                 <button
                   className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors duration-150"
@@ -173,7 +186,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
                   <ul className="ml-6 mt-1 space-y-1">
                     <li key="all-branches">
                       <button
-                        className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${!selectedBranchId ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+                        className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${!currentBranchId ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
                         onClick={() => handleBranchSelect('')}
                       >
                         All Branches
@@ -182,10 +195,10 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
                     {branches.map(branch => (
                       <li key={branch._id}>
                         <button
-                          className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${selectedBranchId === branch._id ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+                          className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${currentBranchId === branch._id ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
                           onClick={() => handleBranchSelect(branch._id)}
                         >
-                          {branch.name} ({branch.code})
+                          {branch.name} ({branch.millCode})
                         </button>
                       </li>
                     ))}
@@ -200,7 +213,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
                   className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 bg-indigo-600 text-white`}
                   disabled
                 >
-                  {user.branch.name} ({user.branch.code})
+                  {user.branch.name} ({user.branch.millCode})
                 </button>
               </div>
             )}

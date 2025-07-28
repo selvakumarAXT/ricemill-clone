@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 
-const Navbar = ({ toggleSidebar, branches = [], selectedBranchId, onBranchChange }) => {
+const Navbar = ({ toggleSidebar }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { user } = useSelector((state) => state.auth);
+  const { currentBranchId, availableBranches } = useSelector((state) => state.branch);
 
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
@@ -26,27 +27,27 @@ const Navbar = ({ toggleSidebar, branches = [], selectedBranchId, onBranchChange
             
             {/* Page title */}
             <div className="ml-4 lg:ml-0">
-              <h1 className="text-2xl font-semibold text-gray-900">Rice Mill Management</h1>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {(() => {
+                  // For superadmin, show selected branch or "All Branches"
+                  if (user?.role === 'superadmin') {
+                    if (!currentBranchId) {
+                      return 'All Branches';
+                    }
+                    const selectedBranch = availableBranches.find(b => b._id === currentBranchId);
+                    return selectedBranch ? `${selectedBranch.name} (${selectedBranch.millCode})` : 'All Branches';
+                  }
+                  // For non-superadmin, show their assigned branch
+                  return user?.branch?.name
+                    ? `${user.branch.name} (${user.branch.millCode})`
+                    : 'Rice Mill Management';
+                })()}
+              </h1>
             </div>
           </div>
 
           {/* Right side - Search and user menu */}
           <div className="flex items-center space-x-4">
-            {/* Branch Switcher for Superadmin */}
-            {user?.isSuperAdmin && branches.length > 0 && (
-              <select
-                className="border rounded px-2 py-1 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500"
-                value={selectedBranchId || ''}
-                onChange={e => onBranchChange && onBranchChange(e.target.value)}
-              >
-                <option value="">All Branches</option>
-                {branches.map(branch => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.name} ({branch.code})
-                  </option>
-                ))}
-              </select>
-            )}
             {/* Search bar */}
             <div className="hidden md:block">
               <div className="relative">

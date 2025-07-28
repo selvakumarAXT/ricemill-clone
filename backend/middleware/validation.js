@@ -75,4 +75,58 @@ exports.handleValidationErrors = (req, res, next) => {
   }
   
   next();
-}; 
+};
+
+// Validation rules for paddy data
+exports.validatePaddyData = [
+  body('issueDate')
+    .notEmpty()
+    .withMessage('Issue date is required')
+    .isISO8601()
+    .withMessage('Please provide a valid date'),
+  body('issueMemo')
+    .notEmpty()
+    .withMessage('Issue memo is required')
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Issue memo must be between 1 and 200 characters'),
+  body('lorryNumber')
+    .notEmpty()
+    .withMessage('Lorry number is required')
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Lorry number must be between 1 and 50 characters'),
+  body('paddyFrom')
+    .notEmpty()
+    .withMessage('Paddy source is required')
+    .isIn(['Local Farmers', 'Traders', 'Cooperative Societies', 'Government Procurement', 'Other'])
+    .withMessage('Invalid paddy source'),
+  body('paddyVariety')
+    .notEmpty()
+    .withMessage('Paddy variety is required')
+    .isIn(['A', 'C'])
+    .withMessage('Paddy variety must be A or C'),
+  body('gunny.nb')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('NB gunny count must be a non-negative integer'),
+  body('gunny.onb')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('ONB gunny count must be a non-negative integer'),
+  body('gunny.ss')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('SS gunny count must be a non-negative integer'),
+  body('gunny.swp')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('SWP gunny count must be a non-negative integer'),
+  body('paddy.bags')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Bags count must be a non-negative integer'),
+  body('paddy.weight')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Weight must be a non-negative number'),
+  exports.handleValidationErrors
+]; 

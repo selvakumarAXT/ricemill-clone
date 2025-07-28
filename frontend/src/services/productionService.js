@@ -1,26 +1,13 @@
-import axios from 'axios';
+import { createAxiosInstance } from '../utils/apiUtils';
 
 const API_URL = 'http://localhost:3001/api/production';
 
-const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true,
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 const productionService = {
-  // Get all production, optionally filtered by branchId (for superadmin)
-  getAllProduction: async (branchId = '') => {
+  // Get all production, optionally filtered by branch_id (for superadmin)
+  getAllProduction: async (branch_id = '') => {
     try {
-      const params = branchId ? { branchId } : {};
-      const response = await api.get('/', { params });
+      const params = branch_id ? { branch_id } : {};
+      const response = await createAxiosInstance().get('/production', { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

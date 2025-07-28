@@ -1,27 +1,12 @@
-import axios from 'axios';
+import { createAxiosInstance } from '../utils/apiUtils';
 
 const API_URL = 'http://localhost:3001/api/branches';
-
-// Create axios instance
-const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true, // Ensure credentials (cookies, etc.) are sent with requests
-});
-
-// Add token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
 
 const branchService = {
   // Get all branches (super admin only)
   getAllBranches: async () => {
     try {
-      const response = await api.get('/');
+      const response = await createAxiosInstance().get('/branches');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -31,7 +16,7 @@ const branchService = {
   // Get current user's branch
   getMyBranch: async () => {
     try {
-      const response = await api.get('/my-branch');
+      const response = await createAxiosInstance().get('/branches/my-branch');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -41,7 +26,7 @@ const branchService = {
   // Get single branch
   getBranch: async (branchId) => {
     try {
-      const response = await api.get(`/${branchId}`);
+      const response = await createAxiosInstance().get(`/branches/${branchId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -51,7 +36,7 @@ const branchService = {
   // Create new branch (super admin only)
   createBranch: async (branchData) => {
     try {
-      const response = await api.post('/', branchData);
+      const response = await createAxiosInstance().post('/branches', branchData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -61,7 +46,7 @@ const branchService = {
   // Update branch (super admin only)
   updateBranch: async (branchId, branchData) => {
     try {
-      const response = await api.put(`/${branchId}`, branchData);
+      const response = await createAxiosInstance().put(`/branches/${branchId}`, branchData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -71,7 +56,7 @@ const branchService = {
   // Delete branch (super admin only)
   deleteBranch: async (branchId) => {
     try {
-      const response = await api.delete(`/${branchId}`);
+      const response = await createAxiosInstance().delete(`/branches/${branchId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

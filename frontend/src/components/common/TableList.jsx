@@ -57,9 +57,17 @@ const TableList = ({
   const [deleteHandler, setDeleteHandler] = useState(null);
 
   // Normalize columns to objects
-  const normColumns = columns.map((col, idx) =>
-    typeof col === 'string' ? { label: col, accessor: col.toLowerCase().replace(/\s+/g, ''), idx } : { ...col, idx }
-  );
+  const normColumns = columns.map((col, idx) => {
+    if (typeof col === 'string') {
+      return { label: col, accessor: col.toLowerCase().replace(/\s+/g, ''), key: col.toLowerCase().replace(/\s+/g, ''), idx };
+    }
+    return { 
+      ...col, 
+      accessor: col.accessor || col.key,
+      renderCell: col.renderCell || col.render, // Support both renderCell and render
+      idx 
+    };
+  });
   const visibleCols = normColumns.filter((_, i) => !hiddenCols.includes(i));
 
   // Sorting logic
@@ -216,24 +224,26 @@ const TableList = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {pagedData.map((row, i) => (
-              <>
+              <React.Fragment key={row.id || row._id || `row-${(page - 1) * pageSize + i}`}>
                 <tr
-                  key={row.id || row._id || `row-${(page - 1) * pageSize + i}`}
                   className="cursor-pointer hover:bg-gray-50"
                   onClick={() => renderDetail && handleRowClick(i)}
                 >
                   {showRowNumbers && <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{getRowNumber(i)}</td>}
                   {selectable && <td className="px-3 py-4"><input type="checkbox" checked={selected.includes((page - 1) * pageSize + i)} onChange={() => handleSelectRow((page - 1) * pageSize + i)} /></td>}
                   {visibleCols.map((col, j) => (
-                    <td key={col.idx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {col.renderCell ? col.renderCell(row, i) : renderRow(row, i)[col.idx]}
+                    <td key={`${row.id || row._id || i}-${col.idx}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {col.renderCell ? col.renderCell(row[col.key], i) : (renderRow ? renderRow(row, i)[col.idx] : (() => {
+                        const value = row[col.key];
+                        if (value === null || value === undefined) return '';
+                        if (typeof value === 'object') return JSON.stringify(value);
+                        return String(value);
+                      })())}
                     </td>
                   ))}
                   {actions && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{
-                    // Intercept delete buttons in actions
                     (() => {
                       const rendered = actions(row, i);
-                      // If it's a fragment or array, map children
                       if (Array.isArray(rendered)) {
                         return rendered.map((child, idx) =>
                           child && child.props && child.props.icon === 'delete'
@@ -268,7 +278,7 @@ const TableList = ({
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>

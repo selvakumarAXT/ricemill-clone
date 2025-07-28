@@ -29,7 +29,7 @@ exports.protect = async (req, res, next) => {
     // Get user from database with branch information
     req.user = await User.findById(decoded.id)
       .select('-password')
-      .populate('branch_id', 'name code isActive');
+      .populate('branch_id', 'name millCode isActive');
 
     if (!req.user) {
       return res.status(401).json({
@@ -106,7 +106,7 @@ exports.sendTokenResponse = (user, statusCode, res) => {
       branch: user.branch_id && typeof user.branch_id === 'object' ? {
         id: user.branch_id._id,
         name: user.branch_id.name,
-        code: user.branch_id.code
+        millCode: user.branch_id.millCode
       } : null
     }
   });

@@ -4,15 +4,16 @@ import { Link } from 'react-router-dom';
 // import dashboardService from '../services/dashboardService'; // Uncomment and implement as needed
 import { getMe } from '../store/slices/authSlice';
 
-const Dashboard = ({ selectedBranchId }) => {
+const Dashboard = () => {
   const dispatch = useDispatch();
   const { user, isLoading } = useSelector((state) => state.auth);
+  const { currentBranchId } = useSelector((state) => state.branch);
   // const [stats, setStats] = useState(null); // Uncomment if you have stats
 
   useEffect(() => {
-    // Example: Fetch dashboard stats filtered by selectedBranchId
+    // Example: Fetch dashboard stats filtered by currentBranchId
     // const fetchStats = async () => {
-    //   const res = await dashboardService.getStats(selectedBranchId);
+    //   const res = await dashboardService.getStats(currentBranchId);
     //   setStats(res);
     // };
     // fetchStats();
@@ -20,7 +21,7 @@ const Dashboard = ({ selectedBranchId }) => {
     if (!user) {
       dispatch(getMe());
     }
-  }, [dispatch, user, selectedBranchId]);
+  }, [dispatch, user, currentBranchId]);
 
   if (isLoading) {
     return (

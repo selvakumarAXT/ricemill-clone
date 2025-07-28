@@ -53,33 +53,38 @@ exports.getBranch = asyncHandler(async (req, res) => {
 // @route   POST /api/branches
 // @access  Private (Super Admin only)
 exports.createBranch = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'superadmin') {
-    return res.status(403).json({
-      success: false,
-      message: 'You are not authorized to access this resource'
-    });
-  }
+  try {
+    if (req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to access this resource'
+      });
+    }
   const {
     name,
-    code,
+    millCode,
     address,
     contactInfo,
+    gstn,
     manager,
     settings
   } = req.body;
 
-  // Check if branch code already exists
-  const existingBranch = await Branch.findOne({ code: code.toUpperCase() });
+  // Check if mill code already exists
+  const existingBranch = await Branch.findOne({ millCode: millCode.toUpperCase() });
   if (existingBranch) {
     return res.status(400).json({
       success: false,
-      message: 'Branch code already exists'
+      message: 'Mill code already exists'
     });
   }
 
+  // Clean up manager field - if it's empty string, set to undefined
+  const cleanManager = manager && manager.trim() !== '' ? manager : undefined;
+
   // Validate manager if provided
-  if (manager) {
-    const managerUser = await User.findById(manager);
+  if (cleanManager) {
+    const managerUser = await User.findById(cleanManager);
     if (!managerUser) {
       return res.status(400).json({
         success: false,
@@ -95,12 +100,20 @@ exports.createBranch = asyncHandler(async (req, res) => {
     }
   }
 
+  // Clean up contactInfo - ensure phone format is valid
+  const cleanContactInfo = {
+    ...contactInfo,
+    phone: contactInfo?.phone ? contactInfo.phone.replace(/\s+/g, '') : undefined,
+    email: contactInfo?.email || undefined
+  };
+
   const branch = await Branch.create({
     name,
-    code: code.toUpperCase(),
+    millCode: millCode.toUpperCase(),
     address,
-    contactInfo,
-    manager,
+    contactInfo: cleanContactInfo,
+    gstn,
+    manager: cleanManager,
     settings
   });
 
@@ -119,6 +132,13 @@ exports.createBranch = asyncHandler(async (req, res) => {
       id: populatedBranch._id
     }
   });
+  } catch (error) {
+    console.error('Error creating branch:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Something went wrong!'
+    });
+  }
 });
 
 // @desc    Update branch
@@ -140,22 +160,22 @@ exports.updateBranch = asyncHandler(async (req, res) => {
     });
   }
 
-  const { code, manager } = req.body;
+  const { millCode, manager, gstn } = req.body;
 
-  // Check if new code conflicts with existing branch
-  if (code && code.toUpperCase() !== branch.code) {
+  // Check if new millCode conflicts with existing branch
+  if (millCode && millCode.toUpperCase() !== branch.millCode) {
     const existingBranch = await Branch.findOne({ 
-      code: code.toUpperCase(),
+      millCode: millCode.toUpperCase(),
       _id: { $ne: req.params.id }
     });
     
     if (existingBranch) {
       return res.status(400).json({
         success: false,
-        message: 'Branch code already exists'
+        message: 'Mill code already exists'
       });
     }
-    req.body.code = code.toUpperCase();
+    req.body.millCode = millCode.toUpperCase();
   }
 
   // Validate and update manager

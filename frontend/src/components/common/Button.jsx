@@ -1,16 +1,16 @@
 import Icon from './Icon';
 
-const VARIANT_CLASSES = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
-  secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
-  danger: 'bg-red-600 text-white hover:bg-red-700',
-  outline: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50',
+  const VARIANT_CLASSES = {
+    primary: 'bg-[var(--color-bg-primary)] text-[var(--color-text-white)] hover:bg-[var(--color-bg-accent)]',
+    secondary: ' bg-[var(--color-text-gray-light)] text-[var(--color-text-white)] hover:bg-[var(--color-bg-light)]  hover:text-[var(--color-text-gray-dark)]',
+    danger: 'bg-[var(--color-text-red)] text-[var(--color-text-white)] hover:bg-[var(--color-bg-light)] hover:text-[var(--color-text-dark)]',
+    outline: 'bg-[var(--color-bg-white)] border border-[var(--color-border-gray)] text-[var(--color-text-gray-dark)] hover:bg-[var(--color-bg-light)]',
 };
 
 const Button = ({ type = 'button', variant = 'primary', className = '', children, icon, iconClass = 'mr-2', ...rest }) => (
   <button
     type={type}
-    className={`px-4 py-2 rounded font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition ${VARIANT_CLASSES[variant] || ''} ${className}`}
+    className={`px-4 py-2 rounded outline-none font-medium focus:outline-none transition ${VARIANT_CLASSES[variant] || ''} ${className}`}
     {...rest}
   >
     <span className="flex items-center justify-center">

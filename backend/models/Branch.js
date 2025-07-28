@@ -7,31 +7,38 @@ const branchSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Branch name cannot exceed 100 characters']
   },
-  code: {
+  millCode: {
     type: String,
-    required: [true, 'Branch code is required'],
+    required: [true, 'Mill code is required'],
     unique: true,
     uppercase: true,
     trim: true,
-    // match: [/^[A-Z0-9]{3,10}$/, 'Branch code must be 3-10 uppercase alphanumeric characters']
+    // match: [/^[A-Z0-9]{3,10}$/, 'Mill code must be 3-10 uppercase alphanumeric characters']
+  },
+  gstn: {
+    type: String,
+    required: [true, 'GSTN is required'],
+    trim: true
   },
   address: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-    country: {
-      type: String,
-      default: 'India'
-    }
+    region: { type: String, required: true },
+    type: { type: String, enum: ['RR', 'BR'], default: 'RR', required: true },
+    // Optionally keep other fields if needed:
+    // street: String,
+    // city: String,
+    // state: String,
+    // zipCode: String,
+    // country: { type: String, default: 'India' }
   },
   contactInfo: {
     phone: {
       type: String,
-      match: [/^\+?[\d\s\-\(\)]+$/, 'Please enter a valid phone number']
+      required: [true, 'Phone number is required'],
+      match: [/^[\d\s\-\(\)\+]+$/, 'Please enter a valid phone number']
     },
     email: {
       type: String,
+      required: [true, 'Email is required'],
       match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
     }
   },
@@ -80,7 +87,7 @@ branchSchema.pre('save', function(next) {
 });
 
 // Add indexes for better performance
-branchSchema.index({ code: 1 });
+branchSchema.index({ millCode: 1 });
 branchSchema.index({ isActive: 1 });
 
 module.exports = mongoose.model('Branch', branchSchema); 

@@ -1,46 +1,50 @@
-import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import userService from '../services/userService';
-import branchService from '../services/branchService';
-import FormInput from '../components/common/FormInput';
-import DialogBox from '../components/common/DialogBox';
-import Button from '../components/common/Button';
-import UserTable from '../components/UserTable';
-import FormSelect from '../components/common/FormSelect';
+import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import userService from "../services/userService";
+import branchService from "../services/branchService";
+import FormInput from "../components/common/FormInput";
+import DialogBox from "../components/common/DialogBox";
+import Button from "../components/common/Button";
+import UserTable from "../components/UserTable";
+import FormSelect from "../components/common/FormSelect";
 
 const ROLES = [
-  { value: 'admin', label: 'Branch Admin' },
-  { value: 'accountant', label: 'Accountant' },
-  { value: 'qc', label: 'QC Officer' },
-  { value: 'sales', label: 'Sales Staff' },
+  { value: "manager", label: "Branch Manager" },
 ];
 
-const UserManagement = ({ selectedBranchId }) => {
+const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [userForm, setUserForm] = useState({ name: '', email: '', password: '', role: 'sales', branch_id: '' });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [userForm, setUserForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "manager",
+    branch_id: "",
+  });
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   // Filters for UserTable
-  const [userFilter, setUserFilter] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState('');
-  const [userBranchFilter, setUserBranchFilter] = useState('');
+  const [userFilter, setUserFilter] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("");
+  const [userBranchFilter, setUserBranchFilter] = useState("");
 
   const { user } = useSelector((state) => state.auth);
+  const { currentBranchId } = useSelector((state) => state.branch);
 
   useEffect(() => {
     if (user?.isSuperAdmin) {
       fetchBranches();
-      fetchUsers(selectedBranchId);
+      fetchUsers(currentBranchId);
     } else if (user?.branch?.id) {
       // No need to fetch branches for non-superadmin, use user.branch
       fetchUsers(user.branch.id);
     }
     // eslint-disable-next-line
-  }, [selectedBranchId, user]);
+  }, [currentBranchId, user]);
 
   const fetchUsers = async (branchId) => {
     try {
@@ -48,7 +52,7 @@ const UserManagement = ({ selectedBranchId }) => {
       const response = await userService.getAllUsers(branchId);
       setUsers(response.users);
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to fetch users');
+      setError(error.response?.data?.message || "Failed to fetch users");
     } finally {
       setLoading(false);
     }
@@ -62,27 +66,29 @@ const UserManagement = ({ selectedBranchId }) => {
       }
       // else: do not set branches for non-superadmin
     } catch (err) {
-      console.error('Failed to fetch branches:', err);
+      console.error("Failed to fetch branches:", err);
     }
   };
 
   // Filtering logic (same as BranchManagement)
   const filteredUsers = users
-    .filter(u => u.role !== 'superadmin')
-    .filter(u => u.id !== user?.id)
-    .filter(u => {
+    .filter((u) => u.role !== "superadmin")
+    .filter((u) => u.id !== user?.id)
+    .filter((u) => {
       const q = userFilter.toLowerCase();
-      const matchesText = (
+      const matchesText =
         u.name?.toLowerCase().includes(q) ||
         u.email?.toLowerCase().includes(q) ||
         u.role?.toLowerCase().includes(q) ||
-        (u.branch_id && (
-          u.branch_id.name?.toLowerCase().includes(q) ||
-          u.branch_id.code?.toLowerCase().includes(q)
-        ))
-      );
+        (u.branch_id &&
+          (u.branch_id.name?.toLowerCase().includes(q) ||
+            u.branch_id.millCode?.toLowerCase().includes(q)));
       const matchesRole = userRoleFilter ? u.role === userRoleFilter : true;
-      const matchesBranch = userBranchFilter ? (u.branch_id && u.branch_id._id === userBranchFilter) : true;
+      // Branch filter - use currentBranchId if set, otherwise use userBranchFilter
+      const effectiveBranchFilter = currentBranchId && currentBranchId !== 'all' ? currentBranchId : userBranchFilter;
+      const matchesBranch = effectiveBranchFilter
+        ? u.branch_id && u.branch_id._id === effectiveBranchFilter
+        : true;
       return matchesText && matchesRole && matchesBranch;
     });
 
@@ -92,21 +98,21 @@ const UserManagement = ({ selectedBranchId }) => {
 
   const saveUser = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setLoading(true);
     try {
       if (editingUser) {
         await userService.updateUser(editingUser._id, userForm);
-        setSuccess('User updated successfully');
+        setSuccess("User updated successfully");
       } else {
         await userService.createUser(userForm);
-        setSuccess('User created successfully');
+        setSuccess("User created successfully");
       }
       fetchUsers();
       closeModal();
     } catch (error) {
-      setError(error.response?.data?.message || 'Operation failed');
+      setError(error.response?.data?.message || "Operation failed");
     } finally {
       setLoading(false);
     }
@@ -116,7 +122,7 @@ const UserManagement = ({ selectedBranchId }) => {
     setLoading(true);
     try {
       await userService.deleteUser(userId);
-      setUsers((prev) => prev.filter(u => u._id !== userId));
+      setUsers((prev) => prev.filter((u) => u._id !== userId));
     } finally {
       setLoading(false);
     }
@@ -128,29 +134,35 @@ const UserManagement = ({ selectedBranchId }) => {
       setUserForm({
         name: editUser.name,
         email: editUser.email,
-        password: '',
+        password: "",
         role: editUser.role,
-        branch_id: editUser.branch_id || editUser.branch?.id || '',
+        branch_id: editUser.branch_id || editUser.branch?.id || "",
       });
     } else {
       setEditingUser(null);
       setUserForm({
-        name: '',
-        email: '',
-        password: '',
-        role: 'sales',
-        branch_id: user?.isSuperAdmin ? '' : (user?.branch?.id || ''),
+        name: "",
+        email: "",
+        password: "",
+        role: user?.isSuperAdmin ? "admin" : "manager",
+        branch_id: user?.isSuperAdmin ? "" : user?.branch?.id || "",
       });
     }
     setShowModal(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingUser(null);
-    setUserForm({ name: '', email: '', password: '', role: 'sales', branch_id: '' });
+    setUserForm({
+      name: "",
+      email: "",
+      password: "",
+      role: "manager",
+      branch_id: "",
+    });
   };
 
   return (
@@ -177,12 +189,14 @@ const UserManagement = ({ selectedBranchId }) => {
         users={filteredUsers}
         branches={branches}
         roles={ROLES}
-        userFilter={user?.isSuperAdmin ? userFilter : ''}
-        userRoleFilter={user?.isSuperAdmin ? userRoleFilter : ''}
-        userBranchFilter={user?.isSuperAdmin ? userBranchFilter : ''}
+        userFilter={user?.isSuperAdmin ? userFilter : ""}
+        userRoleFilter={user?.isSuperAdmin ? userRoleFilter : ""}
+        userBranchFilter={user?.isSuperAdmin ? userBranchFilter : ""}
         setUserFilter={user?.isSuperAdmin ? setUserFilter : undefined}
         setUserRoleFilter={user?.isSuperAdmin ? setUserRoleFilter : undefined}
-        setUserBranchFilter={user?.isSuperAdmin ? setUserBranchFilter : undefined}
+        setUserBranchFilter={
+          user?.isSuperAdmin ? setUserBranchFilter : undefined
+        }
         openUserModal={openUserModal}
         deleteUser={deleteUser}
       />
@@ -191,39 +205,89 @@ const UserManagement = ({ selectedBranchId }) => {
           isOpen={showModal}
           onClose={closeModal}
           onSubmit={saveUser}
-          title={editingUser ? 'Edit User' : 'Create New User'}
-          submitText={editingUser ? 'Update' : 'Create'}
+          title={editingUser ? "Edit User" : "Create New User"}
+          submitText={editingUser ? "Update" : "Create"}
           cancelText="Cancel"
           error={error}
           success={success}
         >
           <form onSubmit={saveUser} className="space-y-4">
-            <FormInput label="Name" name="name" value={userForm.name} onChange={handleUserFormChange} required icon="user" />
-            <FormInput label="Email" name="email" value={userForm.email} onChange={handleUserFormChange} required icon="user" />
+            <FormInput
+              label="Name"
+              name="name"
+              value={userForm.name}
+              onChange={handleUserFormChange}
+              required
+              icon="user"
+            />
+            <FormInput
+              label="Email"
+              name="email"
+              value={userForm.email}
+              onChange={handleUserFormChange}
+              required
+              icon="user"
+            />
             {!editingUser && (
-              <FormInput label="Password" name="password" value={userForm.password} onChange={handleUserFormChange} required type="password" icon="lock" />
+              <FormInput
+                label="Password"
+                name="password"
+                value={userForm.password}
+                onChange={handleUserFormChange}
+                required
+                type="password"
+                icon="lock"
+              />
             )}
-            <FormSelect label="Role" name="role" value={userForm.role} onChange={handleUserFormChange} required>
-              {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            <FormSelect
+              label="Role"
+              name="role"
+              value={userForm.role}
+              onChange={handleUserFormChange}
+              required
+            >
+              {ROLES.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
             </FormSelect>
             {user?.isSuperAdmin ? (
-              <FormSelect label="Branch" name="branch_id" value={userForm.branch_id} onChange={handleUserFormChange} required>
+              <FormSelect
+                label="Branch"
+                name="branch_id"
+                value={userForm.branch_id}
+                onChange={handleUserFormChange}
+                required
+              >
                 <option value="">Select Branch</option>
-                {branches.map(b => <option key={b._id} value={b._id}>{b.name} ({b.code})</option>)}
+                {branches.map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name} ({b.millCode})
+                  </option>
+                ))}
               </FormSelect>
             ) : (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Branch</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Branch
+                </label>
                 <input
                   type="text"
-                  value={user?.branch ? `${user.branch.name} (${user.branch.code})` : 'No Branch'}
+                  value={
+                    user?.branch
+                      ? `${user.branch.name} (${user.branch.millCode})`
+                      : "No Branch"
+                  }
                   disabled
                   className="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 sm:text-sm"
                 />
               </div>
             )}
             <div className="flex justify-end">
-              <Button type="submit" variant="primary" icon="save">{editingUser ? 'Update' : 'Create'}</Button>
+              <Button type="submit" variant="primary" icon="save">
+                {editingUser ? "Update" : "Create"}
+              </Button>
             </div>
           </form>
         </DialogBox>
@@ -232,4 +296,4 @@ const UserManagement = ({ selectedBranchId }) => {
   );
 };
 
-export default UserManagement; 
+export default UserManagement;

@@ -9,14 +9,13 @@ import DialogBox from "../components/common/DialogBox";
 import Button from "../components/common/Button";
 import WarningBox from "../components/common/WarningBox";
 import TableList from "../components/common/TableList";
-import CommonSearchField from "../components/common/CommonSearchField";
+import TableFilters from "../components/common/TableFilters";
+import BranchFilter from "../components/common/BranchFilter";
 import UserTable from "../components/UserTable";
 
 const ROLES = [
   { value: "admin", label: "Branch Admin" },
-  { value: "accountant", label: "Accountant" },
-  { value: "qc", label: "QC Officer" },
-  { value: "sales", label: "Sales Staff" },
+  { value: "manager", label: "Branch Manager" },
 ];
 
 const TABS = [
@@ -26,6 +25,7 @@ const TABS = [
 
 const BranchManagement = () => {
   const { user } = useSelector((state) => state.auth);
+  const { currentBranchId } = useSelector((state) => state.branch);
   const [tab, setTab] = useState("branches");
   const [branches, setBranches] = useState([]);
   const [users, setUsers] = useState([]);
@@ -34,28 +34,18 @@ const BranchManagement = () => {
   const [editingBranch, setEditingBranch] = useState(null);
   const initialBranchForm = {
     name: "",
-    code: "",
+    millCode: "",
     address: {
-      street: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      country: "",
+      region: "",
+      type: "RR", // Default to Raw Rice
     },
     contactInfo: {
       phone: "",
       email: "",
     },
     isActive: true,
-    settings: {
-      currency: "INR",
-      timezone: "Asia/Kolkata",
-      operatingHours: {
-        start: "",
-        end: "",
-      },
-    },
     manager: "",
+    gstn: "",
   };
   const [branchForm, setBranchForm] = useState(initialBranchForm);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -64,10 +54,11 @@ const BranchManagement = () => {
     name: "",
     email: "",
     password: "",
-    role: "sales",
+    role: "admin",
     branch_id: "",
   });
   const [branchFilter, setBranchFilter] = useState("");
+  const [branchSearchFilter, setBranchSearchFilter] = useState("");
   const [userFilter, setUserFilter] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("");
   const [userBranchFilter, setUserBranchFilter] = useState("");
@@ -83,8 +74,8 @@ const BranchManagement = () => {
         branchManagementService.getAllUsers(),
       ])
         .then(([branchesRes, usersRes]) => {
-          setBranches(branchesRes.data || []);
-          setUsers(usersRes.users || usersRes.data || []);
+        setBranches(branchesRes.data || []);
+        setUsers(usersRes.users || usersRes.data || []);
         })
         .finally(() => setLoading(false));
     }
@@ -102,14 +93,6 @@ const BranchManagement = () => {
             contactInfo: {
               ...initialBranchForm.contactInfo,
               ...branch.contactInfo,
-            },
-            settings: {
-              ...initialBranchForm.settings,
-              ...branch.settings,
-              operatingHours: {
-                ...initialBranchForm.settings.operatingHours,
-                ...(branch.settings?.operatingHours || {}),
-              },
             },
             manager: branch.manager?._id || branch.manager || "",
           }
@@ -179,7 +162,7 @@ const BranchManagement = () => {
     setUserForm(
       user
         ? { ...user, password: "" }
-        : { name: "", email: "", password: "", role: "sales", branch_id: "" }
+        : { name: "", email: "", password: "", role: "manager", branch_id: "" }
     );
     setShowUserModal(true);
   };
@@ -218,12 +201,20 @@ const BranchManagement = () => {
 
   // Filtering logic
   const filteredBranches = branches.filter((b) => {
-    const q = branchFilter.toLowerCase();
-    return (
+    // Text search filter
+    const q = branchSearchFilter.toLowerCase();
+    const matchesText = !branchSearchFilter || (
       b.name?.toLowerCase().includes(q) ||
-      b.code?.toLowerCase().includes(q) ||
-      b.address?.city?.toLowerCase().includes(q)
+      b.millCode?.toLowerCase().includes(q) ||
+      b.address?.region?.toLowerCase().includes(q) ||
+      b.contactInfo?.email?.toLowerCase().includes(q)
     );
+
+    // Branch filter - use currentBranchId if set, otherwise use branchFilter
+    const effectiveBranchFilter = currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter;
+    const matchesBranch = !effectiveBranchFilter || b._id === effectiveBranchFilter;
+    
+    return matchesText && matchesBranch;
   });
   const filteredUsers = users.filter((u) => {
     const q = userFilter.toLowerCase();
@@ -233,17 +224,19 @@ const BranchManagement = () => {
       u.role?.toLowerCase().includes(q) ||
       (u.branch_id &&
         (u.branch_id.name?.toLowerCase().includes(q) ||
-          u.branch_id.code?.toLowerCase().includes(q)));
+          u.branch_id.millCode?.toLowerCase().includes(q)));
     const matchesRole = userRoleFilter ? u.role === userRoleFilter : true;
-    const matchesBranch = userBranchFilter
-      ? u.branch_id === userBranchFilter
+    // Branch filter - use currentBranchId if set, otherwise use userBranchFilter
+    const effectiveBranchFilter = currentBranchId && currentBranchId !== 'all' ? currentBranchId : userBranchFilter;
+    const matchesBranch = effectiveBranchFilter
+      ? u.branch_id === effectiveBranchFilter
       : true;
     return matchesText && matchesRole && matchesBranch;
   });
 
   const safeBranches = branches.map((b) => ({
     ...b,
-    id: b._id || b.id || b.code,
+    id: b._id || b.id || b.millCode,
   }));
 
   if (user?.role !== "superadmin") {
@@ -279,43 +272,35 @@ const BranchManagement = () => {
               New Branch
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <CommonSearchField
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              placeholder="Filter branches..."
-            />
-            <FormSelect
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-            >
-              <option value="">All Branches</option>
-              {branches.map((b) => (
-                <option key={b._id} value={b.name}>
-                  {b.name} ({b.code})
-                </option>
-              ))}
-            </FormSelect>
+          <div className="mt-4">
+            <div className="flex items-center gap-4">
+              <TableFilters
+                searchValue={branchSearchFilter}
+                searchPlaceholder="Search branches by name, mill code, region, or email..."
+                onSearchChange={(e) => setBranchSearchFilter(e.target.value)}
+                showSelect={false}
+              />
+              <BranchFilter
+                value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+              />
+            </div>
           </div>
           <TableList
-            columns={["Name", "Code", "City", "Email"]}
-            data={
-              filteredBranches ||
-              safeBranches.filter(
-                (b) => !branchFilter || b.name === branchFilter
-              )
-            }
+            columns={["Name", "Mill Code", "Region", "Type", "Email"]}
+            data={filteredBranches}
             renderRow={(b) => [
               b.name,
-              b.code,
-              b.address?.city || "",
+              b.millCode,
+              b.address?.region || "",
+              b.address?.type === 'RR' ? 'Raw Rice' : b.address?.type === 'BR' ? 'Boiled Rice' : '',
               b.contactInfo?.email || "",
             ]}
             actions={(b) => (
-              <>
+              <div className="flex gap-2">
                 <Button
                   onClick={() => openBranchModal(b)}
-                  variant="info"
+                  variant="secondary"
                   icon="edit"
                 >
                   Edit
@@ -327,15 +312,18 @@ const BranchManagement = () => {
                 >
                   Delete
                 </Button>
-              </>
+              </div>
             )}
             renderDetail={(b) => (
-              <div className="p-4">
+              <div className="p-4 space-y-2">
                 <p>
-                  <strong>Code:</strong> {b.code}
+                  <strong>Mill Code:</strong> {b.millCode}
                 </p>
                 <p>
-                  <strong>City:</strong> {b.address?.city || "N/A"}
+                  <strong>Region:</strong> {b.address?.region || "N/A"}
+                </p>
+                <p>
+                  <strong>Type:</strong> {b.address?.type || "N/A"}
                 </p>
                 <p>
                   <strong>Email:</strong> {b.contactInfo?.email || "N/A"}
@@ -344,6 +332,25 @@ const BranchManagement = () => {
                   <strong>Created At:</strong>{" "}
                   {new Date(b.createdAt).toLocaleDateString()}
                 </p>
+                <p>
+                  <strong>GSTN:</strong> {b.gstn || "N/A"}
+                </p>
+                <div className="flex gap-2">
+                <Button
+                  onClick={() => openBranchModal(b)}
+                   variant="secondary"
+                  icon="edit"
+                >
+                  Edit
+                </Button>
+                <Button
+                  onClick={() => confirmDeleteBranch(b)}
+                  variant="danger"
+                  icon="delete"
+                >
+                  Delete
+                </Button>
+              </div>
               </div>
             )}
           />
@@ -352,7 +359,6 @@ const BranchManagement = () => {
       {tab === "users" && (
         <UserTable
           users={filteredUsers}
-          branches={branches}
           userFilter={userFilter}
           userRoleFilter={userRoleFilter}
           userBranchFilter={userBranchFilter}
@@ -380,103 +386,47 @@ const BranchManagement = () => {
                 label="Name"
                 name="name"
                 value={branchForm.name}
-                onChange={(e) =>
-                  setBranchForm({ ...branchForm, name: e.target.value })
-                }
+                onChange={e => setBranchForm({ ...branchForm, name: e.target.value })}
                 required
                 icon="branch"
               />
               <FormInput
-                label="Code"
-                name="code"
-                value={branchForm.code}
-                onChange={(e) =>
-                  setBranchForm({ ...branchForm, code: e.target.value })
-                }
+                label="Mill Code"
+                name="millCode"
+                value={branchForm.millCode}
+                onChange={e => setBranchForm({ ...branchForm, millCode: e.target.value })}
                 required
                 icon="branch"
               />
             </div>
             {/* Address */}
             <fieldset className="border border-gray-200 rounded p-4">
-              <legend className="text-sm font-semibold text-gray-700 px-2">
-                Address
-              </legend>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <legend className="text-sm font-semibold text-gray-700 px-2">Region & Type</legend>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormInput
-                  label="Street"
-                  name="address.street"
-                  value={branchForm.address.street}
-                  onChange={(e) =>
-                    setBranchForm({
-                      ...branchForm,
-                      address: {
-                        ...branchForm.address,
-                        street: e.target.value,
-                      },
-                    })
-                  }
+                  label="Region"
+                  name="address.region"
+                  value={branchForm.address.region || ''}
+                  onChange={e => setBranchForm({
+                    ...branchForm,
+                    address: { ...branchForm.address, region: e.target.value }
+                  })}
                   required
                   icon="branch"
                 />
-                <FormInput
-                  label="City"
-                  name="address.city"
-                  value={branchForm.address.city}
-                  onChange={(e) =>
-                    setBranchForm({
-                      ...branchForm,
-                      address: { ...branchForm.address, city: e.target.value },
-                    })
-                  }
+                <FormSelect
+                  label="Type"
+                  name="address.type"
+                  value={branchForm.address.type || ''}
+                  onChange={e => setBranchForm({
+                    ...branchForm,
+                    address: { ...branchForm.address, type: e.target.value }
+                  })}
                   required
-                  icon="branch"
-                />
-                <FormInput
-                  label="State"
-                  name="address.state"
-                  value={branchForm.address.state}
-                  onChange={(e) =>
-                    setBranchForm({
-                      ...branchForm,
-                      address: { ...branchForm.address, state: e.target.value },
-                    })
-                  }
-                  required
-                  icon="branch"
-                />
-                <FormInput
-                  label="Zip Code"
-                  name="address.zipCode"
-                  value={branchForm.address.zipCode}
-                  onChange={(e) =>
-                    setBranchForm({
-                      ...branchForm,
-                      address: {
-                        ...branchForm.address,
-                        zipCode: e.target.value,
-                      },
-                    })
-                  }
-                  required
-                  icon="branch"
-                />
-                <FormInput
-                  label="Country"
-                  name="address.country"
-                  value={branchForm.address.country}
-                  onChange={(e) =>
-                    setBranchForm({
-                      ...branchForm,
-                      address: {
-                        ...branchForm.address,
-                        country: e.target.value,
-                      },
-                    })
-                  }
-                  required
-                  icon="branch"
-                />
+                >
+                  <option value="RR">Raw Rice</option>
+                  <option value="BR">Boiled Rice</option>
+                </FormSelect>
               </div>
             </fieldset>
             {/* Contact Info */}
@@ -489,15 +439,8 @@ const BranchManagement = () => {
                   label="Phone"
                   name="contactInfo.phone"
                   value={branchForm.contactInfo.phone}
-                  onChange={(e) =>
-                    setBranchForm({
-                      ...branchForm,
-                      contactInfo: {
-                        ...branchForm.contactInfo,
-                        phone: e.target.value,
-                      },
-                    })
-                  }
+                  onChange={e => setBranchForm({ ...branchForm, contactInfo: { ...branchForm.contactInfo, phone: e.target.value } })}
+                  required
                   icon="phone"
                 />
                 <FormInput
@@ -519,85 +462,20 @@ const BranchManagement = () => {
               </div>
             </fieldset>
             {/* Settings */}
-            <fieldset className="border border-gray-200 rounded p-4">
-              <legend className="text-sm font-semibold text-gray-700 px-2">
-                Settings
-              </legend>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormInput
-                  label="Currency"
-                  name="settings.currency"
-                  value={branchForm.settings.currency}
-                  disabled
-                  icon="currency"
-                />
-                <FormInput
-                  label="Timezone"
-                  name="settings.timezone"
-                  value={branchForm.settings.timezone}
-                  disabled
-                  icon="timezone"
-                />
-                <div className="flex items-center space-x-2 mt-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Active
-                  </label>
-                  <input
-                    type="checkbox"
-                    checked={branchForm.isActive}
-                    onChange={(e) =>
-                      setBranchForm({
-                        ...branchForm,
-                        isActive: e.target.checked,
-                      })
-                    }
-                    className="ml-2"
-                  />
-                </div>
-              </div>
-              {/* Operating Hours */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <FormInput
-                  label="Operating Start"
-                  name="settings.operatingHours.start"
-                  value={branchForm.settings.operatingHours.start}
-                  onChange={(e) =>
-                    setBranchForm({
-                      ...branchForm,
-                      settings: {
-                        ...branchForm.settings,
-                        operatingHours: {
-                          ...branchForm.settings.operatingHours,
-                          start: e.target.value,
-                        },
-                      },
-                    })
-                  }
-                  icon="clock"
-                  type="time"
-                />
-                <FormInput
-                  label="Operating End"
-                  name="settings.operatingHours.end"
-                  value={branchForm.settings.operatingHours.end}
-                  onChange={(e) =>
-                    setBranchForm({
-                      ...branchForm,
-                      settings: {
-                        ...branchForm.settings,
-                        operatingHours: {
-                          ...branchForm.settings.operatingHours,
-                          end: e.target.value,
-                        },
-                      },
-                    })
-                  }
-                  icon="clock"
-                  type="time"
-                />
-              </div>
-            </fieldset>
-            <div className="flex justify-end">
+            {/* Operating Hours */}
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
+              <FormInput
+              label="GSTN"
+              name="gstn"
+              value={branchForm.gstn || ''}
+              onChange={e => setBranchForm({ ...branchForm, gstn: e.target.value })}
+              required
+              icon="branch"
+            />
+            </div>
+            <div className="flex gap-2 justify-end">
+            <Button onClick={()=>closeBranchModal()} variant="secondary" icon="close">Cancel</Button>
+
               <Button type="submit" variant="primary" icon="save">
                 {editingBranch ? "Update" : "Create"}
               </Button>
@@ -665,11 +543,12 @@ const BranchManagement = () => {
               <option value="">Select Branch</option>
               {branches.map((b) => (
                 <option key={b._id} value={b._id}>
-                  {b.name} ({b.code})
+                  {b.name} ({b.millCode})
                 </option>
               ))}
             </FormSelect>
-            <div className="flex justify-end">
+            <div className="flex gap-2 justify-end">
+              <Button onClick={()=>closeUserModal()} variant="secondary" icon="close">Cancel</Button>
               <Button type="submit" variant="primary" icon="save">
                 {editingUser ? "Update" : "Create"}
               </Button>
@@ -707,4 +586,4 @@ const BranchManagement = () => {
   );
 };
 
-export default BranchManagement;
+export default BranchManagement; 

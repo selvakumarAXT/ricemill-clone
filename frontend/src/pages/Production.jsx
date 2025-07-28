@@ -1,21 +1,27 @@
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import productionService from '../services/productionService';
+import TableFilters from '../components/common/TableFilters';
+import BranchFilter from '../components/common/BranchFilter';
 
-const Production = ({ selectedBranchId }) => {
+const Production = () => {
   const [production, setProduction] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [productionFilter, setProductionFilter] = useState('');
+  const [branchFilter, setBranchFilter] = useState('');
+  const { currentBranchId } = useSelector((state) => state.branch);
 
   useEffect(() => {
     fetchProduction();
     // eslint-disable-next-line
-  }, [selectedBranchId]);
+  }, [currentBranchId]);
 
   const fetchProduction = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await productionService.getAllProduction(selectedBranchId);
+      const res = await productionService.getAllProduction(currentBranchId);
       setProduction(res.items || []);
     } catch (err) {
       setError(err.message || 'Failed to fetch production');
@@ -33,11 +39,43 @@ const Production = ({ selectedBranchId }) => {
         </p>
       </div>
       {error && <div className="mb-4 text-red-600">{error}</div>}
+      
+      {/* Search and Filters */}
+      <div className="mb-6">
+        <div className="flex items-center gap-4">
+          <TableFilters
+            searchValue={productionFilter}
+            searchPlaceholder="Search production items..."
+            onSearchChange={(e) => setProductionFilter(e.target.value)}
+            showSelect={false}
+          />
+          <BranchFilter
+            value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+          />
+        </div>
+      </div>
+      
       {loading ? (
         <div className="text-center py-8">Loading...</div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {production.map((item) => (
+          {production
+            .filter(item => {
+              // Text search filter
+              const q = productionFilter.toLowerCase();
+              const matchesText = !productionFilter || (
+                item.name?.toLowerCase().includes(q) ||
+                item.description?.toLowerCase().includes(q)
+              );
+
+              // Branch filter - use currentBranchId if set, otherwise use branchFilter
+              const effectiveBranchFilter = currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter;
+              const matchesBranch = !effectiveBranchFilter || item.branch_id === effectiveBranchFilter;
+
+              return matchesText && matchesBranch;
+            })
+            .map((item) => (
             <div key={item._id} className="bg-white p-6 rounded-lg shadow">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{item.name}</h3>
               <div className="text-3xl font-bold text-indigo-600 mb-2">{item.quantity}</div>

@@ -6,8 +6,8 @@ exports.getAllProduction = async (req, res) => {
   let query = Production.find({});
   let branchFilter = {};
 
-  if (req.user.isSuperAdmin && req.query.branchId) {
-    branchFilter = { branch_id: req.query.branchId };
+  if (req.user.isSuperAdmin && req.query.branch_id) {
+    branchFilter = { branch_id: req.query.branch_id };
   } else if (!req.user.isSuperAdmin && req.user.branch_id) {
     branchFilter = { branch_id: req.user.branch_id };
   }

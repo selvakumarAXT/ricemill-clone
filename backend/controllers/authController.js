@@ -42,7 +42,7 @@ exports.register = async (req, res) => {
     });
 
     // Populate branch info for response
-    const populatedUser = await User.findById(user._id).populate('branch_id', 'name code');
+    const populatedUser = await User.findById(user._id).populate('branch_id', 'name millCode');
 
     res.status(201).json({
       success: true,
@@ -60,7 +60,7 @@ exports.register = async (req, res) => {
         branch: populatedUser.branch_id && typeof populatedUser.branch_id === 'object' ? {
           id: populatedUser.branch_id._id,
           name: populatedUser.branch_id.name,
-          code: populatedUser.branch_id.code
+          millCode: populatedUser.branch_id.millCode
         } : null
       }
     });
@@ -120,7 +120,7 @@ exports.login = async (req, res) => {
     await user.save();
 
     // Populate branch info for response
-    const populatedUser = await User.findById(user._id).populate('branch_id', 'name code');
+    const populatedUser = await User.findById(user._id).populate('branch_id', 'name millCode');
     sendTokenResponse(populatedUser, 200, res);
   } catch (error) {
     res.status(400).json({
@@ -135,7 +135,7 @@ exports.login = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).populate('branch_id', 'name code');
+    const user = await User.findById(req.user.id).populate('branch_id', 'name millCode');
 
     res.status(200).json({
       success: true,
@@ -152,7 +152,7 @@ exports.getMe = async (req, res) => {
         branch: user.branch_id && typeof user.branch_id === 'object' ? {
           id: user.branch_id._id,
           name: user.branch_id.name,
-          code: user.branch_id.code
+          millCode: user.branch_id.millCode
         } : null
       }
     });
