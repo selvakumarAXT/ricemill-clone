@@ -269,3 +269,4 @@ For support, email support@ricemill.com or create an issue in the repository.
 ---
 
 **Built with ❤️ for Rice Mill Management**
+# rice-mill
