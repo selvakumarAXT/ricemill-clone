@@ -11,6 +11,7 @@ import WarningBox from "../components/common/WarningBox";
 import TableList from "../components/common/TableList";
 import TableFilters from "../components/common/TableFilters";
 import BranchFilter from "../components/common/BranchFilter";
+import ResponsiveFilters from "../components/common/ResponsiveFilters";
 import UserTable from "../components/UserTable";
 
 const ROLES = [
@@ -239,53 +240,89 @@ const BranchManagement = () => {
     id: b._id || b.id || b.millCode,
   }));
 
+  if (loading) return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-2 text-gray-600">Loading branches...</p>
+      </div>
+    </div>
+  );
+
   if (user?.role !== "superadmin") {
-    return <div className="p-8 text-red-600 font-bold">Access Denied</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg border border-red-200 p-8 text-center">
+          <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <h2 className="text-xl font-bold text-red-600 mb-2">Access Denied</h2>
+          <p className="text-gray-600">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">
-        Branch Management (Super Admin)
-      </h1>
-      <div className="mb-6 flex gap-2">
-        {TABS.map((t) => (
-          <Button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            variant={tab === t.key ? "primary" : "secondary"}
-            icon={t.key === "branches" ? "branch" : "users"}
-          >
-            {t.label}
-          </Button>
-        ))}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Mobile Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
+        <div className="flex flex-col space-y-4">
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Branch Management
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">Super Admin Panel</p>
+          </div>
+        </div>
       </div>
+
+      {/* Main Content */}
+      <div className="px-4 py-6 sm:px-6">
+        {/* Mobile Tabs */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 mb-6">
+          <div className="flex gap-2">
+            {TABS.map((t) => (
+              <Button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                variant={tab === t.key ? "primary" : "secondary"}
+                icon={t.key === "branches" ? "branch" : "users"}
+                className={`flex-1 sm:flex-none ${
+                  tab === t.key 
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {t.label}
+              </Button>
+            ))}
+          </div>
+        </div>
       {tab === "branches" && (
         <div className="mb-8">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Branches</h2>
-            <Button
-              onClick={() => openBranchModal()}
-              variant="primary"
-              icon="add"
-            >
-              New Branch
-            </Button>
+              <Button
+                onClick={() => openBranchModal()}
+                variant="primary"
+                icon="add"
+              >
+                New Branch
+              </Button>
           </div>
-          <div className="mt-4">
-            <div className="flex items-center gap-4">
-              <TableFilters
-                searchValue={branchSearchFilter}
-                searchPlaceholder="Search branches by name, mill code, region, or email..."
-                onSearchChange={(e) => setBranchSearchFilter(e.target.value)}
-                showSelect={false}
-              />
-              <BranchFilter
-                value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
-                onChange={(e) => setBranchFilter(e.target.value)}
-              />
-            </div>
-          </div>
+          <ResponsiveFilters title="Filters & Search" className="mt-4">
+            <TableFilters
+              searchValue={branchSearchFilter}
+              searchPlaceholder="Search branches by name, mill code, region, or email..."
+              onSearchChange={(e) => setBranchSearchFilter(e.target.value)}
+              showSelect={false}
+            />
+            <BranchFilter
+              value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+            />
+          </ResponsiveFilters>
           <TableList
             columns={["Name", "Mill Code", "Region", "Type", "Email"]}
             data={filteredBranches}
@@ -368,6 +405,7 @@ const BranchManagement = () => {
           openUserModal={openUserModal}
           deleteUser={deleteUser}
           roles={ROLES}
+          showAddButton={currentBranchId && currentBranchId !== 'all'}
         />
       )}
       {/* Branch Modal */}
@@ -582,6 +620,7 @@ const BranchManagement = () => {
           </div>
         </DialogBox>
       )}
+      </div>
     </div>
   );
 };

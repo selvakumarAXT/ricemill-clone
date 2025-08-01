@@ -1,13 +1,13 @@
 // Calculation constants
-export const KG_PER_BAG = 500;
+export const KG_PER_BAG = 50;
 
 // Paddy calculations
-export const calculateWeightFromBags = (bags) => {
-  return bags * KG_PER_BAG;
+export const calculateWeightFromBags = (bags, kgPerBag = KG_PER_BAG) => {
+  return bags * kgPerBag;
 };
 
-export const calculateBagsFromWeight = (weight) => {
-  return Math.round(weight / KG_PER_BAG);
+export const calculateBagsFromWeight = (weight, kgPerBag = KG_PER_BAG) => {
+  return Math.round(weight / kgPerBag);
 };
 
 // Gunny calculations
@@ -26,9 +26,22 @@ export const updateBagsFromGunny = (gunnyData) => {
   return calculateTotalGunny(gunnyData);
 };
 
-// Format weight for display
-export const formatWeight = (weight) => {
-  return `${weight.toLocaleString()} kg`;
+// Convert weight from kg to tons
+export const convertKgToTons = (weightInKg) => {
+  if (!weightInKg || weightInKg === 0) return 0;
+  return (weightInKg / 1000).toFixed(2);
+};
+
+// Format weight display with proper unit
+export const formatWeight = (weightInKg, unit = 'tons') => {
+  if (!weightInKg || weightInKg === 0) return '0 tons';
+  
+  if (unit === 'tons') {
+    const tons = convertKgToTons(weightInKg);
+    return `${tons} tons`;
+  }
+  
+  return `${weightInKg} kg`;
 };
 
 // Format bags for display

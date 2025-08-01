@@ -84,14 +84,26 @@ export const formatPaddyData = (formData) => {
       bags: parseInt(formData.paddy?.bags) || 0,
       weight: parseFloat(formData.paddy?.weight) || 0,
     },
+    createdBy: formData.createdBy,
+    createdAt: formData.createdAt,
+    updatedAt: formData.updatedAt,
+    branch_id: formData.branch_id,
   };
 };
 
 // Helper function to format API response for frontend
 export const formatPaddyResponse = (paddyData) => {
+  // Format issueDate for HTML date input (YYYY-MM-DD)
+  const formatDateForInput = (date) => {
+    if (!date) return '';
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) return '';
+    return dateObj.toISOString().split('T')[0];
+  };
+
   return {
     id: paddyData._id,
-    issueDate: paddyData.issueDate,
+    issueDate: formatDateForInput(paddyData.issueDate),
     issueMemo: paddyData.issueMemo,
     lorryNumber: paddyData.lorryNumber,
     paddyFrom: paddyData.paddyFrom,

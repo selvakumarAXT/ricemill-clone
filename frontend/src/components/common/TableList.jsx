@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import DialogBox from './DialogBox';
 import WarningBox from './WarningBox';
 import Button from './Button';
+import Icon from './Icon';
 
 function downloadCSV(data, columns, filename = 'export.csv') {
   const header = columns.map(col => col.label || col).join(',');
@@ -42,9 +43,19 @@ const TableList = ({
   empty = 'No data',
   tableWidth = '100%', // NEW: allow custom width
   getDeleteWarning,
+  pageSizeOptions = [5, 10, 25, 50, 100], // NEW: customizable page size options
+  
+  // Server-side pagination props
+  serverSidePagination = false,
+  paginationData = null, // { page, limit, total, pages }
+  onPageChange = null, // callback for page changes
+  onPageSizeChange = null, // callback for page size changes
+  onSort = null, // callback for sorting
+  sortData = null, // { col, dir }
 }) => {
   const [expanded, setExpanded] = useState(null); // index of expanded row
   const [page, setPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(pageSize);
   const [sort, setSort] = useState({ col: null, dir: 'asc' });
   const [selected, setSelected] = useState([]); // array of row indices
   const [hiddenCols, setHiddenCols] = useState([]); // array of col indices
@@ -55,6 +66,20 @@ const TableList = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [rowToDelete, setRowToDelete] = useState(null);
   const [deleteHandler, setDeleteHandler] = useState(null);
+
+  // Use server-side pagination data if available
+  const isServerSide = serverSidePagination && paginationData;
+  const currentPage = isServerSide ? paginationData.page : page;
+  const totalPages = isServerSide ? paginationData.pages : Math.ceil(data.length / currentPageSize) || 1;
+  const totalItems = isServerSide ? paginationData.total : data.length;
+  const currentSort = isServerSide ? sortData : sort;
+
+  // Reset to first page when page size changes (only for client-side)
+  React.useEffect(() => {
+    if (!isServerSide) {
+      setPage(1);
+    }
+  }, [currentPageSize, isServerSide]);
 
   // Normalize columns to objects
   const normColumns = columns.map((col, idx) => {
@@ -70,44 +95,54 @@ const TableList = ({
   });
   const visibleCols = normColumns.filter((_, i) => !hiddenCols.includes(i));
 
-  // Sorting logic
+  // Sorting logic - only for client-side
   let sortedData = [...data];
-  if (sort.col !== null) {
-    const col = normColumns[sort.col];
+  if (!isServerSide && currentSort.col !== null) {
+    const col = normColumns[currentSort.col];
     const accessor = col.accessor;
     sortedData.sort((a, b) => {
       let aVal = a[accessor];
       let bVal = b[accessor];
-      if (col.sortFn) return col.sortFn(a, b, sort.dir);
+      if (col.sortFn) return col.sortFn(a, b, currentSort.dir);
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
       if (aVal === undefined || aVal === null) return 1;
       if (bVal === undefined || bVal === null) return -1;
-      if (aVal < bVal) return sort.dir === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sort.dir === 'asc' ? 1 : -1;
+      if (aVal < bVal) return currentSort.dir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return currentSort.dir === 'asc' ? 1 : -1;
       return 0;
     });
   }
 
-  const totalPages = Math.ceil(sortedData.length / pageSize) || 1;
-  const pagedData = sortedData.slice((page - 1) * pageSize, page * pageSize);
+  // Use data directly for server-side, or paginate for client-side
+  const displayData = isServerSide ? data : sortedData.slice((currentPage - 1) * currentPageSize, currentPage * currentPageSize);
 
   const handleRowClick = (idx) => {
     setExpanded(expanded === idx ? null : idx);
   };
 
   const handleSort = (colIdx) => {
-    setSort(prev => {
-      if (prev.col === colIdx) {
-        return { col: colIdx, dir: prev.dir === 'asc' ? 'desc' : 'asc' };
-      }
-      return { col: colIdx, dir: 'asc' };
-    });
+    if (isServerSide && onSort) {
+      // Server-side sorting
+      const newSort = {
+        col: colIdx,
+        dir: currentSort.col === colIdx && currentSort.dir === 'asc' ? 'desc' : 'asc'
+      };
+      onSort(newSort);
+    } else {
+      // Client-side sorting
+      setSort(prev => {
+        if (prev.col === colIdx) {
+          return { col: colIdx, dir: prev.dir === 'asc' ? 'desc' : 'asc' };
+        }
+        return { col: colIdx, dir: 'asc' };
+      });
+    }
   };
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelected(pagedData.map((_, i) => (page - 1) * pageSize + i));
+      setSelected(displayData.map((_, i) => (currentPage - 1) * currentPageSize + i));
     } else {
       setSelected([]);
     }
@@ -143,11 +178,13 @@ const TableList = ({
 
   // CSV Export
   const handleExport = () => {
-    downloadCSV(sortedData, visibleCols);
+    // For server-side, we might want to export all data, not just current page
+    const exportData = isServerSide ? data : sortedData;
+    downloadCSV(exportData, visibleCols);
   };
 
   // Row numbering
-  const getRowNumber = (i) => (page - 1) * pageSize + i + 1;
+  const getRowNumber = (i) => (currentPage - 1) * currentPageSize + i + 1;
 
   // Loading/empty state
   if (loading) return <div className="p-4 text-center text-gray-500">Loading...</div>;
@@ -173,6 +210,56 @@ const TableList = ({
     setDeleteHandler(null);
   };
 
+  // Enhanced pagination functions
+  const goToPage = (pageNum) => {
+    if (isServerSide && onPageChange) {
+      onPageChange(pageNum);
+    } else {
+      setPage(Math.max(1, Math.min(totalPages, pageNum)));
+    }
+  };
+
+  const goToFirstPage = () => goToPage(1);
+  const goToLastPage = () => goToPage(totalPages);
+  const goToPreviousPage = () => goToPage(currentPage - 1);
+  const goToNextPage = () => goToPage(currentPage + 1);
+
+  // Handle page size change
+  const handlePageSizeChange = (newPageSize) => {
+    if (isServerSide && onPageSizeChange) {
+      onPageSizeChange(newPageSize);
+    } else {
+      setCurrentPageSize(newPageSize);
+    }
+  };
+
+  // Generate page numbers to show
+  const getPageNumbers = () => {
+    const delta = 2; // Number of pages to show on each side of current page
+    const range = [];
+    const rangeWithDots = [];
+
+    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+      range.push(i);
+    }
+
+    if (currentPage - delta > 2) {
+      rangeWithDots.push(1, '...');
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (currentPage + delta < totalPages - 1) {
+      rangeWithDots.push('...', totalPages);
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages);
+    }
+
+    return rangeWithDots;
+  };
+
   return (
     <div className={`w-full max-w-full overflow-x-auto ${className} relative`}>
       {/* Column controls */}
@@ -193,23 +280,23 @@ const TableList = ({
       )}
       <div className={stickyHeader ? 'overflow-x-auto max-h-[60vh]' : ''}>
         <table
-          className="min-w-full w-full divide-y divide-gray-200"
+          className="min-w-full w-full divide-y divide-gray-200 border border-gray-300"
           style={{ width: tableWidth }}
         >
           <thead className={stickyHeader ? 'bg-gray-50 sticky top-0 z-10' : 'bg-gray-50'}>
             <tr>
-              {showRowNumbers && <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>}
-              {selectable && <th className="px-3 py-3"><input type="checkbox" checked={selected.length === pagedData.length && pagedData.length > 0} onChange={handleSelectAll} /></th>}
+              {showRowNumbers && <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">#</th>}
+              {selectable && <th className="px-3 py-3 border border-gray-300"><input type="checkbox" checked={selected.length === displayData.length && displayData.length > 0} onChange={handleSelectAll} /></th>}
               {visibleCols.map((col, i) => (
                 <th
                   key={col.idx}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none relative"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none relative border border-gray-300"
                   onClick={() => handleSort(col.idx)}
                   style={colWidths[col.idx] ? { width: colWidths[col.idx] } : {}}
                 >
                   {col.label}
-                  {sort.col === col.idx && (
-                    <span className="ml-1">{sort.dir === 'asc' ? '▲' : '▼'}</span>
+                  {currentSort.col === col.idx && (
+                    <span className="ml-1">{currentSort.dir === 'asc' ? '▲' : '▼'}</span>
                   )}
                   {resizableColumns && (
                     <span
@@ -219,20 +306,20 @@ const TableList = ({
                   )}
                 </th>
               ))}
-              {actions && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>}
+              {actions && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Actions</th>}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {pagedData.map((row, i) => (
-              <React.Fragment key={row.id || row._id || `row-${(page - 1) * pageSize + i}`}>
+            {displayData.map((row, i) => (
+              <React.Fragment key={row.id || row._id || `row-${(currentPage - 1) * currentPageSize + i}`}>
                 <tr
                   className="cursor-pointer hover:bg-gray-50"
                   onClick={() => renderDetail && handleRowClick(i)}
                 >
-                  {showRowNumbers && <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{getRowNumber(i)}</td>}
-                  {selectable && <td className="px-3 py-4"><input type="checkbox" checked={selected.includes((page - 1) * pageSize + i)} onChange={() => handleSelectRow((page - 1) * pageSize + i)} /></td>}
+                  {showRowNumbers && <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">{getRowNumber(i)}</td>}
+                  {selectable && <td className="px-3 py-4 border border-gray-300"><input type="checkbox" checked={selected.includes((currentPage - 1) * currentPageSize + i)} onChange={() => handleSelectRow((currentPage - 1) * currentPageSize + i)} /></td>}
                   {visibleCols.map((col, j) => (
-                    <td key={`${row.id || row._id || i}-${col.idx}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td key={`${row.id || row._id || i}-${col.idx}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
                       {col.renderCell ? col.renderCell(row[col.key], i) : (renderRow ? renderRow(row, i)[col.idx] : (() => {
                         const value = row[col.key];
                         if (value === null || value === undefined) return '';
@@ -241,7 +328,7 @@ const TableList = ({
                       })())}
                     </td>
                   ))}
-                  {actions && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{
+                  {actions && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">{
                     (() => {
                       const rendered = actions(row, i);
                       if (Array.isArray(rendered)) {
@@ -272,7 +359,7 @@ const TableList = ({
                   }</td>}
                 </tr>
                 {renderDetail && expanded === i && (
-                  <tr key={`detail-${row.id || row._id || (page - 1) * pageSize + i}`}>
+                  <tr key={`detail-${row.id || row._id || (currentPage - 1) * currentPageSize + i}`}>
                     <td colSpan={visibleCols.length + (actions ? 1 : 0) + (selectable ? 1 : 0) + (showRowNumbers ? 1 : 0)} className="bg-gray-50 px-6 py-4">
                       {renderDetail(row, i)}
                     </td>
@@ -286,27 +373,98 @@ const TableList = ({
       {/* Bulk actions */}
       {selectable && onBulkAction && selected.length > 0 && (
         <div className="flex gap-2 mt-2">
-          {onBulkAction(selected, pagedData)}
+          {onBulkAction(selected, displayData)}
         </div>
       )}
-      {/* Pagination */}
+      {/* Enhanced Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-end items-center gap-2 mt-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <span className="text-sm">Page {page} of {totalPages}</span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-          >
-            Next
-          </button>
+        <div className="mt-4 px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-700">Show:</label>
+              <select
+                value={isServerSide ? paginationData.limit : currentPageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {pageSizeOptions.map(size => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <span className="text-sm text-gray-700">entries</span>
+            </div>
+
+            {/* Results Info */}
+            <div className="text-sm text-gray-700">
+              Showing {((currentPage - 1) * currentPageSize) + 1} to {Math.min(currentPage * currentPageSize, totalItems)} of {totalItems} results
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center gap-1">
+              {/* First Page */}
+              <button
+                onClick={goToFirstPage}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="First page"
+              >
+                <Icon name="chevronDoubleLeft" className="w-4 h-4" />
+              </button>
+
+              {/* Previous Page */}
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Previous page"
+              >
+                <Icon name="chevronLeft" className="w-4 h-4" />
+              </button>
+
+              {/* Page Numbers */}
+              {getPageNumbers().map((pageNum, index) => (
+                <React.Fragment key={index}>
+                  {pageNum === '...' ? (
+                    <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => goToPage(pageNum)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        currentPage === pageNum
+                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )}
+                </React.Fragment>
+              ))}
+
+              {/* Next Page */}
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Next page"
+              >
+                <Icon name="chevronRight" className="w-4 h-4" />
+              </button>
+
+              {/* Last Page */}
+              <button
+                onClick={goToLastPage}
+                disabled={currentPage === totalPages}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Last page"
+              >
+                <Icon name="chevronDoubleRight" className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {/* Delete Confirmation Dialog */}

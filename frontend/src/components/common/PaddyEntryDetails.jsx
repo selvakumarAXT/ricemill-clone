@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import FormInput from './FormInput';
+import BagWeightSelector from './BagWeightSelector';
 import { 
   KG_PER_BAG, 
   calculateWeightFromBags, 
   calculateBagsFromWeight,
-  validatePaddyData 
+  validatePaddyData,
+  formatWeight
 } from '../../utils/calculations';
 
 const PaddyEntryDetails = ({ 
@@ -14,10 +16,12 @@ const PaddyEntryDetails = ({
   showLegend = true,
   className = "",
   gridCols = "grid-cols-1 md:grid-cols-2",
-  enableAutoCalculation = true
+  enableAutoCalculation = true,
+  onBagWeightChange = null
 }) => {
   const [isAutoCalculationEnabled, setIsAutoCalculationEnabled] = useState(enableAutoCalculation);
   const [validationErrors, setValidationErrors] = useState([]);
+  const [currentBagWeight, setCurrentBagWeight] = useState(KG_PER_BAG);
 
   const handlePaddyChange = (e) => {
     const { name, value } = e.target;
@@ -33,10 +37,10 @@ const PaddyEntryDetails = ({
     if (isAutoCalculationEnabled) {
       if (fieldName === 'bags') {
         // When bags change, calculate weight
-        newPaddyData.weight = calculateWeightFromBags(numericValue);
+        newPaddyData.weight = calculateWeightFromBags(numericValue, currentBagWeight);
       } else if (fieldName === 'weight') {
         // When weight changes, calculate bags
-        newPaddyData.bags = calculateBagsFromWeight(numericValue);
+        newPaddyData.bags = calculateBagsFromWeight(numericValue, currentBagWeight);
       }
     }
     
@@ -61,31 +65,61 @@ const PaddyEntryDetails = ({
       {showLegend && (
         <legend className="text-sm font-semibold text-gray-700 px-2">
           Paddy Details 
-          {isAutoCalculationEnabled && <span className="text-xs text-gray-500">(1 bag = 500kg)</span>}
+          {isAutoCalculationEnabled && <span className="text-xs text-gray-500">(1 bag = {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons)</span>}
           {!enableAutoCalculation && <span className="text-xs text-blue-600">(auto-calculated from gunny)</span>}
         </legend>
       )}
       
-      {/* Auto-calculation toggle */}
+      {/* Auto-calculation toggle and bag weight selector */}
       {enableAutoCalculation && (
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="autoCalculation"
-              checked={isAutoCalculationEnabled}
-              onChange={toggleAutoCalculation}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="autoCalculation" className="text-sm text-gray-700">
-              Enable auto-calculation
-            </label>
+        <div className="mb-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="autoCalculation"
+                checked={isAutoCalculationEnabled}
+                onChange={toggleAutoCalculation}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="autoCalculation" className="text-sm text-gray-700">
+                Enable auto-calculation
+              </label>
+            </div>
+            {isAutoCalculationEnabled && (
+              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                ✓ Active
+              </span>
+            )}
           </div>
-          {isAutoCalculationEnabled && (
-            <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-              ✓ Active
-            </span>
-          )}
+          
+          {/* Bag Weight Selector */}
+          <BagWeightSelector
+            value={currentBagWeight.toString()}
+            onChange={(e) => setCurrentBagWeight(parseFloat(e.target.value))}
+            label="Bag Weight"
+            disabled={disabled}
+            onWeightChange={(weight) => {
+              setCurrentBagWeight(weight);
+              // Call parent callback if provided
+              if (onBagWeightChange) {
+                onBagWeightChange(weight);
+              }
+              // Recalculate if auto-calculation is enabled
+              if (isAutoCalculationEnabled && paddyData?.bags) {
+                const newWeight = calculateWeightFromBags(paddyData.bags, weight);
+                onChange({
+                  target: {
+                    name: 'paddy',
+                    value: {
+                      ...paddyData,
+                      weight: newWeight
+                    }
+                  }
+                });
+              }
+            }}
+          />
         </div>
       )}
       
@@ -102,7 +136,7 @@ const PaddyEntryDetails = ({
           placeholder="0"
         />
         <FormInput
-          label="Weight (kg)"
+          label="Weight (tons)"
           name="paddy.weight"
           type="number"
           value={paddyData?.weight || 0}
@@ -121,8 +155,8 @@ const PaddyEntryDetails = ({
           <div className="text-xs text-blue-800">
             <div className="font-medium mb-1">💡 Auto-calculation is active:</div>
             <ul className="space-y-1">
-              <li>• Enter <strong>bags</strong> → Weight will be calculated (bags × 500kg)</li>
-              <li>• Enter <strong>weight</strong> → Bags will be calculated (weight ÷ 500kg)</li>
+              <li>• Enter <strong>bags</strong> → Weight will be calculated (bags × {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons)</li>
+              <li>• Enter <strong>weight</strong> → Bags will be calculated (weight ÷ {currentBagWeight}kg)</li>
             </ul>
           </div>
         </div>
@@ -133,7 +167,7 @@ const PaddyEntryDetails = ({
         <div className="mt-3 p-3 bg-gray-50 rounded-lg">
           <div className="text-xs text-gray-600">
             <div className="font-medium mb-1">📝 Manual mode:</div>
-            <div>You can enter bags and weight independently. Standard: 1 bag = 500kg</div>
+            <div>You can enter bags and weight independently. Current standard: 1 bag = {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons</div>
           </div>
         </div>
       )}
@@ -143,7 +177,7 @@ const PaddyEntryDetails = ({
         <div className="mt-3 p-3 bg-blue-50 rounded-lg">
           <div className="text-xs text-blue-800">
             <div className="font-medium mb-1">🎯 Auto-calculated from Gunny:</div>
-            <div>Both bags and weight are automatically calculated from gunny count. Bags = Total Gunny, Weight = Bags × 500kg</div>
+            <div>Both bags and weight are automatically calculated from gunny count. Bags = Total Gunny, Weight = Bags × {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons</div>
           </div>
         </div>
       )}

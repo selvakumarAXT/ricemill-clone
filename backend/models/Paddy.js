@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { KG_PER_BAG } = require('../../frontend/src/utils/calculations');
 
 const paddySchema = new mongoose.Schema({
   issueDate: {
@@ -65,6 +66,12 @@ const paddySchema = new mongoose.Schema({
       min: 0,
     },
   },
+  bagWeight: {
+    type: Number,
+    default: KG_PER_BAG,
+    min: 1,
+    max: 100,
+  },
   branch_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Branch',
@@ -94,9 +101,9 @@ paddySchema.pre('save', function(next) {
   const totalGunny = this.totalGunny;
   this.paddy.bags = totalGunny;
   
-  // Auto-calculate weight if not provided (1 bag = 500kg)
+  // Auto-calculate weight if not provided (use bagWeight field)
   if (!this.paddy.weight || this.paddy.weight === 0) {
-    this.paddy.weight = totalGunny * 500;
+    this.paddy.weight = totalGunny * this.bagWeight;
   }
   
   next();

@@ -3,6 +3,9 @@ import { useSelector } from 'react-redux';
 import inventoryService from '../services/inventoryService';
 import TableFilters from '../components/common/TableFilters';
 import BranchFilter from '../components/common/BranchFilter';
+import TableList from '../components/common/TableList';
+import Button from '../components/common/Button';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const Inventory = () => {
   const [inventory, setInventory] = useState([]);
@@ -10,6 +13,7 @@ const Inventory = () => {
   const [error, setError] = useState('');
   const [inventoryFilter, setInventoryFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
+  const [expandedInventory, setExpandedInventory] = useState(null);
   const { currentBranchId } = useSelector((state) => state.branch);
 
   useEffect(() => {
@@ -30,19 +34,83 @@ const Inventory = () => {
     }
   };
 
+  // Define columns for the table
+  const columns = [
+    { key: "name", label: "Name" },
+    { key: "quantity", label: "Quantity", render: (quantity) => (
+      <span className="font-semibold text-indigo-600">{quantity}</span>
+    )},
+    { key: "description", label: "Description" },
+    { key: "branch_id", label: "Branch", render: (branch) => branch?.name || "N/A" },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (_, record) => (
+        <div className="flex gap-2">
+          <Button
+            onClick={() => console.log('Edit inventory:', record)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 text-xs"
+          >
+            Edit
+          </Button>
+          <Button
+            onClick={() => console.log('Delete inventory:', record)}
+            className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 text-xs"
+          >
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const filteredInventory = inventory.filter(item => {
+    // Text search filter
+    // Branch filtering is now handled automatically by the API
+    const q = inventoryFilter.toLowerCase();
+    const matchesText = !inventoryFilter || (
+      item.name?.toLowerCase().includes(q) ||
+      item.description?.toLowerCase().includes(q)
+    );
+
+    return matchesText;
+  });
+
+  if (loading) return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+      <LoadingSpinner />
+    </div>
+  );
+
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
-        <p className="mt-2 text-gray-600">
-          Track and manage rice mill inventory
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Mobile Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
+        <div className="flex flex-col space-y-4">
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Inventory Management
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">Track and manage rice mill inventory</p>
+          </div>
+        </div>
       </div>
-      {error && <div className="mb-4 text-red-600">{error}</div>}
-      
-      {/* Search and Filters */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4">
+
+      {/* Main Content */}
+      <div className="px-4 py-6 sm:px-6">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-red-700 font-medium">{error}</span>
+            </div>
+          </div>
+        )}
+
+        <ResponsiveFilters title="Filters & Search" className="mb-6">
           <TableFilters
             searchValue={inventoryFilter}
             searchPlaceholder="Search inventory items..."
@@ -53,44 +121,165 @@ const Inventory = () => {
             value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
             onChange={(e) => setBranchFilter(e.target.value)}
           />
-        </div>
-      </div>
-      
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {inventory
-            .filter(item => {
-              // Text search filter
-              const q = inventoryFilter.toLowerCase();
-              const matchesText = !inventoryFilter || (
-                item.name?.toLowerCase().includes(q) ||
-                item.description?.toLowerCase().includes(q)
-              );
+        </ResponsiveFilters>
 
-              // Branch filter - use currentBranchId if set, otherwise use branchFilter
-              const effectiveBranchFilter = currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter;
-              const matchesBranch = !effectiveBranchFilter || item.branch_id === effectiveBranchFilter;
-
-              return matchesText && matchesBranch;
-            })
-            .map((item) => (
-            <div key={item._id} className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{item.name}</h3>
-              <div className="text-3xl font-bold text-indigo-600 mb-2">{item.quantity}</div>
-              <p className="text-gray-600">{item.description}</p>
-            </div>
-          ))}
+        {/* Desktop Table View */}
+        <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+            <h3 className="text-lg font-semibold text-gray-800">Inventory Records</h3>
+            <p className="text-sm text-gray-600 mt-1">Total: {filteredInventory.length} records</p>
+          </div>
+          <TableList
+            data={filteredInventory}
+            columns={columns}
+            actions={(item) => [
+              <Button
+                key="edit"
+                onClick={() => console.log('Edit inventory:', item)}
+                variant="info"
+                icon="edit"
+              >
+                Edit
+              </Button>,
+              <Button
+                key="delete"
+                onClick={() => console.log('Delete inventory:', item)}
+                variant="danger"
+                icon="delete"
+              >
+                Delete
+              </Button>,
+            ]}
+            renderDetail={(item) => (
+              <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border-l-4 border-purple-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Name:</span>
+                      <span className="text-gray-900 font-medium">{item.name}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Quantity:</span>
+                      <span className="text-gray-900 font-medium text-indigo-600">{item.quantity}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Branch:</span>
+                      <span className="text-gray-900 font-medium">{item.branch_id?.name || 'N/A'}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">Description</h4>
+                      <p className="text-gray-700">{item.description}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          />
         </div>
-      )}
 
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Inventory Items</h3>
-        </div>
-        <div className="p-6">
-          <p className="text-gray-500 text-center">Detailed inventory management coming soon...</p>
+        {/* Mobile Table View */}
+        <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+            <h3 className="text-lg font-semibold text-gray-800">Inventory Records</h3>
+            <p className="text-sm text-gray-600 mt-1">Total: {filteredInventory.length} records</p>
+          </div>
+          
+          <div className="p-4">
+            {filteredInventory.length === 0 ? (
+              <div className="text-center py-8">
+                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No inventory records</h3>
+                <p className="mt-1 text-sm text-gray-500">Get started by creating a new inventory record.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredInventory.map((item) => (
+                  <div key={item._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                    {/* Mobile Table Row */}
+                    <div 
+                      className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => setExpandedInventory(expandedInventory === item._id ? null : item._id)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{item.name}</div>
+                          <div className="text-sm text-gray-600">{item.description}</div>
+                          <div className="text-xs text-gray-500">
+                            Quantity: {item.quantity} • {item.branch_id?.name || 'N/A'}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('Edit inventory:', item);
+                            }}
+                            variant="info"
+                            icon="edit"
+                            className="text-xs px-2 py-1"
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('Delete inventory:', item);
+                            }}
+                            variant="danger"
+                            icon="delete"
+                            className="text-xs px-2 py-1"
+                          >
+                            Delete
+                          </Button>
+                          <svg 
+                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                              expandedInventory === item._id ? 'rotate-180' : ''
+                            }`}
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Detail View */}
+                    {expandedInventory === item._id && (
+                      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 border-t border-gray-200">
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                          <div>
+                            <span className="text-gray-600">Name:</span>
+                            <span className="ml-1 font-medium text-gray-900">{item.name}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Quantity:</span>
+                            <span className="ml-1 font-medium text-indigo-600">{item.quantity}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Branch:</span>
+                            <span className="ml-1 font-medium text-gray-900">{item.branch_id?.name || 'N/A'}</span>
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
+                          <h5 className="text-sm font-semibold text-gray-800 mb-2">Description</h5>
+                          <p className="text-gray-700 text-sm">{item.description}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+const { KG_PER_BAG } = require('../../frontend/src/utils/calculations');
 const Paddy = require('../models/Paddy');
 const { asyncHandler } = require('../utils/asyncHandler');
 const mongoose = require('mongoose');
@@ -6,11 +7,22 @@ const mongoose = require('mongoose');
 // @route   GET /api/paddy
 // @access  Private
 const getAllPaddy = asyncHandler(async (req, res) => {
-  const { branch_id } = req.user;
-  const { page = 1, limit = 10, search = '', sortBy = 'issueDate', sortOrder = 'desc' } = req.query;
+  const { branch_id, isSuperAdmin } = req.user;
+  const { page = 1, limit = 10, search = '', sortBy = 'issueDate', sortOrder = 'desc', branch_id: queryBranchId, variety, source } = req.query;
 
-  // Build query
-  const query = { branch_id };
+  // Build query - handle "all branches" case for superadmin
+  let query = {};
+  
+  if (isSuperAdmin) {
+    // For superadmin, if queryBranchId is 'all' or not provided, show all branches
+    if (queryBranchId && queryBranchId !== 'all') {
+      query.branch_id = queryBranchId;
+    }
+    // If queryBranchId is 'all' or not provided, don't filter by branch (show all)
+  } else {
+    // For regular users, always filter by their assigned branch
+    query.branch_id = branch_id;
+  }
   
   if (search) {
     query.$or = [
@@ -19,6 +31,16 @@ const getAllPaddy = asyncHandler(async (req, res) => {
       { paddyFrom: { $regex: search, $options: 'i' } },
       { paddyVariety: { $regex: search, $options: 'i' } },
     ];
+  }
+
+  // Add variety filter
+  if (variety) {
+    query.paddyVariety = variety;
+  }
+
+  // Add source filter
+  if (source) {
+    query.paddyFrom = source;
   }
 
   // Build sort object
@@ -31,6 +53,7 @@ const getAllPaddy = asyncHandler(async (req, res) => {
   const [paddies, total] = await Promise.all([
     Paddy.find(query)
       .populate('createdBy', 'name email')
+      .populate('branch_id', 'name')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit))
@@ -59,6 +82,7 @@ const getPaddyById = asyncHandler(async (req, res) => {
 
   const paddy = await Paddy.findOne({ _id: id, branch_id })
     .populate('createdBy', 'name email')
+    .populate('branch_id', 'name')
     .lean();
 
   if (!paddy) {
@@ -76,15 +100,22 @@ const getPaddyById = asyncHandler(async (req, res) => {
 // @route   POST /api/paddy
 // @access  Private
 const createPaddy = asyncHandler(async (req, res) => {
-  const { branch_id, _id: createdBy } = req.user;
+  const { branch_id, _id: createdBy, isSuperAdmin } = req.user;
 
   
   // Prepare paddy data
   const paddyData = {
     ...req.body,
-    branch_id,
     createdBy,
   };
+
+  // For superadmin, use the branch_id from request body if provided
+  // For regular users, always use their assigned branch_id
+  if (isSuperAdmin && req.body.branch_id) {
+    paddyData.branch_id = req.body.branch_id;
+  } else {
+    paddyData.branch_id = branch_id;
+  }
 
   // Auto-calculate bags from gunny total
   const totalGunny = (paddyData.gunny?.nb || 0) + 
@@ -92,11 +123,17 @@ const createPaddy = asyncHandler(async (req, res) => {
                      (paddyData.gunny?.ss || 0) + 
                      (paddyData.gunny?.swp || 0);
   
+  // Use provided bagWeight or default to KG_PER_BAG
+  const bagWeight = paddyData.bagWeight || KG_PER_BAG;
+  
   paddyData.paddy = {
     ...paddyData.paddy,
     bags: totalGunny,
-    weight: paddyData.paddy?.weight || (totalGunny * 500) // 1 bag = 500kg
+    weight: paddyData.paddy?.weight || (totalGunny * bagWeight)
   };
+  
+  // Set the bagWeight field
+  paddyData.bagWeight = bagWeight;
 
   const paddy = await Paddy.create(paddyData);
   
@@ -134,11 +171,17 @@ const updatePaddy = asyncHandler(async (req, res) => {
                      (updateData.gunny?.ss || 0) + 
                      (updateData.gunny?.swp || 0);
   
+  // Use provided bagWeight or existing bagWeight or default to KG_PER_BAG
+  const bagWeight = updateData.bagWeight || existingPaddy.bagWeight || KG_PER_BAG;
+  
   updateData.paddy = {
     ...updateData.paddy,
     bags: totalGunny,
-    weight: updateData.paddy?.weight || (totalGunny * 500)
+    weight: updateData.paddy?.weight || (totalGunny * bagWeight)
   };
+  
+  // Set the bagWeight field
+  updateData.bagWeight = bagWeight;
 
   const updatedPaddy = await Paddy.findByIdAndUpdate(
     id,

@@ -4,13 +4,26 @@ const mongoose = require('mongoose');
 // Get all gunny records
 const getAllGunny = async (req, res) => {
   try {
-    const { branch_id } = req.user;
+    const { branch_id, isSuperAdmin } = req.user;
+    const { branch_id: queryBranchId } = req.query;
     
-    // Build query
-    const query = { branch_id };
+    // Build query - handle "all branches" case for superadmin
+    let query = {};
+    
+    if (isSuperAdmin) {
+      // For superadmin, if queryBranchId is 'all' or not provided, show all branches
+      if (queryBranchId && queryBranchId !== 'all') {
+        query.branch_id = queryBranchId;
+      }
+      // If queryBranchId is 'all' or not provided, don't filter by branch (show all)
+    } else {
+      // For regular users, always filter by their assigned branch
+      query.branch_id = branch_id;
+    }
     
     const gunnyRecords = await Gunny.find(query)
       .populate('createdBy', 'name email')
+      .populate('branch_id', 'name')
       .sort({ createdAt: -1 });
     
     res.json(gunnyRecords);
@@ -27,7 +40,8 @@ const getGunnyById = async (req, res) => {
     const { branch_id } = req.user;
     
     const gunnyRecord = await Gunny.findOne({ _id: id, branch_id })
-      .populate('createdBy', 'name email');
+      .populate('createdBy', 'name email')
+      .populate('branch_id', 'name');
     
     if (!gunnyRecord) {
       return res.status(404).json({ message: 'Gunny record not found' });
@@ -43,19 +57,27 @@ const getGunnyById = async (req, res) => {
 // Create new gunny record
 const createGunny = async (req, res) => {
   try {
-    const { branch_id, _id: userId } = req.user;
+    const { branch_id, _id: userId, isSuperAdmin } = req.user;
     
     const gunnyData = {
       ...req.body,
-      branch_id,
       createdBy: userId
     };
+
+    // For superadmin, use the branch_id from request body if provided
+    // For regular users, always use their assigned branch_id
+    if (isSuperAdmin && req.body.branch_id) {
+      gunnyData.branch_id = req.body.branch_id;
+    } else {
+      gunnyData.branch_id = branch_id;
+    }
     
     const newGunny = new Gunny(gunnyData);
     const savedGunny = await newGunny.save();
     
     const populatedGunny = await Gunny.findById(savedGunny._id)
-      .populate('createdBy', 'name email');
+      .populate('createdBy', 'name email')
+      .populate('branch_id', 'name');
     
     res.status(201).json(populatedGunny);
   } catch (error) {
@@ -77,7 +99,8 @@ const updateGunny = async (req, res) => {
       { _id: id, branch_id },
       { ...req.body, updatedAt: Date.now() },
       { new: true, runValidators: true }
-    ).populate('createdBy', 'name email');
+    ).populate('createdBy', 'name email')
+      .populate('branch_id', 'name');
     
     if (!updatedGunny) {
       return res.status(404).json({ message: 'Gunny record not found' });

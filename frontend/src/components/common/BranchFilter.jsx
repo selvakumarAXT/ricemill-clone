@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { setCurrentBranchId } from '../../store/slices/branchSlice';
 import TableFilters from './TableFilters';
+import Icon from './Icon';
 import branchService from '../../services/branchService';
 
 const BranchFilter = ({
@@ -13,6 +15,7 @@ const BranchFilter = ({
 }) => {
   const { user } = useSelector((state) => state.auth);
   const { currentBranchId } = useSelector((state) => state.branch);
+  const dispatch = useDispatch();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -54,10 +57,13 @@ const BranchFilter = ({
     return null;
   }
 
-  // Determine if filter should be disabled
-  const isFilterDisabled = currentBranchId && currentBranchId !== 'all';
+  // Only allow branch selection when sidebar has "All Branches" selected
+  // For superadmin users: only enable when currentBranchId is 'all' or null
+  // For non-superadmin users: always disabled (they only see their assigned branch)
+  const isFilterDisabled = !user?.isSuperAdmin || (currentBranchId && currentBranchId !== 'all');
   
-  // If filter is disabled, only show the current branch
+  // Show all branches when filter is enabled (sidebar has "All Branches" selected)
+  // Show only current branch when filter is disabled (specific branch selected in sidebar)
   const displayBranches = isFilterDisabled 
     ? branches.filter(branch => branch._id === currentBranchId)
     : branches;
@@ -66,13 +72,33 @@ const BranchFilter = ({
     label: `${branch.name} (${branch.millCode})`
   }));
 
+  // Handle branch selection change
+  const handleBranchChange = (e) => {
+    const selectedBranchId = e.target.value;
+    
+    // Only allow changes when filter is enabled (sidebar has "All Branches" selected)
+    if (isFilterDisabled) {
+      return;
+    }
+    
+    // Call the parent's onChange if provided
+    if (onChange) {
+      onChange(e);
+    }
+    
+    // For superadmin users, also update the Redux store
+    if (user?.isSuperAdmin) {
+      dispatch(setCurrentBranchId(selectedBranchId));
+    }
+  };
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <TableFilters
         searchValue=""
         selectValue={isFilterDisabled ? currentBranchId : value}
         selectOptions={branchOptions}
-        onSelectChange={isFilterDisabled ? undefined : onChange}
+        onSelectChange={handleBranchChange}
         selectPlaceholder={placeholder}
         showSearch={false}
         showSelect={true}
@@ -80,9 +106,11 @@ const BranchFilter = ({
         disabled={isFilterDisabled}
       />
       {isFilterDisabled && (
-        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-          Locked to selected branch
-        </span>
+        <Icon 
+          name="lock" 
+          className="w-4 h-4 text-gray-500" 
+          title="Locked to selected branch"
+        />
       )}
     </div>
   );

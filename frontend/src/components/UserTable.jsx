@@ -2,6 +2,7 @@ import TableList from './common/TableList';
 import Button from './common/Button';
 import TableFilters from './common/TableFilters';
 import BranchFilter from './common/BranchFilter';
+import ResponsiveFilters from './common/ResponsiveFilters';
 import { useSelector } from 'react-redux';
 
 const UserTable = ({
@@ -15,6 +16,7 @@ const UserTable = ({
   setUserBranchFilter,
   openUserModal,
   deleteUser,
+  showAddButton = true,
 }) => {
   const { user } = useSelector((state) => state.auth);
   const { currentBranchId } = useSelector((state) => state.branch);
@@ -24,9 +26,11 @@ const UserTable = ({
     <div className="mb-8">
       <div className="flex justify-between items-center ">
         <h2 className="text-xl font-semibold">Users</h2>
-        <Button onClick={() => openUserModal()} variant="primary" icon="add">New User</Button>
+        {showAddButton && (
+          <Button onClick={() => openUserModal()} variant="primary" icon="add">New User</Button>
+        )}
       </div>
-      <div className="flex items-center gap-4 mt-4">
+      <ResponsiveFilters title="Filters & Search" className="mt-4">
         <TableFilters
           searchValue={userFilter}
           searchPlaceholder="Search users..."
@@ -41,7 +45,7 @@ const UserTable = ({
           value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : userBranchFilter}
           onChange={e => setUserBranchFilter(e.target.value)}
         />
-      </div>
+      </ResponsiveFilters>
       <TableList
         columns={["Name", "Email", "Role", "Branch"]}
         data={filteredUsers}

@@ -30,6 +30,41 @@
   --color-accent-primary: #00ba8b;
   --color-accent-blue: #2f89f5;
   --color-accent-red: #ff0000;
+  
+  /* Premium design colors */
+  --color-gradient-blue-start: #3b82f6;
+  --color-gradient-blue-end: #6366f1;
+  --color-gradient-green-start: #10b981;
+  --color-gradient-green-end: #059669;
+  --color-gradient-purple-start: #8b5cf6;
+  --color-gradient-purple-end: #7c3aed;
+  --color-gradient-amber-start: #f59e0b;
+  --color-gradient-amber-end: #d97706;
+  --color-gradient-red-start: #ef4444;
+  --color-gradient-red-end: #dc2626;
+  
+  /* Background gradients */
+  --color-bg-gradient-slate: #f8fafc;
+  --color-bg-gradient-blue: #eff6ff;
+  --color-bg-gradient-green: #ecfdf5;
+  --color-bg-gradient-purple: #faf5ff;
+  --color-bg-gradient-amber: #fffbeb;
+  --color-bg-gradient-red: #fef2f2;
+  
+  /* Card and border colors */
+  --color-card-bg: #ffffff;
+  --color-card-border: #e5e7eb;
+  --color-card-shadow: rgba(0, 0, 0, 0.1);
+  
+  /* Status colors */
+  --color-success-bg: #d1fae5;
+  --color-success-text: #065f46;
+  --color-error-bg: #fee2e2;
+  --color-error-text: #991b1b;
+  --color-warning-bg: #fef3c7;
+  --color-warning-text: #92400e;
+  --color-info-bg: #dbeafe;
+  --color-info-text: #1e40af;
 }
 
 body {
@@ -70,3 +105,30 @@ code {
 .accent-primary { color: var(--color-accent-primary) !important; }
 .accent-blue { color: var(--color-accent-blue) !important; }
 .accent-red { color: var(--color-accent-red) !important; }
+
+/* Premium design utility classes */
+.bg-gradient-blue { background: linear-gradient(135deg, var(--color-gradient-blue-start), var(--color-gradient-blue-end)) !important; }
+.bg-gradient-green { background: linear-gradient(135deg, var(--color-gradient-green-start), var(--color-gradient-green-end)) !important; }
+.bg-gradient-purple { background: linear-gradient(135deg, var(--color-gradient-purple-start), var(--color-gradient-purple-end)) !important; }
+.bg-gradient-amber { background: linear-gradient(135deg, var(--color-gradient-amber-start), var(--color-gradient-amber-end)) !important; }
+.bg-gradient-red { background: linear-gradient(135deg, var(--color-gradient-red-start), var(--color-gradient-red-end)) !important; }
+
+.bg-gradient-slate { background-color: var(--color-bg-gradient-slate) !important; }
+.bg-gradient-blue-light { background-color: var(--color-bg-gradient-blue) !important; }
+.bg-gradient-green-light { background-color: var(--color-bg-gradient-green) !important; }
+.bg-gradient-purple-light { background-color: var(--color-bg-gradient-purple) !important; }
+.bg-gradient-amber-light { background-color: var(--color-bg-gradient-amber) !important; }
+.bg-gradient-red-light { background-color: var(--color-bg-gradient-red) !important; }
+
+.card-bg { background-color: var(--color-card-bg) !important; }
+.card-border { border-color: var(--color-card-border) !important; }
+.card-shadow { box-shadow: 0 4px 6px -1px var(--color-card-shadow) !important; }
+
+.status-success-bg { background-color: var(--color-success-bg) !important; }
+.status-success-text { color: var(--color-success-text) !important; }
+.status-error-bg { background-color: var(--color-error-bg) !important; }
+.status-error-text { color: var(--color-error-text) !important; }
+.status-warning-bg { background-color: var(--color-warning-bg) !important; }
+.status-warning-text { color: var(--color-warning-text) !important; }
+.status-info-bg { background-color: var(--color-info-bg) !important; }
+.status-info-text { color: var(--color-info-text) !important; }

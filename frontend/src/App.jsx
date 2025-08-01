@@ -20,6 +20,8 @@ import Layout from "./components/Layout/Layout";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import PaddyManagement from "./pages/PaddyManagement";
 import GunnyManagement from "./pages/GunnyManagement";
+import RiceManagement from "./pages/RiceManagement";
+import GodownManagement from "./pages/GodownManagement";
 
 // ✅ Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -121,6 +123,28 @@ function AppContent() {
             <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
               <LayoutWrapper>
                 <GunnyManagement />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/rice-management"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
+              <LayoutWrapper>
+                <RiceManagement />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/godown-management"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
+              <LayoutWrapper>
+                <GodownManagement />
               </LayoutWrapper>
             </ProtectedRoute>
           }

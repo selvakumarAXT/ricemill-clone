@@ -60,6 +60,22 @@ const gunnyService = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  // Helper function to format gunny data for frontend
+  formatGunnyResponse: (gunnyData) => {
+    // Format issueDate for HTML date input (YYYY-MM-DD)
+    const formatDateForInput = (date) => {
+      if (!date) return '';
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) return '';
+      return dateObj.toISOString().split('T')[0];
+    };
+
+    return {
+      ...gunnyData,
+      issueDate: formatDateForInput(gunnyData.issueDate),
+    };
   }
 };
 

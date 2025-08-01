@@ -1,5 +1,5 @@
 // Test calculation functions (simplified version)
-const KG_PER_BAG = 500;
+const KG_PER_BAG = 50;
 
 const calculateWeightFromBags = (bags) => {
   return bags * KG_PER_BAG;
