@@ -10,6 +10,7 @@ import BranchFilter from "../components/common/BranchFilter";
 import ResponsiveFilters from "../components/common/ResponsiveFilters";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import riceDepositService from "../services/riceDepositService";
+import { getAllPaddy } from "../services/paddyService";
 import { formatWeight } from "../utils/calculations";
 
 const RiceManagement = () => {
@@ -31,6 +32,21 @@ const RiceManagement = () => {
     totalGunnyWeight: 0,
     count: 0
   });
+  const [paddyData, setPaddyData] = useState([]);
+  const [riceComparison, setRiceComparison] = useState({
+    actualRiceOutput: 0,
+    expectedRiceOutput: 0,
+    totalPaddyWeight: 0,
+    efficiency: 0,
+    difference: 0
+  });
+  const [selectedPaddy, setSelectedPaddy] = useState(null);
+  const [usedGunnyFromPaddy, setUsedGunnyFromPaddy] = useState({
+    nb: 0,
+    onb: 0,
+    ss: 0,
+    swp: 0
+  });
   const [successMessage, setSuccessMessage] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
 
@@ -49,9 +65,17 @@ const RiceManagement = () => {
     totalRiceDeposit: 0,
     moisture: 0,
     sampleNumber: "",
+    paddyReference: "",
     gunny: {
       onb: 0,
       ss: 0,
+      swp: 0,
+    },
+    gunnyUsedFromPaddy: {
+      nb: 0,
+      onb: 0,
+      ss: 0,
+      swp: 0,
     },
     gunnyBags: 0,
     gunnyWeight: 0,
@@ -63,6 +87,7 @@ const RiceManagement = () => {
   useEffect(() => {
     fetchRiceData();
     fetchRiceStats();
+    fetchPaddyData();
   }, []);
 
   // Refetch data when branch changes
@@ -70,6 +95,7 @@ const RiceManagement = () => {
     if (currentBranchId) {
       fetchRiceData();
       fetchRiceStats();
+      fetchPaddyData();
     }
   }, [currentBranchId]);
 
@@ -104,6 +130,44 @@ const RiceManagement = () => {
     }
   };
 
+  const fetchPaddyData = async () => {
+    try {
+      const data = await getAllPaddy();
+      setPaddyData(data.data || data);
+    } catch (error) {
+      console.error('Error fetching paddy data:', error);
+    }
+  };
+
+  // Calculate rice comparison statistics
+  const calculateRiceComparison = () => {
+    const actualRiceOutput = stats.totalRiceWeight || 0;
+    
+    // Calculate expected rice output (67% of total paddy weight)
+    const totalPaddyWeight = paddyData.reduce((total, paddy) => {
+      return total + (paddy.paddy?.weight || 0);
+    }, 0);
+    
+    const expectedRiceOutput = totalPaddyWeight * 0.67;
+    const difference = actualRiceOutput - expectedRiceOutput;
+    const efficiency = expectedRiceOutput > 0 ? (actualRiceOutput / expectedRiceOutput) * 100 : 0;
+
+    setRiceComparison({
+      actualRiceOutput,
+      expectedRiceOutput,
+      totalPaddyWeight,
+      efficiency,
+      difference
+    });
+  };
+
+  // Update comparison when stats or paddy data changes
+  useEffect(() => {
+    if (stats.totalRiceWeight !== undefined && paddyData.length > 0) {
+      calculateRiceComparison();
+    }
+  }, [stats, paddyData]);
+
   // Rice CRUD operations
   const openRiceModal = (rice = null) => {
     setEditingRice(rice);
@@ -113,9 +177,21 @@ const RiceManagement = () => {
             ...initialRiceForm,
             ...rice,
             gunny: { ...initialRiceForm.gunny, ...rice.gunny },
+            gunnyUsedFromPaddy: { ...initialRiceForm.gunnyUsedFromPaddy, ...rice.gunnyUsedFromPaddy },
           }
         : initialRiceForm
     );
+    
+    // Set selected paddy if editing
+    if (rice && rice.paddyReference) {
+      const paddyRecord = paddyData.find(paddy => paddy._id === rice.paddyReference);
+      setSelectedPaddy(paddyRecord);
+      setUsedGunnyFromPaddy(rice.gunnyUsedFromPaddy || { nb: 0, onb: 0, ss: 0, swp: 0 });
+    } else {
+      setSelectedPaddy(null);
+      setUsedGunnyFromPaddy({ nb: 0, onb: 0, ss: 0, swp: 0 });
+    }
+    
     setShowRiceModal(true);
   };
 
@@ -123,6 +199,8 @@ const RiceManagement = () => {
     setShowRiceModal(false);
     setEditingRice(null);
     setRiceForm(initialRiceForm);
+    setSelectedPaddy(null);
+    setUsedGunnyFromPaddy({ nb: 0, onb: 0, ss: 0, swp: 0 });
     setErrorMessage(null);
   };
 
@@ -145,8 +223,64 @@ const RiceManagement = () => {
     }
   };
 
+  const handlePaddySelection = (paddyId) => {
+    const selectedPaddyRecord = paddyData.find(paddy => paddy._id === paddyId);
+    setSelectedPaddy(selectedPaddyRecord);
+    setRiceForm({
+      ...riceForm,
+      paddyReference: paddyId
+    });
+    // Reset gunny usage when paddy changes
+    setUsedGunnyFromPaddy({ nb: 0, onb: 0, ss: 0, swp: 0 });
+  };
+
+  const handleGunnyUsageChange = (grade, value) => {
+    const newUsedGunny = {
+      ...usedGunnyFromPaddy,
+      [grade]: parseInt(value) || 0
+    };
+    setUsedGunnyFromPaddy(newUsedGunny);
+    
+    // Update the form with the new gunny usage
+    setRiceForm({
+      ...riceForm,
+      gunnyUsedFromPaddy: newUsedGunny
+    });
+  };
+
   const saveRice = async (e) => {
     e.preventDefault();
+    
+    // Validate gunny stock availability
+    if (selectedPaddy && riceForm.paddyReference) {
+      const validationErrors = [];
+      
+      // Check NB gunny availability
+      if (usedGunnyFromPaddy.nb > selectedPaddy.gunny?.nb) {
+        validationErrors.push(`NB gunny: Requested ${usedGunnyFromPaddy.nb}, Available ${selectedPaddy.gunny?.nb || 0}`);
+      }
+      
+      // Check ONB gunny availability
+      if (usedGunnyFromPaddy.onb > selectedPaddy.gunny?.onb) {
+        validationErrors.push(`ONB gunny: Requested ${usedGunnyFromPaddy.onb}, Available ${selectedPaddy.gunny?.onb || 0}`);
+      }
+      
+      // Check SS gunny availability
+      if (usedGunnyFromPaddy.ss > selectedPaddy.gunny?.ss) {
+        validationErrors.push(`SS gunny: Requested ${usedGunnyFromPaddy.ss}, Available ${selectedPaddy.gunny?.ss || 0}`);
+      }
+      
+      // Check SWP gunny availability
+      if (usedGunnyFromPaddy.swp > selectedPaddy.gunny?.swp) {
+        validationErrors.push(`SWP gunny: Requested ${usedGunnyFromPaddy.swp}, Available ${selectedPaddy.gunny?.swp || 0}`);
+      }
+      
+      if (validationErrors.length > 0) {
+        setErrorMessage('Insufficient gunny stock: ' + validationErrors.join(', '));
+        return;
+      }
+    }
+    
     try {
       setLoading(true);
       if (editingRice) {
@@ -162,6 +296,7 @@ const RiceManagement = () => {
       setTimeout(() => {
         fetchRiceData();
         fetchRiceStats();
+        fetchPaddyData();
       }, 100);
     } catch (error) {
       console.error('Error saving rice deposit:', error);
@@ -178,6 +313,7 @@ const RiceManagement = () => {
         await riceDepositService.deleteRiceDeposit(riceId);
         fetchRiceData();
         fetchRiceStats();
+        fetchPaddyData();
       } catch (error) {
         console.error('Error deleting rice deposit:', error);
       } finally {
@@ -337,6 +473,11 @@ const RiceManagement = () => {
           render: (value, record) => record.gunny?.ss || 0,
         },
         {
+          key: "gunny.swp",
+          label: "SWP",
+          render: (value, record) => record.gunny?.swp || 0,
+        },
+        {
           key: "gunnyBags",
           label: "BAGS",
           render: (value) => value || 0,
@@ -468,6 +609,128 @@ const RiceManagement = () => {
           </div>
         </div>
 
+        {/* Rice Output Comparison Summary */}
+        <div className="mb-6">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+              <h3 className="text-lg font-semibold text-gray-800">Rice Output Analysis</h3>
+              <p className="text-sm text-gray-600 mt-1">Actual vs Expected Rice Production (67% of paddy weight)</p>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Actual Rice Output */}
+                <div className="text-center">
+                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <div className="text-2xl font-bold text-green-600 mb-2">
+                      {formatWeight(riceComparison.actualRiceOutput)}
+                    </div>
+                    <div className="text-sm font-medium text-gray-700">Actual Rice Output</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Total rice produced
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expected Rice Output */}
+                <div className="text-center">
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <div className="text-2xl font-bold text-blue-600 mb-2">
+                      {formatWeight(riceComparison.expectedRiceOutput)}
+                    </div>
+                    <div className="text-sm font-medium text-gray-700">Expected Rice Output</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      67% of total paddy weight
+                    </div>
+                  </div>
+                </div>
+
+                {/* Efficiency */}
+                <div className="text-center">
+                  <div className={`rounded-lg p-4 border ${
+                    riceComparison.efficiency >= 100 
+                      ? 'bg-emerald-50 border-emerald-200' 
+                      : riceComparison.efficiency >= 90 
+                        ? 'bg-yellow-50 border-yellow-200' 
+                        : 'bg-red-50 border-red-200'
+                  }`}>
+                    <div className={`text-2xl font-bold mb-2 ${
+                      riceComparison.efficiency >= 100 
+                        ? 'text-emerald-600' 
+                        : riceComparison.efficiency >= 90 
+                          ? 'text-yellow-600' 
+                          : 'text-red-600'
+                    }`}>
+                      {riceComparison.efficiency.toFixed(1)}%
+                    </div>
+                    <div className="text-sm font-medium text-gray-700">Production Efficiency</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Actual vs Expected
+                    </div>
+                  </div>
+                </div>
+
+                {/* Difference */}
+                <div className="text-center">
+                  <div className={`rounded-lg p-4 border ${
+                    riceComparison.difference >= 0 
+                      ? 'bg-emerald-50 border-emerald-200' 
+                      : 'bg-red-50 border-red-200'
+                  }`}>
+                    <div className={`text-2xl font-bold mb-2 ${
+                      riceComparison.difference >= 0 
+                        ? 'text-emerald-600' 
+                        : 'text-red-600'
+                    }`}>
+                      {riceComparison.difference >= 0 ? '+' : ''}{formatWeight(riceComparison.difference)}
+                    </div>
+                    <div className="text-sm font-medium text-gray-700">Difference</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Actual - Expected
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Details */}
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="font-medium text-gray-700 mb-1">Processing Summary</div>
+                  <div className="text-gray-600">
+                    <div>• Total Paddy Weight: {formatWeight(riceComparison.totalPaddyWeight)}</div>
+                    <div>• Expected Rice: {formatWeight(riceComparison.expectedRiceOutput)}</div>
+                    <div>• Actual Rice: {formatWeight(riceComparison.actualRiceOutput)}</div>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="font-medium text-gray-700 mb-1">Efficiency Analysis</div>
+                  <div className="text-gray-600">
+                    <div>• Target Efficiency: 100%</div>
+                    <div>• Current Efficiency: {riceComparison.efficiency.toFixed(1)}%</div>
+                    <div>• Status: {
+                      riceComparison.efficiency >= 100 
+                        ? '✅ Above Target' 
+                        : riceComparison.efficiency >= 90 
+                          ? '⚠️ Near Target' 
+                          : '❌ Below Target'
+                    }</div>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="font-medium text-gray-700 mb-1">Production Insights</div>
+                  <div className="text-gray-600">
+                    <div>• Processing Ratio: 67% rice, 33% by-products</div>
+                    <div>• By-products: {formatWeight(riceComparison.totalPaddyWeight * 0.33)}</div>
+                    <div>• Total Records: {stats.count}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Responsive Filters */}
         <ResponsiveFilters title="Filters & Search" className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -486,8 +749,115 @@ const RiceManagement = () => {
         {/* Desktop Table View */}
         <div className="hidden lg:block">
           <GroupedTable
+            tableTitle="Rice Deposit Records"
             data={filteredRiceDeposits}
             groupedHeaders={groupedHeaders}
+            renderDetail={(rice) => (
+              <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Date:</span>
+                      <span className="text-gray-900 font-medium">{new Date(rice.date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Truck Memo:</span>
+                      <span className="text-gray-900 font-medium">{rice.truckMemo}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Lorry Number:</span>
+                      <span className="text-gray-900 font-medium">{rice.lorryNumber}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Deposit Godown:</span>
+                      <span className="text-gray-900 font-medium">{rice.depositGodown}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Variety:</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        rice.variety === 'A' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        Variety {rice.variety}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Ack No:</span>
+                      <span className="text-gray-900 font-medium">{rice.ackNo}</span>
+                    </div>
+                    {rice.createdAt && (
+                      <div className="flex items-center">
+                        <span className="w-24 text-sm font-medium text-gray-600">Created:</span>
+                        <span className="text-gray-900 font-medium">
+                          {new Date(rice.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {rice.updatedAt && rice.updatedAt !== rice.createdAt && (
+                      <div className="flex items-center">
+                        <span className="w-24 text-sm font-medium text-gray-600">Updated:</span>
+                        <span className="text-gray-900 font-medium">
+                          {new Date(rice.updatedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {/* Rice Summary */}
+                    <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
+                      <h5 className="text-sm font-semibold text-gray-800 mb-2">Rice Summary</h5>
+                      <div className="grid grid-cols-2 gap-4 text-sm w-full">
+                        <div>
+                          <span className="text-gray-600">Rice Bags:</span>
+                          <span className="ml-1 font-medium text-green-600">{rice.riceBag || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Total Rice:</span>
+                          <span className="ml-1 font-medium text-green-600">{rice.totalRiceDeposit || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Gunny Summary */}
+                    <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
+                      <h5 className="text-sm font-semibold text-gray-800 mb-2">Gunny Summary</h5>
+                      <div className="grid grid-cols-3 gap-4 text-sm w-full">
+                        <div className="text-center">
+                          <div className="font-medium text-blue-600">ONB</div>
+                          <div className="text-gray-900">{rice.gunny?.onb || 0}</div>
+                          {rice.gunnyUsedFromPaddy?.nb > 0 && (
+                            <div className="text-xs text-blue-500">(from {rice.gunnyUsedFromPaddy.nb} NB)</div>
+                          )}
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-green-600">SS</div>
+                          <div className="text-gray-900">{rice.gunny?.ss || 0}</div>
+                          {rice.gunnyUsedFromPaddy?.onb > 0 && (
+                            <div className="text-xs text-green-500">(from {rice.gunnyUsedFromPaddy.onb} ONB)</div>
+                          )}
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-purple-600">SWP</div>
+                          <div className="text-gray-900">{rice.gunny?.swp || 0}</div>
+                          {(rice.gunnyUsedFromPaddy?.ss > 0 || rice.gunnyUsedFromPaddy?.swp > 0) && (
+                            <div className="text-xs text-purple-500">
+                              (from {rice.gunnyUsedFromPaddy?.ss || 0} SS + {rice.gunnyUsedFromPaddy?.swp || 0} SWP)
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="text-center">
+                          <div className="text-xs font-medium text-gray-600">Total Gunny</div>
+                          <div className="text-lg font-bold text-green-600">
+                            {(rice.gunny?.onb || 0) + (rice.gunny?.ss || 0) + (rice.gunny?.swp || 0)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             actions={(rice) => [
               <Button
                 key="edit"
@@ -709,6 +1079,71 @@ const RiceManagement = () => {
             />
           </div>
 
+          {/* Paddy Reference Selection */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Paddy Record *
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+              <select
+                name="paddyReference"
+                value={riceForm.paddyReference}
+                onChange={(e) => handlePaddySelection(e.target.value)}
+                className="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                required
+              >
+                <option value="">Select a paddy record...</option>
+                {paddyData.map((paddy) => (
+                  <option key={paddy._id} value={paddy._id}>
+                    {paddy.issueMemo} - {paddy.lorryNumber} - {paddy.paddyFrom} - Variety {paddy.paddyVariety}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Selected Paddy Details */}
+            {selectedPaddy && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-blue-800 mb-2">Selected Paddy Details</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-600 font-medium">Issue Memo:</span>
+                    <span className="ml-2 text-gray-700">{selectedPaddy.issueMemo}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-medium">Lorry Number:</span>
+                    <span className="ml-2 text-gray-700">{selectedPaddy.lorryNumber}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-medium">Paddy From:</span>
+                    <span className="ml-2 text-gray-700">{selectedPaddy.paddyFrom}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-medium">Variety:</span>
+                    <span className="ml-2 text-gray-700">Variety {selectedPaddy.paddyVariety}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-medium">Available ONB:</span>
+                    <span className="ml-2 text-gray-700">{selectedPaddy.gunny?.onb || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-medium">Available SS:</span>
+                    <span className="ml-2 text-gray-700">{selectedPaddy.gunny?.ss || 0}</span>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <div className="text-center">
+                    <span className="text-xs font-medium text-blue-600">Total Available Gunny (ONB + SS)</span>
+                    <div className="text-lg font-bold text-blue-800">
+                      {(selectedPaddy.gunny?.onb || 0) + (selectedPaddy.gunny?.ss || 0)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Rice Bag Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput
@@ -761,24 +1196,204 @@ const RiceManagement = () => {
             />
           </div>
 
-          {/* Gunny Details */}
+          {/* Gunny Downgrade Details */}
+          {selectedPaddy && (
+            <div className="space-y-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-yellow-800 mb-3">Gunny Downgrade System</h4>
+                <p className="text-xs text-yellow-700 mb-4">
+                  Select how many gunny bags to use from each grade. They will be downgraded in rice output:
+                  <br />• NB → ONB | ONB → SS | SS → SWP | SWP → SWP
+                </p>
+                
+                {/* Validation Summary */}
+                {(() => {
+                  const hasShortage = 
+                    usedGunnyFromPaddy.nb > (selectedPaddy.gunny?.nb || 0) ||
+                    usedGunnyFromPaddy.onb > (selectedPaddy.gunny?.onb || 0) ||
+                    usedGunnyFromPaddy.ss > (selectedPaddy.gunny?.ss || 0) ||
+                    usedGunnyFromPaddy.swp > (selectedPaddy.gunny?.swp || 0);
+                  
+                  if (hasShortage) {
+                    return (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                          <span className="text-sm font-medium text-red-800">Insufficient Gunny Stock</span>
+                        </div>
+                        <p className="text-xs text-red-700 mt-1">
+                          Some gunny grades have insufficient stock. Please reduce the requested amounts or select a different paddy record.
+                        </p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-sm font-medium text-green-800">Sufficient Gunny Stock</span>
+                      </div>
+                      <p className="text-xs text-green-700 mt-1">
+                        All requested gunny amounts are within available stock limits.
+                      </p>
+                    </div>
+                  );
+                })()}
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* NB to ONB */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Use NB (→ ONB)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={selectedPaddy.gunny?.nb || 0}
+                      value={usedGunnyFromPaddy.nb}
+                      onChange={(e) => handleGunnyUsageChange('nb', e.target.value)}
+                      className={`block w-full border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                        usedGunnyFromPaddy.nb > (selectedPaddy.gunny?.nb || 0) 
+                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300'
+                      }`}
+                      placeholder="0"
+                    />
+                    <p className={`text-xs mt-1 ${
+                      usedGunnyFromPaddy.nb > (selectedPaddy.gunny?.nb || 0) 
+                        ? 'text-red-600 font-medium' 
+                        : 'text-gray-500'
+                    }`}>
+                      Available: {selectedPaddy.gunny?.nb || 0}
+                      {usedGunnyFromPaddy.nb > (selectedPaddy.gunny?.nb || 0) && 
+                        ` (Shortage: ${usedGunnyFromPaddy.nb - (selectedPaddy.gunny?.nb || 0)})`
+                      }
+                    </p>
+                  </div>
+                  
+                  {/* ONB to SS */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Use ONB (→ SS)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={selectedPaddy.gunny?.onb || 0}
+                      value={usedGunnyFromPaddy.onb}
+                      onChange={(e) => handleGunnyUsageChange('onb', e.target.value)}
+                      className={`block w-full border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                        usedGunnyFromPaddy.onb > (selectedPaddy.gunny?.onb || 0) 
+                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300'
+                      }`}
+                      placeholder="0"
+                    />
+                    <p className={`text-xs mt-1 ${
+                      usedGunnyFromPaddy.onb > (selectedPaddy.gunny?.onb || 0) 
+                        ? 'text-red-600 font-medium' 
+                        : 'text-gray-500'
+                    }`}>
+                      Available: {selectedPaddy.gunny?.onb || 0}
+                      {usedGunnyFromPaddy.onb > (selectedPaddy.gunny?.onb || 0) && 
+                        ` (Shortage: ${usedGunnyFromPaddy.onb - (selectedPaddy.gunny?.onb || 0)})`
+                      }
+                    </p>
+                  </div>
+                  
+                  {/* SS to SWP */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Use SS (→ SWP)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={selectedPaddy.gunny?.ss || 0}
+                      value={usedGunnyFromPaddy.ss}
+                      onChange={(e) => handleGunnyUsageChange('ss', e.target.value)}
+                      className={`block w-full border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                        usedGunnyFromPaddy.ss > (selectedPaddy.gunny?.ss || 0) 
+                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300'
+                      }`}
+                      placeholder="0"
+                    />
+                    <p className={`text-xs mt-1 ${
+                      usedGunnyFromPaddy.ss > (selectedPaddy.gunny?.ss || 0) 
+                        ? 'text-red-600 font-medium' 
+                        : 'text-gray-500'
+                    }`}>
+                      Available: {selectedPaddy.gunny?.ss || 0}
+                      {usedGunnyFromPaddy.ss > (selectedPaddy.gunny?.ss || 0) && 
+                        ` (Shortage: ${usedGunnyFromPaddy.ss - (selectedPaddy.gunny?.ss || 0)})`
+                      }
+                    </p>
+                  </div>
+                  
+                  {/* SWP stays SWP */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Use SWP (→ SWP)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={selectedPaddy.gunny?.swp || 0}
+                      value={usedGunnyFromPaddy.swp}
+                      onChange={(e) => handleGunnyUsageChange('swp', e.target.value)}
+                      className={`block w-full border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                        usedGunnyFromPaddy.swp > (selectedPaddy.gunny?.swp || 0) 
+                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300'
+                      }`}
+                      placeholder="0"
+                    />
+                    <p className={`text-xs mt-1 ${
+                      usedGunnyFromPaddy.swp > (selectedPaddy.gunny?.swp || 0) 
+                        ? 'text-red-600 font-medium' 
+                        : 'text-gray-500'
+                    }`}>
+                      Available: {selectedPaddy.gunny?.swp || 0}
+                      {usedGunnyFromPaddy.swp > (selectedPaddy.gunny?.swp || 0) && 
+                        ` (Shortage: ${usedGunnyFromPaddy.swp - (selectedPaddy.gunny?.swp || 0)})`
+                      }
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Result Preview */}
+                <div className="mt-4 pt-4 border-t border-yellow-200">
+                  <h5 className="text-sm font-semibold text-yellow-800 mb-2">Rice Output Gunny Preview</h5>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="font-medium text-blue-600">ONB</div>
+                      <div className="text-lg font-bold text-blue-800">{usedGunnyFromPaddy.nb}</div>
+                      <div className="text-xs text-gray-500">(from NB)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium text-green-600">SS</div>
+                      <div className="text-lg font-bold text-green-800">{usedGunnyFromPaddy.onb}</div>
+                      <div className="text-xs text-gray-500">(from ONB)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium text-purple-600">SWP</div>
+                      <div className="text-lg font-bold text-purple-800">{usedGunnyFromPaddy.ss + usedGunnyFromPaddy.swp}</div>
+                      <div className="text-xs text-gray-500">(from SS + SWP)</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Gunny Summary */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              label="ONB Count"
-              name="gunny.onb"
-              type="number"
-              value={riceForm.gunny.onb}
-              onChange={handleRiceFormChange}
-              min="0"
-            />
-            <FormInput
-              label="SS Count"
-              name="gunny.ss"
-              type="number"
-              value={riceForm.gunny.ss}
-              onChange={handleRiceFormChange}
-              min="0"
-            />
             <FormInput
               label="Gunny Bags"
               name="gunnyBags"

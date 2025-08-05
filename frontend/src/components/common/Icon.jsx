@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  FaUser, FaLock, FaSignOutAlt, FaSearch, FaCog, FaHome, FaUsers, FaBoxes, FaChartBar, FaIndustry, FaBuilding, FaExclamationTriangle, FaPlus, FaEdit, FaTrash, FaSave, FaEye, FaEyeSlash, FaChevronDown, FaChevronUp, FaChevronLeft, FaChevronRight, FaDownload, FaUpload, FaCheck, FaTimes, FaCalendar, FaFile, FaTruck, FaBox, FaWeightHanging, FaAngleDoubleLeft, FaAngleDoubleRight, FaFilter
+  FaUser, FaLock, FaSignOutAlt, FaSearch, FaCog, FaHome, FaUsers, FaBoxes, FaChartBar, FaIndustry, FaBuilding, FaExclamationTriangle, FaPlus, FaEdit, FaTrash, FaSave, FaEye, FaEyeSlash, FaChevronDown, FaChevronUp, FaChevronLeft, FaChevronRight, FaDownload, FaUpload, FaCheck, FaTimes, FaCalendar, FaFile, FaTruck, FaBox, FaWeightHanging, FaAngleDoubleLeft, FaAngleDoubleRight, FaFilter, FaMapMarkerAlt, FaTint, FaSeedling
 } from 'react-icons/fa';
 
 // Map icon names to components for dynamic usage
@@ -39,6 +39,9 @@ const ICONS = {
   truck: FaTruck,
   package: FaBox,
   scale: FaWeightHanging,
+  location: FaMapMarkerAlt,
+  droplet: FaTint,
+  seedling: FaSeedling,
 };
 
 /**

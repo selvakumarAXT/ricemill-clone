@@ -11,6 +11,25 @@ dotenv.config();
 // Connect to database
 connectDB();
 
+// Import models for index management
+const { ensureIndexes: ensureRiceDepositIndexes } = require('./models/RiceDeposit');
+
+
+// Ensure proper indexes after database connection
+const ensureAllIndexes = async () => {
+  try {
+    console.log('Ensuring proper database indexes...');
+    await ensureRiceDepositIndexes();
+  
+    console.log('All indexes ensured successfully');
+  } catch (error) {
+    console.error('Error ensuring indexes:', error);
+  }
+};
+
+// Call index management after a short delay to ensure database is connected
+setTimeout(ensureAllIndexes, 2000);
+
 const app = express();
 
 // Security middleware
@@ -46,7 +65,7 @@ app.use('/api/production', require('./routes/production'));
 app.use('/api/gunny', require('./routes/gunny'));
 app.use('/api/paddy', require('./routes/paddy'));
 app.use('/api/rice-deposits', require('./routes/riceDeposits'));
-app.use('/api/godown-deposits', require('./routes/godownDeposits'));
+
 app.use('/api/bag-weight-options', require('./routes/bagWeightOptions'));
 // app.use('/api/checkstacks', require('./routes/checkstacks'));
 // app.use('/api/holds', require('./routes/holds'));

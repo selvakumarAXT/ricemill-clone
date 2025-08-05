@@ -23,7 +23,7 @@ const GunnyManagement = () => {
   const [allGunnyData, setAllGunnyData] = useState({
     paddyRecords: [],
     riceRecords: [],
-    godownRecords: [],
+
     gunnyRecords: []
   });
   const [loading, setLoading] = useState(false);
@@ -55,10 +55,12 @@ const GunnyManagement = () => {
     bySource: {
       paddy: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
       rice: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
-      godown: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
+      
       gunny: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 }
     }
   });
+
+
 
   // Paddy varieties options
   const PADDY_VARIETIES = ["A", "C"];
@@ -274,7 +276,7 @@ const GunnyManagement = () => {
     const allRecords = [
       ...allGunnyData.paddyRecords,
       ...allGunnyData.riceRecords,
-      ...allGunnyData.godownRecords,
+
       ...allGunnyData.gunnyRecords
     ];
 
@@ -324,7 +326,7 @@ const GunnyManagement = () => {
       bySource: {
         paddy: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
         rice: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
-        godown: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
+
         gunny: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 }
       }
     };
@@ -357,6 +359,127 @@ const GunnyManagement = () => {
     return stats;
   }, [allGunnyData, currentBranchId, selectedSource, gunnyFilter]);
 
+  // Calculate comprehensive gunny balance statistics
+  const gunnyBalanceStats = useMemo(() => {
+    const stats = {
+      totalPaddyGunny: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
+      totalRiceGunny: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
+
+      totalDirectGunny: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
+      balanceGunny: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
+      utilizationRate: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
+      // New fields for gunny lifecycle
+      gunnyEntry: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
+      gunnyUsed: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
+      gunnyAvailable: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 }
+    };
+
+    // Filter records by current branch
+    const branchFilteredPaddy = currentBranchId && currentBranchId !== 'all' 
+      ? allGunnyData.paddyRecords.filter(record => {
+          const recordBranchId = record.branch_id?._id || record.branch_id;
+          return recordBranchId === currentBranchId;
+        })
+      : allGunnyData.paddyRecords;
+
+    const branchFilteredRice = currentBranchId && currentBranchId !== 'all' 
+      ? allGunnyData.riceRecords.filter(record => {
+          const recordBranchId = record.branch_id?._id || record.branch_id;
+          return recordBranchId === currentBranchId;
+        })
+      : allGunnyData.riceRecords;
+
+
+
+    const branchFilteredDirect = currentBranchId && currentBranchId !== 'all' 
+      ? allGunnyData.gunnyRecords.filter(record => {
+          const recordBranchId = record.branch_id?._id || record.branch_id;
+          return recordBranchId === currentBranchId;
+        })
+      : allGunnyData.gunnyRecords;
+
+    // Calculate total gunny from paddy records (GUNNY ENTRY - Import)
+    branchFilteredPaddy.forEach(paddy => {
+      const gunny = paddy.gunny || {};
+      stats.totalPaddyGunny.nb += gunny.nb || 0;
+      stats.totalPaddyGunny.onb += gunny.onb || 0;
+      stats.totalPaddyGunny.ss += gunny.ss || 0;
+      stats.totalPaddyGunny.swp += gunny.swp || 0;
+      
+      // Gunny Entry = Paddy Gunny (Import)
+      stats.gunnyEntry.nb += gunny.nb || 0;
+      stats.gunnyEntry.onb += gunny.onb || 0;
+      stats.gunnyEntry.ss += gunny.ss || 0;
+      stats.gunnyEntry.swp += gunny.swp || 0;
+    });
+    stats.totalPaddyGunny.total = stats.totalPaddyGunny.nb + stats.totalPaddyGunny.onb + 
+                                  stats.totalPaddyGunny.ss + stats.totalPaddyGunny.swp;
+    stats.gunnyEntry.total = stats.gunnyEntry.nb + stats.gunnyEntry.onb + 
+                             stats.gunnyEntry.ss + stats.gunnyEntry.swp;
+
+    // Calculate total gunny used in rice records (GUNNY USED - Export)
+    branchFilteredRice.forEach(rice => {
+      const gunnyUsed = rice.gunnyUsedFromPaddy || {};
+      stats.totalRiceGunny.nb += gunnyUsed.nb || 0;
+      stats.totalRiceGunny.onb += gunnyUsed.onb || 0;
+      stats.totalRiceGunny.ss += gunnyUsed.ss || 0;
+      stats.totalRiceGunny.swp += gunnyUsed.swp || 0;
+      
+      // Gunny Used = Rice Gunny Used (Export)
+      stats.gunnyUsed.nb += gunnyUsed.nb || 0;
+      stats.gunnyUsed.onb += gunnyUsed.onb || 0;
+      stats.gunnyUsed.ss += gunnyUsed.ss || 0;
+      stats.gunnyUsed.swp += gunnyUsed.swp || 0;
+    });
+    stats.totalRiceGunny.total = stats.totalRiceGunny.nb + stats.totalRiceGunny.onb + 
+                                 stats.totalRiceGunny.ss + stats.totalRiceGunny.swp;
+    stats.gunnyUsed.total = stats.gunnyUsed.nb + stats.gunnyUsed.onb + 
+                            stats.gunnyUsed.ss + stats.gunnyUsed.swp;
+
+    
+
+    // Calculate total direct gunny records
+    branchFilteredDirect.forEach(gunny => {
+      const gunnyData = gunny.gunny || {};
+      stats.totalDirectGunny.nb += gunnyData.nb || 0;
+      stats.totalDirectGunny.onb += gunnyData.onb || 0;
+      stats.totalDirectGunny.ss += gunnyData.ss || 0;
+      stats.totalDirectGunny.swp += gunnyData.swp || 0;
+    });
+    stats.totalDirectGunny.total = stats.totalDirectGunny.nb + stats.totalDirectGunny.onb + 
+                                   stats.totalDirectGunny.ss + stats.totalDirectGunny.swp;
+
+    // Calculate balance gunny (total available - total used)
+    stats.balanceGunny.nb = stats.totalPaddyGunny.nb - stats.totalRiceGunny.nb;
+    stats.balanceGunny.onb = stats.totalPaddyGunny.onb - stats.totalRiceGunny.onb;
+    stats.balanceGunny.ss = stats.totalPaddyGunny.ss - stats.totalRiceGunny.ss;
+    stats.balanceGunny.swp = stats.totalPaddyGunny.swp - stats.totalRiceGunny.swp;
+    stats.balanceGunny.total = stats.balanceGunny.nb + stats.balanceGunny.onb + 
+                               stats.balanceGunny.ss + stats.balanceGunny.swp;
+
+    // Calculate gunny available (Gunny Entry - Gunny Used)
+    stats.gunnyAvailable.nb = stats.gunnyEntry.nb - stats.gunnyUsed.nb;
+    stats.gunnyAvailable.onb = stats.gunnyEntry.onb - stats.gunnyUsed.onb;
+    stats.gunnyAvailable.ss = stats.gunnyEntry.ss - stats.gunnyUsed.ss;
+    stats.gunnyAvailable.swp = stats.gunnyEntry.swp - stats.gunnyUsed.swp;
+    stats.gunnyAvailable.total = stats.gunnyAvailable.nb + stats.gunnyAvailable.onb + 
+                                 stats.gunnyAvailable.ss + stats.gunnyAvailable.swp;
+
+    // Calculate utilization rate (percentage used)
+    stats.utilizationRate.nb = stats.totalPaddyGunny.nb > 0 ? 
+      ((stats.totalRiceGunny.nb / stats.totalPaddyGunny.nb) * 100) : 0;
+    stats.utilizationRate.onb = stats.totalPaddyGunny.onb > 0 ? 
+      ((stats.totalRiceGunny.onb / stats.totalPaddyGunny.onb) * 100) : 0;
+    stats.utilizationRate.ss = stats.totalPaddyGunny.ss > 0 ? 
+      ((stats.totalRiceGunny.ss / stats.totalPaddyGunny.ss) * 100) : 0;
+    stats.utilizationRate.swp = stats.totalPaddyGunny.swp > 0 ? 
+      ((stats.totalRiceGunny.swp / stats.totalPaddyGunny.swp) * 100) : 0;
+    stats.utilizationRate.total = stats.totalPaddyGunny.total > 0 ? 
+      ((stats.totalRiceGunny.total / stats.totalPaddyGunny.total) * 100) : 0;
+
+    return stats;
+  }, [allGunnyData, currentBranchId]);
+
   // Filter gunny records (for original gunny management)
   const filteredGunnyRecords = gunnyRecords.filter((gunny) => {
     // Text search filter
@@ -376,7 +499,7 @@ const GunnyManagement = () => {
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
         value === 'Paddy Management' ? 'bg-blue-100 text-blue-800' :
         value === 'Rice Management' ? 'bg-green-100 text-green-800' :
-        value === 'Godown Management' ? 'bg-purple-100 text-purple-800' :
+
         'bg-gray-100 text-gray-800'
       }`}>
         {value}
@@ -393,15 +516,15 @@ const GunnyManagement = () => {
     { key: "displayDate", label: "Date" },
     { key: "issueMemo", label: "Memo/Details", render: (value, record) => {
       if (record.recordType === 'rice') return `Month: ${record.month}`;
-      if (record.recordType === 'godown') return `Date: ${record.displayDate}`;
+
       return value || 'N/A';
     }},
     { key: "lorryNumber", label: "Lorry/Vehicle", render: (value, record) => {
-      if (record.recordType === 'rice' || record.recordType === 'godown') return 'N/A';
+      if (record.recordType === 'rice') return 'N/A';
       return value || 'N/A';
     }},
     { key: "paddyFrom", label: "Source/Variety", render: (value, record) => {
-      if (record.recordType === 'rice' || record.recordType === 'godown') return 'N/A';
+      if (record.recordType === 'rice') return 'N/A';
       return value || 'N/A';
     }},
     { 
@@ -432,7 +555,7 @@ const GunnyManagement = () => {
       key: "paddy", 
       label: "Paddy Details", 
       render: (paddy, record) => {
-        if (record.recordType === 'rice' || record.recordType === 'godown') {
+        if (record.recordType === 'rice') {
           return <span className="text-gray-500 text-xs">N/A</span>;
         }
         return (
@@ -545,7 +668,7 @@ const GunnyManagement = () => {
               <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              Comprehensive Gunny Statistics (All Sources)
+              Comprehensive Gunny Statistics (All Sources) - Balance Included
             </h3>
             <div className="flex items-center gap-2">
               {aggregatedLoading && (
@@ -567,7 +690,7 @@ const GunnyManagement = () => {
           </div>
           
           {/* Overall Totals */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 mb-6">
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-4 rounded-lg border border-gray-200 text-center">
               <h4 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Total Records</h4>
               <p className="text-lg sm:text-2xl font-bold text-gray-900">{filteredStats.totalRecords}</p>
@@ -575,18 +698,22 @@ const GunnyManagement = () => {
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 sm:p-4 rounded-lg border border-blue-200 text-center">
               <h4 className="text-xs sm:text-sm font-medium text-blue-600 mb-1">Total NB</h4>
               <p className="text-lg sm:text-2xl font-bold text-blue-700">{filteredStats.totalNB}</p>
+              <p className="text-xs text-blue-600">Balance: {gunnyBalanceStats.balanceGunny.nb}</p>
             </div>
             <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 sm:p-4 rounded-lg border border-green-200 text-center">
               <h4 className="text-xs sm:text-sm font-medium text-green-600 mb-1">Total ONB</h4>
               <p className="text-lg sm:text-2xl font-bold text-green-700">{filteredStats.totalONB}</p>
+              <p className="text-xs text-green-600">Balance: {gunnyBalanceStats.balanceGunny.onb}</p>
             </div>
             <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-3 sm:p-4 rounded-lg border border-yellow-200 text-center">
               <h4 className="text-xs sm:text-sm font-medium text-yellow-600 mb-1">Total SS</h4>
               <p className="text-lg sm:text-2xl font-bold text-yellow-700">{filteredStats.totalSS}</p>
+              <p className="text-xs text-yellow-600">Balance: {gunnyBalanceStats.balanceGunny.ss}</p>
             </div>
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 sm:p-4 rounded-lg border border-purple-200 text-center">
               <h4 className="text-xs sm:text-sm font-medium text-purple-600 mb-1">Total SWP</h4>
               <p className="text-lg sm:text-2xl font-bold text-purple-700">{filteredStats.totalSWP}</p>
+              <p className="text-xs text-purple-600">Balance: {gunnyBalanceStats.balanceGunny.swp}</p>
             </div>
             <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-3 sm:p-4 rounded-lg border border-indigo-200 text-center">
               <h4 className="text-xs sm:text-sm font-medium text-indigo-600 mb-1">Total Bags</h4>
@@ -596,6 +723,11 @@ const GunnyManagement = () => {
               <h4 className="text-xs sm:text-sm font-medium text-red-600 mb-1">Total Weight</h4>
               <p className="text-lg sm:text-2xl font-bold text-red-700">{formatWeight(filteredStats.totalWeight)}</p>
             </div>
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-3 sm:p-4 rounded-lg border border-orange-200 text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-orange-600 mb-1">Total Balance</h4>
+              <p className="text-lg sm:text-2xl font-bold text-orange-700">{gunnyBalanceStats.balanceGunny.nb + gunnyBalanceStats.balanceGunny.onb}</p>
+              <p className="text-xs text-orange-600">NB+ONB: {((gunnyBalanceStats.totalRiceGunny.nb + gunnyBalanceStats.totalRiceGunny.onb) / (gunnyBalanceStats.totalPaddyGunny.nb + gunnyBalanceStats.totalPaddyGunny.onb) * 100).toFixed(1)}% Used</p>
+            </div>
           </div>
 
           {/* Breakdown by Source */}
@@ -603,7 +735,7 @@ const GunnyManagement = () => {
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
               <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center">
                 <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                Paddy Management
+                Paddy Management (Source)
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -612,19 +744,25 @@ const GunnyManagement = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-blue-700">NB:</span>
-                  <span className="font-medium">{filteredStats.bySource.paddy.nb}</span>
+                  <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.nb}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-blue-700">ONB:</span>
-                  <span className="font-medium">{filteredStats.bySource.paddy.onb}</span>
+                  <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.onb}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-blue-700">SS:</span>
-                  <span className="font-medium">{filteredStats.bySource.paddy.ss}</span>
+                  <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.ss}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-blue-700">SWP:</span>
-                  <span className="font-medium">{filteredStats.bySource.paddy.swp}</span>
+                  <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.swp}</span>
+                </div>
+                <div className="pt-2 border-t border-blue-200">
+                  <div className="flex justify-between font-semibold">
+                    <span className="text-blue-800">Total:</span>
+                    <span className="text-blue-900">{gunnyBalanceStats.totalPaddyGunny.total}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -632,7 +770,7 @@ const GunnyManagement = () => {
             <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
               <h4 className="text-sm font-semibold text-green-800 mb-3 flex items-center">
                 <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                Rice Management
+                Rice Management (Consumption)
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -640,41 +778,62 @@ const GunnyManagement = () => {
                   <span className="font-medium">{filteredStats.bySource.rice.count}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-700">ONB:</span>
-                  <span className="font-medium">{filteredStats.bySource.rice.onb}</span>
+                  <span className="text-green-700">NB Used:</span>
+                  <span className="font-medium">{filteredStats.bySource.rice.nb || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-700">SS:</span>
-                  <span className="font-medium">{filteredStats.bySource.rice.ss}</span>
+                  <span className="text-green-700">ONB Used:</span>
+                  <span className="font-medium">{filteredStats.bySource.rice.onb || 0}</span>
+                </div>
+                <div className="pt-2 border-t border-green-200">
+                  <div className="flex justify-between font-semibold">
+                    <span className="text-green-800">Total Used Gunnys:</span>
+                    <span className="text-green-900">{(filteredStats.bySource.rice.nb || 0) + (filteredStats.bySource.rice.onb || 0)}</span>
+                  </div>
+                </div>
+                <div className="pt-1 border-t border-green-200">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-green-600">Rice NB:</span>
+                    <span className="font-medium">{filteredStats.bySource.rice.nb || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-green-600">Rice ONB:</span>
+                    <span className="font-medium">{filteredStats.bySource.rice.onb || 0}</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-green-200">
+                  <div className="flex justify-between font-semibold">
+                    <span className="text-green-800">Total Used:</span>
+                    <span className="text-green-900">{gunnyBalanceStats.totalRiceGunny.total}</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-green-200">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-green-600">Utilization Rate (NB+ONB):</span>
+                    <span className="font-medium text-green-800">
+                      {(() => {
+                        const riceUsed = (filteredStats.bySource.rice.nb || 0) + (filteredStats.bySource.rice.onb || 0);
+                        const paddyAvailable = gunnyBalanceStats.totalPaddyGunny.nb + gunnyBalanceStats.totalPaddyGunny.onb;
+                        return paddyAvailable > 0 ? ((riceUsed / paddyAvailable) * 100).toFixed(1) : '0.0';
+                      })()}%
+                    </span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-green-200">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-green-600">Rice Output:</span>
+                    <span className="font-medium text-green-800">{filteredStats.bySource.rice.weight || 0} kg</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
-              <h4 className="text-sm font-semibold text-purple-800 mb-3 flex items-center">
-                <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
-                Godown Management
-              </h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-purple-700">Records:</span>
-                  <span className="font-medium">{filteredStats.bySource.godown.count}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-purple-700">ONB:</span>
-                  <span className="font-medium">{filteredStats.bySource.godown.onb}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-purple-700">SS:</span>
-                  <span className="font-medium">{filteredStats.bySource.godown.ss}</span>
-                </div>
-              </div>
-            </div>
+
 
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
               <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
                 <div className="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
-                Gunny Management
+                Direct Gunny Management
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -683,24 +842,32 @@ const GunnyManagement = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">NB:</span>
-                  <span className="font-medium">{filteredStats.bySource.gunny.nb}</span>
+                  <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.nb}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">ONB:</span>
-                  <span className="font-medium">{filteredStats.bySource.gunny.onb}</span>
+                  <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.onb}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">SS:</span>
-                  <span className="font-medium">{filteredStats.bySource.gunny.ss}</span>
+                  <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.ss}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">SWP:</span>
-                  <span className="font-medium">{filteredStats.bySource.gunny.swp}</span>
+                  <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.swp}</span>
+                </div>
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="flex justify-between font-semibold">
+                    <span className="text-gray-800">Total:</span>
+                    <span className="text-gray-900">{gunnyBalanceStats.totalDirectGunny.total}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+
 
         {/* Branch Filter Summary */}
         {/* {currentBranchId && (
@@ -740,7 +907,6 @@ const GunnyManagement = () => {
                 { value: "all", label: "All Sources" },
                 { value: "paddy", label: "Paddy Management" },
                 { value: "rice", label: "Rice Management" },
-                { value: "godown", label: "Godown Management" },
                 { value: "gunny", label: "Gunny Management" }
               ]}
               className="w-full sm:w-auto"
@@ -779,7 +945,6 @@ const GunnyManagement = () => {
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           record.source === 'Paddy Management' ? 'bg-blue-100 text-blue-800' :
                           record.source === 'Rice Management' ? 'bg-green-100 text-green-800' :
-                          record.source === 'Godown Management' ? 'bg-purple-100 text-purple-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {record.source}
@@ -811,12 +976,7 @@ const GunnyManagement = () => {
                           <span className="text-gray-900 font-medium">{record.month}</span>
                         </div>
                       )}
-                      {record.recordType === 'godown' && (
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Date:</span>
-                          <span className="text-gray-900 font-medium">{new Date(record.date).toLocaleDateString()}</span>
-                        </div>
-                      )}
+
                     </div>
                     <div className="space-y-3">
                       {/* Gunny Summary */}
@@ -915,7 +1075,6 @@ const GunnyManagement = () => {
                           </div>
                           <div className="font-medium text-gray-900">
                             {record.recordType === 'rice' ? `Month: ${record.month}` :
-                             record.recordType === 'godown' ? `Date: ${record.displayDate}` :
                              record.issueMemo || 'N/A'}
                           </div>
                           <div className="text-sm text-gray-600">

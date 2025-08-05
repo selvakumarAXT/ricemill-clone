@@ -19,18 +19,18 @@ const paddySchema = new mongoose.Schema({
   paddyFrom: {
     type: String,
     required: true,
-    enum: [
-      "Local Farmers",
-      "Traders", 
-      "Cooperative Societies",
-      "Government Procurement",
-      "Other"
-    ],
+    trim: true,
   },
   paddyVariety: {
     type: String,
     required: true,
     enum: ["A", "C"],
+  },
+  moisture: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
   },
   gunny: {
     nb: {

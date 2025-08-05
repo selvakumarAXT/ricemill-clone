@@ -33,7 +33,7 @@ const PaddyManagement = () => {
   const [editingPaddy, setEditingPaddy] = useState(null);
   const [paddyFilter, setPaddyFilter] = useState("");
   const [paddyVarietyFilter, setPaddyVarietyFilter] = useState("");
-  const [paddySourceFilter, setPaddySourceFilter] = useState("");
+
   const [expandedPaddy, setExpandedPaddy] = useState(null);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -51,14 +51,7 @@ const PaddyManagement = () => {
   // Paddy varieties options
   const PADDY_VARIETIES = ["A", "C"];
 
-  // Paddy sources
-  const PADDY_SOURCES = [
-    "Local Farmers",
-    "Traders",
-    "Cooperative Societies",
-    "Government Procurement",
-    "Other",
-  ];
+
 
   const initialPaddyForm = {
     issueDate: "",
@@ -66,6 +59,7 @@ const PaddyManagement = () => {
     lorryNumber: "",
     paddyFrom: "",
     paddyVariety: "A",
+    moisture: "",
     gunny: {
       nb: '',
       onb: '',
@@ -84,35 +78,9 @@ const PaddyManagement = () => {
 
   const [paddyForm, setPaddyForm] = useState(initialPaddyForm);
 
-  // Memoized calculations for performance
-  const memoizedCalculations = useMemo(() => {
-    const gunnyTotal = 
-      (parseInt(paddyForm.gunny?.nb) || 0) +
-      (parseInt(paddyForm.gunny?.onb) || 0) +
-      (parseInt(paddyForm.gunny?.ss) || 0) +
-      (parseInt(paddyForm.gunny?.swp) || 0);
-    
-    const bags = gunnyTotal; // Bags = Total Gunny
-    const weight = bags * currentBagWeight; // Weight = Bags * currentBagWeight
-    
-    return {
-      gunnyTotal,
-      bags,
-      weight
-    };
-  }, [paddyForm.gunny?.nb, paddyForm.gunny?.onb, paddyForm.gunny?.ss, paddyForm.gunny?.swp, currentBagWeight]);
 
-  // Auto-update bags and weight when gunny changes
-  useEffect(() => {
-    setPaddyForm(prev => ({
-      ...prev,
-      paddy: {
-        ...prev.paddy,
-        bags: memoizedCalculations.bags,
-        weight: memoizedCalculations.weight
-      }
-    }));
-  }, [memoizedCalculations.bags, memoizedCalculations.weight]);
+
+
 
   // Auto-clear success message after 5 seconds
   useEffect(() => {
@@ -145,7 +113,7 @@ const PaddyManagement = () => {
   }, [currentBranchId]);
 
   // Fetch paddy data with server-side pagination
-  const fetchPaddies = async (page = 1, limit = 10, search = '', sortBy = 'issueDate', sortOrder = 'desc', variety = '', source = '') => {
+  const fetchPaddies = async (page = 1, limit = 10, search = '', sortBy = 'issueDate', sortOrder = 'desc', variety = '') => {
     setLoading(true);
     setError(null);
     try {
@@ -155,8 +123,7 @@ const PaddyManagement = () => {
         search,
         sortBy,
         sortOrder,
-        variety: variety || undefined,
-        source: source || undefined
+        variety: variety || undefined
       };
       
       console.log('Fetching paddies with params:', params);
@@ -185,7 +152,7 @@ const PaddyManagement = () => {
   useEffect(() => {
     // Only fetch if currentBranchId is available
     if (currentBranchId !== undefined) {
-      fetchPaddies(1, paginationData.limit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter, paddySourceFilter);
+      fetchPaddies(1, paginationData.limit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter);
     }
   }, [currentBranchId]);
 
@@ -193,12 +160,12 @@ const PaddyManagement = () => {
 
   // Handle page change
   const handlePageChange = (newPage) => {
-    fetchPaddies(newPage, paginationData.limit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter, paddySourceFilter);
+    fetchPaddies(newPage, paginationData.limit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter);
   };
 
   // Handle page size change
   const handlePageSizeChange = (newLimit) => {
-    fetchPaddies(1, newLimit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter, paddySourceFilter);
+    fetchPaddies(1, newLimit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter);
   };
 
   // Handle sorting
@@ -206,7 +173,7 @@ const PaddyManagement = () => {
     setSortData(newSort);
     const sortBy = newSort.col !== null ? ['issueDate', 'issueMemo', 'lorryNumber', 'paddyFrom', 'paddyVariety'][newSort.col] : 'issueDate';
     const sortOrder = newSort.dir;
-    fetchPaddies(1, paginationData.limit, paddyFilter, sortBy, sortOrder, paddyVarietyFilter, paddySourceFilter);
+    fetchPaddies(1, paginationData.limit, paddyFilter, sortBy, sortOrder, paddyVarietyFilter);
   };
 
   // Paddy CRUD operations
@@ -224,6 +191,7 @@ const PaddyManagement = () => {
           lorryNumber: paddy.lorryNumber || "",
           paddyFrom: paddy.paddyFrom || "",
           paddyVariety: paddy.paddyVariety || "A",
+          moisture: paddy.moisture || "",
           gunny: { ...initialPaddyForm.gunny, ...(paddy.gunny || {}) },
           paddy: { ...initialPaddyForm.paddy, ...(paddy.paddy || {}) },
         }
@@ -266,12 +234,7 @@ const PaddyManagement = () => {
     }
   };
 
-  // Handle gunny total change to update bag count (now simplified due to useMemo)
-  const handleGunnyTotalChange = (totalGunny) => {
-    // This is now handled automatically by useMemo and useEffect
-    // Keeping for backward compatibility with GunnyEntryDetails
-    console.log('Gunny total updated via callback:', totalGunny);
-  };
+
 
   const handleBagWeightChange = (newWeight) => {
     setCurrentBagWeight(newWeight);
@@ -327,23 +290,70 @@ const PaddyManagement = () => {
   // Handle filter changes for server-side filtering
   const handleFilterChange = (newFilter) => {
     setPaddyFilter(newFilter);
-    fetchPaddies(1, paginationData.limit, newFilter, sortData.col, sortData.dir, paddyVarietyFilter, paddySourceFilter);
+    fetchPaddies(1, paginationData.limit, newFilter, sortData.col, sortData.dir, paddyVarietyFilter);
   };
 
   const handleVarietyFilterChange = (newVariety) => {
     setPaddyVarietyFilter(newVariety);
     // Trigger API call with new filters
-    fetchPaddies(1, paginationData.limit, paddyFilter, sortData.col, sortData.dir, newVariety, paddySourceFilter);
+    fetchPaddies(1, paginationData.limit, paddyFilter, sortData.col, sortData.dir, newVariety);
   };
 
-  const handleSourceFilterChange = (newSource) => {
-    setPaddySourceFilter(newSource);
-    // Trigger API call with new filters
-    fetchPaddies(1, paginationData.limit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter, newSource);
-  };
+
 
   // Server-side filtering is now handled by the API
   const filteredPaddies = paddies;
+
+  // Calculate summary statistics
+  const calculateSummaryStats = () => {
+    const stats = {
+      totalPaddyBags: 0,
+      totalPaddyWeight: 0,
+      totalRiceOutput: 0,
+      totalByProducts: 0,
+      totalGunny: 0,
+      averageMoisture: 0,
+      recordCount: paddies.length
+    };
+
+    if (paddies.length > 0) {
+      let totalMoisture = 0;
+      let moistureCount = 0;
+
+      paddies.forEach(paddy => {
+        // Paddy totals
+        stats.totalPaddyBags += paddy.paddy?.bags || 0;
+        stats.totalPaddyWeight += paddy.paddy?.weight || 0;
+        
+        // Rice output (67% of paddy weight)
+        const riceOutput = (paddy.paddy?.weight || 0) * 0.67;
+        stats.totalRiceOutput += riceOutput;
+        
+        // By-products (33% of paddy weight - husk, bran, etc.)
+        const byProducts = (paddy.paddy?.weight || 0) * 0.33;
+        stats.totalByProducts += byProducts;
+        
+        // Gunny totals
+        const gunnyTotal = (paddy.gunny?.nb || 0) + (paddy.gunny?.onb || 0) + (paddy.gunny?.ss || 0) + (paddy.gunny?.swp || 0);
+        stats.totalGunny += gunnyTotal;
+        
+        // Moisture average
+        if (paddy.moisture !== undefined && paddy.moisture !== null) {
+          totalMoisture += paddy.moisture;
+          moistureCount++;
+        }
+      });
+
+      // Calculate average moisture
+      if (moistureCount > 0) {
+        stats.averageMoisture = totalMoisture / moistureCount;
+      }
+    }
+
+    return stats;
+  };
+
+  const summaryStats = calculateSummaryStats();
 
   // Table columns configuration
 //   const columns = [
@@ -421,6 +431,7 @@ const groupedHeaders = [
       }
     ]
   },
+ 
   {
     label: "GUNNY",
     columns: [
@@ -473,7 +484,16 @@ const groupedHeaders = [
         },
       }
     ]
-  }
+  }, {
+    // label: "MOISTURE",
+    columns: [
+      {
+        key: "moisture",
+        label: "MOISTURE (%)",
+        render: (value) => value ? `${value}%` : '0%',
+      }
+    ]
+  },
 ];
 
   if (loading) return (
@@ -531,6 +551,99 @@ const groupedHeaders = [
         </div>
       )}
 
+      {/* Summary Statistics */}
+      <div className="mb-6">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <h3 className="text-lg font-semibold text-gray-800">Summary Statistics</h3>
+            <p className="text-sm text-gray-600 mt-1">Total records: {summaryStats.recordCount}</p>
+          </div>
+          
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Total Paddy */}
+              <div className="text-center">
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-600 mb-2">
+                    {summaryStats.totalPaddyBags.toLocaleString()}
+                  </div>
+                  <div className="text-sm font-medium text-gray-700">Total Paddy Bags</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {formatWeight(summaryStats.totalPaddyWeight)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Rice Output */}
+              <div className="text-center">
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <div className="text-2xl font-bold text-green-600 mb-2">
+                    {formatWeight(summaryStats.totalRiceOutput)}
+                  </div>
+                  <div className="text-sm font-medium text-gray-700">Rice Output</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    67% of paddy weight
+                  </div>
+                </div>
+              </div>
+
+              {/* By-Products */}
+              <div className="text-center">
+                <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                  <div className="text-2xl font-bold text-orange-600 mb-2">
+                    {formatWeight(summaryStats.totalByProducts)}
+                  </div>
+                  <div className="text-sm font-medium text-gray-700">By-Products</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Husk, bran, etc. (33%)
+                  </div>
+                </div>
+              </div>
+
+              {/* Gunny & Moisture */}
+              <div className="text-center">
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <div className="text-2xl font-bold text-purple-600 mb-2">
+                    {summaryStats.totalGunny.toLocaleString()}
+                  </div>
+                  <div className="text-sm font-medium text-gray-700">Total Gunny</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Avg. Moisture: {summaryStats.averageMoisture.toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Details */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="font-medium text-gray-700 mb-1">Processing Ratio</div>
+                <div className="text-gray-600">
+                  <div>• Rice: 67% of paddy weight</div>
+                  <div>• By-products: 33% of paddy weight</div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="font-medium text-gray-700 mb-1">Weight Distribution</div>
+                <div className="text-gray-600">
+                  <div>• Total Paddy: {formatWeight(summaryStats.totalPaddyWeight)}</div>
+                  <div>• Total Rice: {formatWeight(summaryStats.totalRiceOutput)}</div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="font-medium text-gray-700 mb-1">Quality Metrics</div>
+                <div className="text-gray-600">
+                  <div>• Average Moisture: {summaryStats.averageMoisture.toFixed(1)}%</div>
+                  <div>• Total Records: {summaryStats.recordCount}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Responsive Filters */}
       <ResponsiveFilters title="Filters & Search" className="mb-6">
         <TableFilters
@@ -551,18 +664,7 @@ const groupedHeaders = [
           showSearch={false}
           showSelect={true}
         />
-        <TableFilters
-          searchValue=""
-          selectValue={paddySourceFilter}
-          selectOptions={PADDY_SOURCES.map(source => ({
-            value: source,
-            label: source
-          }))}
-          onSelectChange={(e) => handleSourceFilterChange(e.target.value)}
-          selectPlaceholder="All Sources"
-          showSearch={false}
-          showSelect={true}
-        />
+
                  <BranchFilter
            value={currentBranchId || ''}
            onChange={(e) => {
@@ -576,6 +678,7 @@ const groupedHeaders = [
         {/* Desktop Table View */}
         <div className="hidden lg:block">
           <GroupedTable
+            tableTitle="Paddy Records"
             data={filteredPaddies}
             groupedHeaders={groupedHeaders}
             serverSidePagination={true}
@@ -584,6 +687,124 @@ const groupedHeaders = [
             onPageSizeChange={handlePageSizeChange}
             onSort={handleSort}
             sortData={sortData}
+            renderDetail={(paddy) => (
+              <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Issue Date:</span>
+                      <span className="text-gray-900 font-medium">
+                        {new Date(paddy.issueDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Issue Memo:</span>
+                      <span className="text-gray-900 font-medium">{paddy.issueMemo}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Lorry Number:</span>
+                      <span className="text-gray-900 font-medium">{paddy.lorryNumber}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Paddy From:</span>
+                      <span className="text-gray-900 font-medium">{paddy.paddyFrom}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Variety:</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        paddy.paddyVariety === 'A' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        Variety {paddy.paddyVariety}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Moisture:</span>
+                      <span className="text-gray-900 font-medium">{paddy.moisture || 0}%</span>
+                    </div>
+                    {paddy.bagWeight && (
+                      <div className="flex items-center">
+                        <span className="w-24 text-sm font-medium text-gray-600">Bag Weight:</span>
+                        <span className="text-gray-900 font-medium">{paddy.bagWeight} kg</span>
+                      </div>
+                    )}
+                    {paddy.createdAt && (
+                      <div className="flex items-center">
+                        <span className="w-24 text-sm font-medium text-gray-600">Created:</span>
+                        <span className="text-gray-900 font-medium">
+                          {new Date(paddy.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {paddy.updatedAt && paddy.updatedAt !== paddy.createdAt && (
+                      <div className="flex items-center">
+                        <span className="w-24 text-sm font-medium text-gray-600">Updated:</span>
+                        <span className="text-gray-900 font-medium">
+                          {new Date(paddy.updatedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {/* Gunny Summary */}
+                    <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
+                      <h5 className="text-sm font-semibold text-gray-800 mb-2">Gunny Summary</h5>
+                      <div className="grid grid-cols-4 gap-2 text-xs w-full">
+                        <div className="text-center">
+                          <div className="font-medium text-blue-600">NB</div>
+                          <div className="text-gray-900">{paddy.gunny?.nb || 0}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-green-600">ONB</div>
+                          <div className="text-gray-900">{paddy.gunny?.onb || 0}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-yellow-600">SS</div>
+                          <div className="text-gray-900">{paddy.gunny?.ss || 0}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-purple-600">SWP</div>
+                          <div className="text-gray-900">{paddy.gunny?.swp || 0}</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="text-center">
+                          <div className="text-xs font-medium text-gray-600">Total Gunny</div>
+                          <div className="text-lg font-bold text-indigo-600">
+                            {(paddy.gunny?.nb || 0) + (paddy.gunny?.onb || 0) + (paddy.gunny?.ss || 0) + (paddy.gunny?.swp || 0)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Paddy Summary */}
+                    <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
+                      <h5 className="text-sm font-semibold text-gray-800 mb-2">Paddy Summary</h5>
+                      <div className="grid grid-cols-2 gap-4 text-sm w-full">
+                        <div>
+                          <span className="text-gray-600">Bags:</span>
+                          <span className="ml-1 font-medium text-indigo-600">{paddy.paddy?.bags || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Weight:</span>
+                          <span className="ml-1 font-medium text-red-600">{formatWeight(paddy.paddy?.weight || 0)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rice Output Calculation */}
+                    <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
+                      <h5 className="text-sm font-semibold text-gray-800 mb-2">Expected Rice Output</h5>
+                      <div className="text-center">
+                        <div className="text-xs text-gray-600 mb-1">(67% of paddy weight)</div>
+                        <div className="text-lg font-bold text-green-600">
+                          {formatWeight((paddy.paddy?.weight || 0) * 0.67)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             actions={(paddy) => [
               <Button
                 key="edit"
@@ -694,6 +915,10 @@ const groupedHeaders = [
                             <span className="text-gray-600">Source:</span>
                             <span className="ml-1 font-medium text-gray-900">{paddy.paddyFrom}</span>
                           </div>
+                          <div>
+                            <span className="text-gray-600">Moisture:</span>
+                            <span className="ml-1 font-medium text-gray-900">{paddy.moisture || 0}%</span>
+                          </div>
                         </div>
 
                         {/* Gunny Summary */}
@@ -779,20 +1004,14 @@ const groupedHeaders = [
               required
               icon="truck"
             />
-            <FormSelect
+            <FormInput
               label="Paddy From"
               name="paddyFrom"
               value={paddyForm.paddyFrom}
               onChange={handlePaddyFormChange}
               required
-            >
-              <option value="">Select Source</option>
-              {PADDY_SOURCES.map((source) => (
-                <option key={source} value={source}>
-                  {source}
-                </option>
-              ))}
-            </FormSelect>
+              icon="location"
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -802,6 +1021,7 @@ const groupedHeaders = [
               value={paddyForm.paddyVariety}
               onChange={handlePaddyFormChange}
               required
+              icon="seedling"
             >
               {PADDY_VARIETIES.map((variety) => (
                 <option key={variety} value={variety}>
@@ -809,6 +1029,17 @@ const groupedHeaders = [
                 </option>
               ))}
             </FormSelect>
+            <FormInput
+              label="Moisture (%)"
+              name="moisture"
+              type="number"
+              value={paddyForm.moisture}
+              onChange={handlePaddyFormChange}
+              min="0"
+              max="100"
+              step="0.1"
+              icon="droplet"
+            />
           </div>
 
           {/* Gunny Details */}
@@ -816,39 +1047,16 @@ const groupedHeaders = [
             gunnyData={paddyForm.gunny}
             onChange={handlePaddyFormChange}
             enableAutoCalculation={true}
-            onGunnyTotalChange={handleGunnyTotalChange}
           />
 
-          {/* Auto-calculation Status */}
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="text-sm text-green-800">
-              <div className="font-medium mb-2">🔄 Auto-Calculation Status:</div>
-              <div className="grid grid-cols-3 gap-4 text-xs">
-                <div>
-                  <span className="font-medium">Total Gunny:</span>
-                  <span className="ml-1 text-lg font-bold">{memoizedCalculations.gunnyTotal}</span>
-                </div>
-                <div>
-                  <span className="font-medium">Bags:</span>
-                  <span className="ml-1 text-lg font-bold">{memoizedCalculations.bags}</span>
-                </div>
-                <div>
-                  <span className="font-medium">Weight:</span>
-                                          <span className="ml-1 text-lg font-bold">{formatWeight(memoizedCalculations.weight)}</span>
-                </div>
-              </div>
-              <div className="text-xs mt-2 text-green-600">
-                Formula: Gunny Total → Bags → Weight (1 bag = {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons)
-              </div>
-            </div>
-          </div>
+
 
           {/* Paddy Details */}
           <PaddyEntryDetails
             paddyData={paddyForm.paddy}
             onChange={handlePaddyFormChange}
-            enableAutoCalculation={false} // Disable auto-calculation since bags are controlled by gunny count
-            disabled={true} // Disable both fields since they're auto-calculated
+            enableAutoCalculation={true} // Enable auto-calculation for manual input
+            disabled={false} // Enable both fields for manual editing
             onBagWeightChange={handleBagWeightChange}
           />
 

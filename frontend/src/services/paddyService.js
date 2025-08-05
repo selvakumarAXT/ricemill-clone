@@ -74,6 +74,7 @@ export const formatPaddyData = (formData) => {
     lorryNumber: formData.lorryNumber,
     paddyFrom: formData.paddyFrom,
     paddyVariety: formData.paddyVariety,
+    moisture: parseFloat(formData.moisture) || 0,
     gunny: {
       nb: parseInt(formData.gunny?.nb) || 0,
       onb: parseInt(formData.gunny?.onb) || 0,
@@ -108,6 +109,7 @@ export const formatPaddyResponse = (paddyData) => {
     lorryNumber: paddyData.lorryNumber,
     paddyFrom: paddyData.paddyFrom,
     paddyVariety: paddyData.paddyVariety,
+    moisture: paddyData.moisture || 0,
     gunny: {
       nb: paddyData.gunny?.nb || 0,
       onb: paddyData.gunny?.onb || 0,

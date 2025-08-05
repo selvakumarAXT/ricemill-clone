@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Button from './Button';
 
 const GroupedTable = ({
@@ -6,6 +6,7 @@ const GroupedTable = ({
   columns = [],
   groupedHeaders = [],
   actions,
+  renderDetail, // NEW: Add renderDetail prop for detailed view
   serverSidePagination = false,
   paginationData = null,
   onPageChange = null,
@@ -18,7 +19,10 @@ const GroupedTable = ({
   selected = [],
   onSelectAll = null,
   onSelectRow = null,
+  tableTitle = '',
 }) => {
+  const [expanded, setExpanded] = useState(null); // NEW: Track expanded row
+
   const handleSort = (colKey) => {
     if (onSort) {
       const currentDir = sortData?.col === colKey ? sortData.dir : 'asc';
@@ -32,10 +36,17 @@ const GroupedTable = ({
     return sortData.dir === 'asc' ? '↑' : '↓';
   };
 
+  // NEW: Handle row click for detailed view
+  const handleRowClick = (rowIndex) => {
+    if (renderDetail) {
+      setExpanded(expanded === rowIndex ? null : rowIndex);
+    }
+  };
+
   return (
     <div className={`bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden ${className}`}>
       <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800">Paddy Records</h3>
+        <h3 className="text-lg font-semibold text-gray-800">{tableTitle}</h3>
         <p className="text-sm text-gray-600 mt-1">Total: {paginationData?.total || data.length} records</p>
       </div>
       
@@ -109,51 +120,72 @@ const GroupedTable = ({
           {/* Table Body */}
           <tbody className="bg-white divide-y divide-gray-200">
             {data.map((row, rowIndex) => (
-              <tr key={row.id || rowIndex} className="hover:bg-gray-50">
-                {showRowNumbers && (
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
-                    {serverSidePagination 
-                      ? ((paginationData.page - 1) * paginationData.limit) + rowIndex + 1
-                      : rowIndex + 1
-                    }
-                  </td>
-                )}
-                {selectable && (
-                  <td className="px-4 py-4 whitespace-nowrap border border-gray-300">
-                    <input 
-                      type="checkbox" 
-                      checked={selected.includes(rowIndex)}
-                      onChange={() => onSelectRow(rowIndex)}
-                      className="rounded border-gray-300" 
-                    />
-                  </td>
-                )}
-                {groupedHeaders.map((group) =>
-                  group.columns.map((col, colIndex) => (
-                    <td 
-                      key={`${row.id || rowIndex}-${col.key}`}
-                      className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center border border-gray-300"
-                    >
-                      {col.key === 'serialNumber' 
-                        ? (serverSidePagination 
-                            ? ((paginationData.page - 1) * paginationData.limit) + rowIndex + 1
-                            : rowIndex + 1
-                          )
-                        : col.render 
-                          ? col.render(row[col.key], row, rowIndex) 
-                          : row[col.key]
+              <React.Fragment key={row.id || rowIndex}>
+                <tr 
+                  className={`hover:bg-gray-50 ${renderDetail ? 'cursor-pointer' : ''}`}
+                  onClick={() => handleRowClick(rowIndex)}
+                >
+                  {showRowNumbers && (
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
+                      {serverSidePagination 
+                        ? ((paginationData.page - 1) * paginationData.limit) + rowIndex + 1
+                        : rowIndex + 1
                       }
                     </td>
-                  ))
+                  )}
+                  {selectable && (
+                    <td className="px-4 py-4 whitespace-nowrap border border-gray-300">
+                      <input 
+                        type="checkbox" 
+                        checked={selected.includes(rowIndex)}
+                        onChange={() => onSelectRow(rowIndex)}
+                        className="rounded border-gray-300" 
+                      />
+                    </td>
+                  )}
+                  {groupedHeaders.map((group) =>
+                    group.columns.map((col, colIndex) => (
+                      <td 
+                        key={`${row.id || rowIndex}-${col.key}`}
+                        className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center border border-gray-300"
+                      >
+                        {col.key === 'serialNumber' 
+                          ? (serverSidePagination 
+                              ? ((paginationData.page - 1) * paginationData.limit) + rowIndex + 1
+                              : rowIndex + 1
+                            )
+                          : col.render 
+                            ? col.render(row[col.key], row, rowIndex) 
+                            : row[col.key]
+                        }
+                      </td>
+                    ))
+                  )}
+                  {actions && (
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
+                      <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                        {actions(row)}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+                {/* NEW: Detailed view row */}
+                {renderDetail && expanded === rowIndex && (
+                  <tr key={`detail-${row.id || rowIndex}`}>
+                    <td 
+                      colSpan={
+                        groupedHeaders.reduce((total, group) => total + group.columns.length, 0) + 
+                        (actions ? 1 : 0) + 
+                        (selectable ? 1 : 0) + 
+                        (showRowNumbers ? 1 : 0)
+                      } 
+                      className="bg-gray-50 px-6 py-4"
+                    >
+                      {renderDetail(row, rowIndex)}
+                    </td>
+                  </tr>
                 )}
-                {actions && (
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
-                    <div className="flex space-x-2">
-                      {actions(row)}
-                    </div>
-                  </td>
-                )}
-              </tr>
+              </React.Fragment>
             ))}
           </tbody>
         </table>

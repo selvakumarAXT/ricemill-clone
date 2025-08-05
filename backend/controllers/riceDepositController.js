@@ -1,4 +1,4 @@
-const RiceDeposit = require('../models/RiceDeposit');
+const { RiceDeposit } = require('../models/RiceDeposit');
 const mongoose = require('mongoose');
 
 // Get all rice deposit records
@@ -71,21 +71,47 @@ const createRiceDeposit = async (req, res) => {
     } else {
       riceDepositData.branch_id = branch_id;
     }
+
+    // Validate that paddyReference is provided
+    if (!riceDepositData.paddyReference) {
+      return res.status(400).json({ 
+        message: 'Paddy reference is required. Please select a paddy record to link this rice deposit.' 
+      });
+    }
     
     const newRiceDeposit = new RiceDeposit(riceDepositData);
     const savedRiceDeposit = await newRiceDeposit.save();
     
     const populatedRiceDeposit = await RiceDeposit.findById(savedRiceDeposit._id)
       .populate('createdBy', 'name email')
-      .populate('branch_id', 'name');
+      .populate('branch_id', 'name')
+      .populate('paddyReference', 'issueMemo lorryNumber paddyFrom paddyVariety gunny');
     
     res.status(201).json(populatedRiceDeposit);
   } catch (error) {
     console.error('Error creating rice deposit:', error);
     if (error.code === 11000) {
-      return res.status(400).json({ message: 'A record for this date already exists' });
+      // Handle duplicate key errors
+      const keyPattern = error.keyPattern;
+      if (keyPattern && keyPattern.date && keyPattern.branch_id) {
+        return res.status(400).json({ message: 'A record for this date already exists in this branch' });
+      } else if (keyPattern && keyPattern.month && keyPattern.branch_id) {
+        return res.status(400).json({ message: 'A record for this month already exists in this branch' });
+      } else {
+        return res.status(400).json({ message: 'A duplicate record already exists' });
+      }
     }
     if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
+    // Handle custom gunny validation errors
+    if (error.message && error.message.includes('Gunny count')) {
+      return res.status(400).json({ message: error.message });
+    }
+    if (error.message && error.message.includes('Total gunny usage')) {
+      return res.status(400).json({ message: error.message });
+    }
+    if (error.message && error.message.includes('Referenced paddy record')) {
       return res.status(400).json({ message: error.message });
     }
     res.status(500).json({ message: 'Internal server error' });
