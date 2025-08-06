@@ -24,6 +24,7 @@ exports.getAllUsers = async (req, res) => {
     
     // Transform users to include branch_id and branch name/millCode
     const usersWithBranch = users.map(user => ({
+      _id: user._id,
       id: user._id,
       name: user.name,
       email: user.email,
@@ -124,7 +125,7 @@ exports.createUser = async (req, res) => {
       name,
       email,
       password,
-      role: role || 'employee',
+      role: role || 'manager',
       branch_id: userBranchId
     });
     
@@ -150,11 +151,11 @@ exports.createUser = async (req, res) => {
 // @route   PUT /api/users/:id
 // @access  Private/Admin
 exports.updateUser = async (req, res) => {
-  if (req.user.role !== 'superadmin') {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
   try {
-    const { name, password, role, isActive } = req.body;
+    const { name, email, password, role, isActive, branch_id } = req.body;
     
     const user = await User.findById(req.params.id);
     
@@ -165,10 +166,24 @@ exports.updateUser = async (req, res) => {
       });
     }
     
+    // Prevent updating superadmin unless you are superadmin
+    if (user.role === 'superadmin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot update superadmin user'
+      });
+    }
+    
     // Update fields
     if (name !== undefined) user.name = name;
+    if (email !== undefined) user.email = email;
     if (role !== undefined) user.role = role;
     if (isActive !== undefined) user.isActive = isActive;
+    
+    // Only superadmin can change branch_id
+    if (branch_id !== undefined && req.user.isSuperAdmin) {
+      user.branch_id = branch_id;
+    }
     
     // If password is provided, it will be hashed by the pre-save middleware
     if (password && password.trim() !== '') {
@@ -177,13 +192,15 @@ exports.updateUser = async (req, res) => {
     
     await user.save();
     
-    // Remove password from response
-    user.password = undefined;
+    // Get populated user data
+    const updatedUser = await User.findById(user._id)
+      .select('-password')
+      .populate('branch_id', 'name millCode');
     
     res.status(200).json({
       success: true,
       message: 'User updated successfully',
-      user
+      user: updatedUser
     });
   } catch (error) {
     res.status(400).json({
@@ -197,7 +214,7 @@ exports.updateUser = async (req, res) => {
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
 exports.deleteUser = async (req, res) => {
-  if (req.user.role !== 'superadmin') {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
   try {
@@ -215,6 +232,14 @@ exports.deleteUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'You cannot delete your own account'
+      });
+    }
+    
+    // Prevent deleting superadmin unless you are superadmin
+    if (user.role === 'superadmin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot delete superadmin user'
       });
     }
     

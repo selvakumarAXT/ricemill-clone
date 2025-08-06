@@ -55,6 +55,15 @@ const authService = {
     }
   },
 
+  updateProfile: async (profileData) => {
+    try {
+      const response = await api.put('/profile', profileData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || error.message || 'Profile update failed';
+    }
+  },
+
   changePassword: async (passwordData) => {
     try {
       const response = await api.post('/change-password', passwordData);

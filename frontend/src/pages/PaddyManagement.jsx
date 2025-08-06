@@ -270,7 +270,7 @@ const PaddyManagement = () => {
     }
   };
 
-  const deletePaddy = async (paddyId) => {
+  const handleDeletePaddy = async (paddyId) => {
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
@@ -816,7 +816,7 @@ const groupedHeaders = [
               </Button>,
               <Button
                 key="delete"
-                onClick={() => deletePaddy(paddy.id)}
+                onClick={() => handleDeletePaddy(paddy.id)}
                 variant="danger"
                 icon="delete"
               >
@@ -874,7 +874,7 @@ const groupedHeaders = [
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deletePaddy(paddy.id);
+                              handleDeletePaddy(paddy.id);
                             }}
                             variant="danger"
                             icon="delete"

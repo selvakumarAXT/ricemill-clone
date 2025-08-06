@@ -14,7 +14,6 @@ connectDB();
 // Import models for index management
 const { ensureIndexes: ensureRiceDepositIndexes } = require('./models/RiceDeposit');
 
-
 // Ensure proper indexes after database connection
 const ensureAllIndexes = async () => {
   try {
@@ -65,8 +64,14 @@ app.use('/api/production', require('./routes/production'));
 app.use('/api/gunny', require('./routes/gunny'));
 app.use('/api/paddy', require('./routes/paddy'));
 app.use('/api/rice-deposits', require('./routes/riceDeposits'));
-
 app.use('/api/bag-weight-options', require('./routes/bagWeightOptions'));
+app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/financial-transactions', require('./routes/financialTransactions'));
+
+// Upload routes
+app.use('/api/uploads', require('./routes/uploads'));
+
 // app.use('/api/checkstacks', require('./routes/checkstacks'));
 // app.use('/api/holds', require('./routes/holds'));
 // app.use('/api/delivers', require('./routes/delivers'));

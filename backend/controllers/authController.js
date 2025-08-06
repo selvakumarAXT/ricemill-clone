@@ -164,6 +164,65 @@ exports.getMe = async (req, res) => {
   }
 };
 
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, email, phone } = req.body;
+
+    // Check if email is being changed and if it's already taken
+    if (email && email !== req.user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is already taken'
+        });
+      }
+    }
+
+    // Update user profile
+    const user = await User.findById(req.user.id);
+    
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (phone !== undefined) user.phone = phone;
+
+    await user.save();
+
+    // Get updated user with populated branch
+    const updatedUser = await User.findById(user._id).populate('branch_id', 'name millCode');
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        createdAt: updatedUser.createdAt,
+        lastLogin: updatedUser.lastLogin,
+        branch_id: updatedUser.branch_id?._id || updatedUser.branch_id || null,
+        isSuperAdmin: updatedUser.isSuperAdmin,
+        isActive: updatedUser.isActive,
+        branch: updatedUser.branch_id && typeof updatedUser.branch_id === 'object' ? {
+          id: updatedUser.branch_id._id,
+          name: updatedUser.branch_id.name,
+          millCode: updatedUser.branch_id.millCode
+        } : null
+      }
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 // @desc    Forgot password
 // @route   POST /api/auth/forgot-password
 // @access  Public

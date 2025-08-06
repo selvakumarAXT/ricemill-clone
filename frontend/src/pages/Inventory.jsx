@@ -6,6 +6,9 @@ import BranchFilter from '../components/common/BranchFilter';
 import TableList from '../components/common/TableList';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import ResponsiveFilters from '../components/common/ResponsiveFilters';
+import DialogBox from '../components/common/DialogBox';
+import FormInput from '../components/common/FormInput';
 
 const Inventory = () => {
   const [inventory, setInventory] = useState([]);
@@ -14,6 +17,13 @@ const Inventory = () => {
   const [inventoryFilter, setInventoryFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
   const [expandedInventory, setExpandedInventory] = useState(null);
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
+  const [editingInventory, setEditingInventory] = useState(null);
+  const [inventoryForm, setInventoryForm] = useState({
+    name: '',
+    quantity: '',
+    description: ''
+  });
   const { currentBranchId } = useSelector((state) => state.branch);
 
   useEffect(() => {
@@ -34,6 +44,59 @@ const Inventory = () => {
     }
   };
 
+  // Modal functions
+  const openInventoryModal = (item = null) => {
+    setEditingInventory(item);
+    setInventoryForm(
+      item
+        ? { name: item.name, quantity: item.quantity, description: item.description }
+        : { name: '', quantity: '', description: '' }
+    );
+    setShowInventoryModal(true);
+  };
+
+  const closeInventoryModal = () => {
+    setShowInventoryModal(false);
+    setEditingInventory(null);
+    setInventoryForm({ name: '', quantity: '', description: '' });
+  };
+
+  const handleInventoryFormChange = (e) => {
+    setInventoryForm({ ...inventoryForm, [e.target.name]: e.target.value });
+  };
+
+  const saveInventory = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (editingInventory) {
+        await inventoryService.updateInventory(editingInventory._id, inventoryForm);
+      } else {
+        await inventoryService.createInventory(inventoryForm);
+      }
+      fetchInventory();
+      closeInventoryModal();
+    } catch (err) {
+      setError(err.message || 'Failed to save inventory');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteInventory = async (itemId) => {
+    if (window.confirm('Are you sure you want to delete this inventory item?')) {
+      setLoading(true);
+      try {
+        await inventoryService.deleteInventory(itemId);
+        fetchInventory();
+      } catch (err) {
+        setError(err.message || 'Failed to delete inventory');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // Define columns for the table
   const columns = [
     { key: "name", label: "Name" },
@@ -42,26 +105,7 @@ const Inventory = () => {
     )},
     { key: "description", label: "Description" },
     { key: "branch_id", label: "Branch", render: (branch) => branch?.name || "N/A" },
-    {
-      key: "actions",
-      label: "Actions",
-      render: (_, record) => (
-        <div className="flex gap-2">
-          <Button
-            onClick={() => console.log('Edit inventory:', record)}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 text-xs"
-          >
-            Edit
-          </Button>
-          <Button
-            onClick={() => console.log('Delete inventory:', record)}
-            className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 text-xs"
-          >
-            Delete
-          </Button>
-        </div>
-      ),
-    },
+   
   ];
 
   const filteredInventory = inventory.filter(item => {
@@ -92,6 +136,15 @@ const Inventory = () => {
               Inventory Management
             </h1>
             <p className="text-gray-600 mt-1 text-sm sm:text-base">Track and manage rice mill inventory</p>
+          </div>
+          <div className="flex justify-center sm:justify-end">
+            <Button
+              onClick={() => openInventoryModal()}
+              variant="primary"
+              icon="add"
+            >
+              Add New Inventory
+            </Button>
           </div>
         </div>
       </div>
@@ -135,7 +188,7 @@ const Inventory = () => {
             actions={(item) => [
               <Button
                 key="edit"
-                onClick={() => console.log('Edit inventory:', item)}
+                onClick={() => openInventoryModal(item)}
                 variant="info"
                 icon="edit"
               >
@@ -143,7 +196,7 @@ const Inventory = () => {
               </Button>,
               <Button
                 key="delete"
-                onClick={() => console.log('Delete inventory:', item)}
+                onClick={() => handleDeleteInventory(item._id)}
                 variant="danger"
                 icon="delete"
               >
@@ -212,40 +265,7 @@ const Inventory = () => {
                             Quantity: {item.quantity} • {item.branch_id?.name || 'N/A'}
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log('Edit inventory:', item);
-                            }}
-                            variant="info"
-                            icon="edit"
-                            className="text-xs px-2 py-1"
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log('Delete inventory:', item);
-                            }}
-                            variant="danger"
-                            icon="delete"
-                            className="text-xs px-2 py-1"
-                          >
-                            Delete
-                          </Button>
-                          <svg 
-                            className={`w-4 h-4 text-gray-400 transition-transform ${
-                              expandedInventory === item._id ? 'rotate-180' : ''
-                            }`}
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
+                       
                       </div>
                     </div>
 
@@ -282,6 +302,45 @@ const Inventory = () => {
           </div>
         </div>
       </div>
+
+      {/* Inventory Modal */}
+      {showInventoryModal && (
+        <DialogBox
+          title={editingInventory ? "Edit Inventory" : "New Inventory"}
+          onClose={closeInventoryModal}
+          onSubmit={saveInventory}
+          show={showInventoryModal}
+          loading={loading}
+        >
+          <form onSubmit={saveInventory} className="space-y-6">
+            <FormInput
+              label="Name"
+              name="name"
+              value={inventoryForm.name}
+              onChange={handleInventoryFormChange}
+              required
+              icon="inventory"
+            />
+            <FormInput
+              label="Quantity"
+              name="quantity"
+              type="number"
+              value={inventoryForm.quantity}
+              onChange={handleInventoryFormChange}
+              required
+              icon="weight"
+            />
+            <FormInput
+              label="Description"
+              name="description"
+              value={inventoryForm.description}
+              onChange={handleInventoryFormChange}
+              required
+              icon="info"
+            />
+          </form>
+        </DialogBox>
+      )}
     </div>
   );
 };

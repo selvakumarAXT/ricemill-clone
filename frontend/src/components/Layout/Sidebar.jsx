@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
 import { setCurrentBranchId } from '../../store/slices/branchSlice';
 import FormSelect from '../common/FormSelect';
+import Icon from '../common/Icon';
 
 const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBranchChange }) => {
   const location = useLocation();
@@ -40,128 +41,106 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
     {
       name: 'Dashboard',
       path: '/dashboard',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
-        </svg>
-      ),
-      roles: ['admin', 'manager', ]
+      icon: <Icon name="dashboard" />,
+      roles: ['admin', 'manager', 'superadmin']
     },
     {
       name: 'User Management',
       path: '/users',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-        </svg>
-      ),
-      roles: ['admin']
+      icon: <Icon name="users" />,
+      roles: ['admin', 'superadmin']
     },
     {
       name: 'Production',
       path: '/production',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-        </svg>
-      ),
-      roles: ['admin', 'manager']
+      icon: <Icon name="production" />,
+      roles: ['admin', 'manager', 'superadmin']
     },
     {
       name: 'Paddy Entry',
       path: '/paddy-entries',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-        </svg>
-      ),
+      icon: <Icon name="paddy" />,
       roles: ['admin', 'manager','superadmin']
     },
     {
       name: 'Gunny Management',
       path: '/gunny-management',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-      ),
+      icon: <Icon name="gunny" />,
       roles: ['admin', 'manager', 'superadmin']
     },
     {
       name: 'Rice Management',
       path: '/rice-management',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ),
+      icon: <Icon name="rice" />,
       roles: ['admin', 'manager', 'superadmin']
     },
-
     {
       name: 'Inventory',
       path: '/inventory',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-      ),
+      icon: <Icon name="inventory" />,
       roles: ['admin', 'manager', 'superadmin']
     },
     {
       name: 'Reports',
       path: '/reports',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
+      icon: <Icon name="reports" />,
       roles: ['admin', 'manager', 'superadmin']
     },
     {
       name: 'Settings',
       path: '/settings',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
+      icon: <Icon name="settings" />,
       roles: ['admin', 'manager', 'superadmin']
     },
     {
-      name: 'User Management',
-      path: '/users',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-        </svg>
-      ),
-      roles: ['admin']
+      name: 'Sales & Dispatch',
+      path: '/sales-dispatch',
+      icon: <Icon name="sales" />,
+      roles: ['admin', 'manager', 'superadmin']
+    },
+    {
+      name: 'QC Data Entry',
+      path: '/qc-data-entry',
+      icon: <Icon name="qc" />,
+      roles: ['admin', 'manager', 'superadmin']
+    },
+    {
+      name: 'Vendor Management',
+      path: '/vendor-management',
+      icon: <Icon name="vendor" />,
+      roles: ['admin', 'manager', 'superadmin']
+    },
+    {
+      name: 'Financial Ledger',
+      path: '/financial-ledger',
+      icon: <Icon name="financial" />,
+      roles: ['admin', 'manager', 'superadmin']
+    },
+    {
+      name: 'EB Meter Calculation',
+      path: '/eb-meter-calculation',
+      icon: <Icon name="ebMeter" />,
+      roles: ['admin', 'manager', 'superadmin']
+    },
+    {
+      name: 'Document Uploads',
+      path: '/document-uploads',
+      icon: <Icon name="documents" />,
+      roles: ['admin', 'manager', 'superadmin']
     },
     {
       name: 'Production',
       path: '/production',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-      ),
+      icon: <Icon name="production" />,
       roles: ['admin', 'manager', 'superadmin']
     },
 
     // Branch Management (superadmin only)
-    ...(user?.isSuperAdmin ? [
+    ...(user?.role === 'superadmin' ? [
       {
         name: 'Branch Management',
         path: '/branch-management',
-        icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
-          </svg>
-        ),
+        icon: <Icon name="branch" />,
         roles: ['superadmin']
       }
     ] : [])
@@ -190,9 +169,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
         <div className="flex items-center justify-center h-16 bg-gray-800">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
+              <Icon name="production" className="h-8 w-8 text-white" />
             </div>
             <div className="ml-3">
               <h1 className="text-white text-lg font-semibold hidden sm:block">Rice Mill</h1>
@@ -203,7 +180,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
         <nav className="mt-5 px-2">
           <div className="space-y-1">
             {/* Branches tree for superadmin */}
-            {user?.isSuperAdmin && branches.length > 0 && (
+            {user?.role === 'superadmin' && branches.length > 0 && (
               <div>
                 <button
                   className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors duration-150"
@@ -238,7 +215,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
               </div>
             )}
             {/* Show only the user's branch for non-superadmin */}
-            {!user?.isSuperAdmin && user?.branch && (
+            {user?.role !== 'superadmin' && user?.branch && (
               <div className="mb-2">
                 <button
                   className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 bg-indigo-600 text-white`}
@@ -249,7 +226,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
               </div>
             )}
             {/* Only show other menu items if a branch is selected or not superadmin */}
-            {(user?.isSuperAdmin || user?.branch) && filteredMenuItems.map((item) => {
+            {(user?.role === 'superadmin' || user?.branch) && filteredMenuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Link
@@ -298,9 +275,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
                 onClick={handleLogout}
                 className="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150"
               >
-                <svg className="mr-3 flex-shrink-0 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
+                <Icon name="logout" className="mr-3 flex-shrink-0 h-5 w-5" />
                 Logout
               </button>
             </div>

@@ -37,7 +37,7 @@ const FormInput = ({ label, name, value, onChange, type = 'text', required = fal
             className="absolute right-0 pr-3 flex items-center h-full text-[var(--color-text-gray-light)] hover:text-[var(--color-text-gray-dark)] focus:outline-none"
             onClick={() => setShowPassword((v) => !v)}
           >
-            <Icon name={showPassword ? 'hide' : 'show'} className="h-5 w-5" />
+            <Icon name={showPassword ? 'eyeOff' : 'eye'} className="h-5 w-5" />
           </button>
         )}
       </div>

@@ -1,11 +1,12 @@
 import Icon from './Icon';
 
   const VARIANT_CLASSES = {
-    primary: 'bg-[var(--color-bg-primary)] text-[var(--color-text-white)] hover:bg-[var(--color-bg-accent)]',
-    secondary: ' bg-[var(--color-text-gray-light)] text-[var(--color-text-white)] hover:bg-[var(--color-bg-light)]  hover:text-[var(--color-text-gray-dark)]',
-    danger: 'bg-[var(--color-text-red)] text-[var(--color-text-white)] hover:bg-[var(--color-bg-light)] hover:text-[var(--color-text-dark)]',
-    outline: 'bg-[var(--color-bg-white)] border border-[var(--color-border-gray)] text-[var(--color-text-gray-dark)] hover:bg-[var(--color-bg-light)]',
-};
+    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2',
+    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2',
+    info: 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+    outline: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+  };
 
 const Button = ({ type = 'button', variant = 'primary', className = '', children, icon, iconClass = 'mr-2', ...rest }) => (
   <button

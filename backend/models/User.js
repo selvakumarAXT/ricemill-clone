@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema(
         "Please provide a valid email",
       ],
     },
+    phone: {
+      type: String,
+      trim: true,
+      maxLength: [15, "Phone number cannot be more than 15 characters"],
+    },
     password: {
       type: String,
       required: [true, "Password is required"],

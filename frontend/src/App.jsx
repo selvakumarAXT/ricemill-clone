@@ -21,6 +21,12 @@ import LoadingSpinner from "./components/common/LoadingSpinner";
 import PaddyManagement from "./pages/PaddyManagement";
 import GunnyManagement from "./pages/GunnyManagement";
 import RiceManagement from "./pages/RiceManagement";
+import SalesDispatch from "./pages/SalesDispatch";
+import QCDataEntry from "./pages/QCDataEntry";
+import VendorManagement from "./pages/VendorManagement";
+import FinancialLedger from "./pages/FinancialLedger";
+import EBMeterCalculation from "./pages/EBMeterCalculation";
+import DocumentUploads from "./pages/DocumentUploads";
 
 
 // ✅ Protected Route Component
@@ -142,9 +148,75 @@ function AppContent() {
 
 
         <Route
+          path="/sales-dispatch"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
+              <LayoutWrapper>
+                <SalesDispatch />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/qc-data-entry"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
+              <LayoutWrapper>
+                <QCDataEntry />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/vendor-management"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
+              <LayoutWrapper>
+                <VendorManagement />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/financial-ledger"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
+              <LayoutWrapper>
+                <FinancialLedger />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/eb-meter-calculation"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
+              <LayoutWrapper>
+                <EBMeterCalculation />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/document-uploads"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
+              <LayoutWrapper>
+                <DocumentUploads />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/users"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
               <LayoutWrapper>
                 <UserManagement />
               </LayoutWrapper>

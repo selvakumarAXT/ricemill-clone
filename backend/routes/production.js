@@ -1,11 +1,32 @@
 const express = require('express');
-const { protect } = require('../middleware/auth');
-const { getAllProduction } = require('../controllers/productionController');
+const {
+  getAllProduction,
+  getProduction,
+  createProduction,
+  updateProduction,
+  deleteProduction,
+  getProductionStats
+} = require('../controllers/productionController');
+
+const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
+// All routes are protected
 router.use(protect);
+router.use(authorize('superadmin', 'admin', 'manager'));
 
-router.get('/', getAllProduction);
+// Routes
+router.route('/')
+  .get(getAllProduction)
+  .post(createProduction);
+
+router.route('/stats')
+  .get(getProductionStats);
+
+router.route('/:id')
+  .get(getProduction)
+  .put(updateProduction)
+  .delete(deleteProduction);
 
 module.exports = router; 

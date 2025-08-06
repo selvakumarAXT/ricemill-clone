@@ -414,7 +414,7 @@ const BranchManagement = () => {
           title={editingBranch ? "Edit Branch" : "New Branch"}
           onClose={closeBranchModal}
           onSubmit={saveBranch}
-          isOpen={showBranchModal}
+          show={showBranchModal}
           loading={loading}
         >
           <form onSubmit={saveBranch} className="space-y-6">
@@ -527,7 +527,7 @@ const BranchManagement = () => {
           title={editingUser ? "Edit User" : "New User"}
           onClose={closeUserModal}
           onSubmit={saveUser}
-          isOpen={showUserModal}
+          show={showUserModal}
           loading={loading}
         >
           <form onSubmit={saveUser} className="space-y-4">

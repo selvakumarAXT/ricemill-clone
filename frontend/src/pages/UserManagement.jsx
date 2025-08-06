@@ -8,7 +8,10 @@ import Button from "../components/common/Button";
 import UserTable from "../components/UserTable";
 import FormSelect from "../components/common/FormSelect";
 
-const ROLES = [{ value: "manager", label: "Branch Manager" }];
+const ROLES = [
+  { value: "manager", label: "Branch Manager" },
+  { value: "admin", label: "Admin" }
+];
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -49,7 +52,7 @@ const UserManagement = () => {
     try {
       setLoading(true);
       const response = await userService.getAllUsers(branchId);
-      setUsers(response.users);
+      setUsers(response.users || response.data || []);
     } catch (error) {
       setError(error.response?.data?.message || "Failed to fetch users");
     } finally {
@@ -72,7 +75,7 @@ const UserManagement = () => {
   // Filtering logic (same as BranchManagement)
   const filteredUsers = users
     .filter((u) => u.role !== "superadmin")
-    .filter((u) => u.id !== user?.id)
+    .filter((u) => u._id !== user?._id && u.id !== user?.id)
     .filter((u) => {
       const q = userFilter.toLowerCase();
       const matchesText =
@@ -89,7 +92,7 @@ const UserManagement = () => {
           ? currentBranchId
           : userBranchFilter;
       const matchesBranch = effectiveBranchFilter
-        ? u.branch_id && u.branch_id._id === effectiveBranchFilter
+        ? u.branch_id && (u.branch_id._id === effectiveBranchFilter || u.branch_id.id === effectiveBranchFilter)
         : true;
       return matchesText && matchesRole && matchesBranch;
     });
@@ -105,13 +108,18 @@ const UserManagement = () => {
     setLoading(true);
     try {
       if (editingUser) {
-        await userService.updateUser(editingUser._id, userForm);
+        await userService.updateUser(editingUser._id || editingUser.id, userForm);
         setSuccess("User updated successfully");
       } else {
         await userService.createUser(userForm);
         setSuccess("User created successfully");
       }
-      fetchUsers();
+      // Refresh users list
+      if (user?.isSuperAdmin) {
+        fetchUsers(currentBranchId);
+      } else if (user?.branch?.id) {
+        fetchUsers(user.branch.id);
+      }
       closeModal();
     } catch (error) {
       setError(error.response?.data?.message || "Operation failed");
@@ -121,10 +129,22 @@ const UserManagement = () => {
   };
 
   const deleteUser = async (userId) => {
+    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      return;
+    }
+    
     setLoading(true);
     try {
       await userService.deleteUser(userId);
-      setUsers((prev) => prev.filter((u) => u._id !== userId));
+      setSuccess("User deleted successfully");
+      // Refresh users list
+      if (user?.isSuperAdmin) {
+        fetchUsers(currentBranchId);
+      } else if (user?.branch?.id) {
+        fetchUsers(user.branch.id);
+      }
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to delete user");
     } finally {
       setLoading(false);
     }
@@ -134,11 +154,11 @@ const UserManagement = () => {
     if (editUser) {
       setEditingUser(editUser);
       setUserForm({
-        name: editUser.name,
-        email: editUser.email,
+        name: editUser.name || "",
+        email: editUser.email || "",
         password: "",
-        role: editUser.role,
-        branch_id: editUser.branch_id || editUser.branch?.id || "",
+        role: editUser.role || "manager",
+        branch_id: editUser.branch_id?._id || editUser.branch_id?.id || editUser.branch?.id || "",
       });
     } else {
       setEditingUser(null);
@@ -190,6 +210,21 @@ const UserManagement = () => {
               Manage system users and their permissions
             </p>
           </div>
+          
+          {/* Add User Button */}
+          {/* {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
+            (!user?.isSuperAdmin && user?.branch?.id)) && (
+            <div className="flex justify-center sm:justify-start">
+              <Button
+                onClick={() => openUserModal()}
+                variant="primary"
+                icon="add"
+                className="w-full sm:w-auto"
+              >
+                Add New User
+              </Button>
+            </div>
+          )} */}
         </div>
       </div>
 
@@ -244,21 +279,6 @@ const UserManagement = () => {
           </div>
         )}
 
-        {/* User Table with Mobile Design */}
-        {/* Desktop Table View */}
-        {/* <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">User Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredUsers.length} users</p>
-          </div>
-          <UserTable 
-            users={filteredUsers} 
-            onEdit={openUserModal} 
-            onDelete={deleteUser}
-            showAddButton={currentBranchId && currentBranchId !== 'all'}
-          />
-        </div> */}
-
         {/* Mobile Table View */}
         <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
@@ -295,9 +315,9 @@ const UserManagement = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredUsers.map((user) => (
+                {filteredUsers.map((userItem) => (
                   <div
-                    key={user.id}
+                    key={userItem._id || userItem.id}
                     className="border border-gray-200 rounded-lg overflow-hidden"
                   >
                     {/* Mobile Table Row */}
@@ -305,27 +325,27 @@ const UserManagement = () => {
                       className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                       onClick={() =>
                         setExpandedUser(
-                          expandedUser === user.id ? null : user.id
+                          expandedUser === (userItem._id || userItem.id) ? null : (userItem._id || userItem.id)
                         )
                       }
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
                           <div className="font-medium text-gray-900">
-                            {user.name}
+                            {userItem.name}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {user.email}
+                            {userItem.email}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {user.role} • {user.branch_id?.name || "N/A"}
+                            {userItem.role} • {userItem.branch_id?.name || userItem.branch?.name || "N/A"}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              openUserModal(user);
+                              openUserModal(userItem);
                             }}
                             variant="info"
                             icon="edit"
@@ -336,7 +356,7 @@ const UserManagement = () => {
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteUser(user.id);
+                              deleteUser(userItem._id || userItem.id);
                             }}
                             variant="danger"
                             icon="delete"
@@ -346,7 +366,7 @@ const UserManagement = () => {
                           </Button>
                           <svg
                             className={`w-4 h-4 text-gray-400 transition-transform ${
-                              expandedUser === user.id ? "rotate-180" : ""
+                              expandedUser === (userItem._id || userItem.id) ? "rotate-180" : ""
                             }`}
                             fill="none"
                             stroke="currentColor"
@@ -364,20 +384,26 @@ const UserManagement = () => {
                     </div>
 
                     {/* Expanded Detail View */}
-                    {expandedUser === user.id && (
+                    {expandedUser === (userItem._id || userItem.id) && (
                       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 border-t border-gray-200">
                         {/* Details Grid */}
                         <div className="grid grid-cols-1 gap-3 text-sm mb-3">
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600">Role:</span>
                             <span className="font-medium text-gray-900 capitalize">
-                              {user.role}
+                              {userItem.role}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600">Branch:</span>
                             <span className="font-medium text-gray-900">
-                              {user.branch_id?.name || "N/A"}
+                              {userItem.branch_id?.name || userItem.branch?.name || "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">Created:</span>
+                            <span className="font-medium text-gray-900">
+                              {userItem.createdAt ? new Date(userItem.createdAt).toLocaleDateString() : "N/A"}
                             </span>
                           </div>
                         </div>
@@ -390,12 +416,12 @@ const UserManagement = () => {
                             </span>
                             <span
                               className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                user.isActive
+                                userItem.isActive !== false
                                   ? "bg-green-100 text-green-800"
                                   : "bg-red-100 text-red-800"
                               }`}
                             >
-                              {user.isActive ? "Active" : "Inactive"}
+                              {userItem.isActive !== false ? "Active" : "Inactive"}
                             </span>
                           </div>
                         </div>
@@ -410,14 +436,6 @@ const UserManagement = () => {
 
         {/* User Table Component (for desktop) */}
         <div className="hidden lg:block">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">
-              User Records
-            </h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Total: {filteredUsers.length} users
-            </p>
-          </div>
           <UserTable
             users={filteredUsers}
             branches={branches}
@@ -434,12 +452,16 @@ const UserManagement = () => {
             }
             openUserModal={openUserModal}
             deleteUser={deleteUser}
+            showAddButton={((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
+              (!user?.isSuperAdmin && user?.branch?.id))}
           />
         </div>
       </div>
+      
+      {/* User Modal */}
       {showModal && (
         <DialogBox
-          isOpen={showModal}
+          show={showModal}
           onClose={closeModal}
           onSubmit={saveUser}
           title={editingUser ? "Edit User" : "Create New User"}
@@ -460,10 +482,11 @@ const UserManagement = () => {
             <FormInput
               label="Email"
               name="email"
+              type="email"
               value={userForm.email}
               onChange={handleUserFormChange}
               required
-              icon="user"
+              icon="mail"
             />
             {!editingUser && (
               <FormInput
@@ -474,6 +497,7 @@ const UserManagement = () => {
                 required
                 type="password"
                 icon="lock"
+                minLength={6}
               />
             )}
             <FormSelect
@@ -521,11 +545,6 @@ const UserManagement = () => {
                 />
               </div>
             )}
-            <div className="flex justify-end">
-              <Button type="submit" variant="primary" icon="save">
-                {editingUser ? "Update" : "Create"}
-              </Button>
-            </div>
           </form>
         </DialogBox>
       )}

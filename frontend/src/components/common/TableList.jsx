@@ -328,35 +328,62 @@ const TableList = ({
                       })())}
                     </td>
                   ))}
-                  {actions && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">{
-                    (() => {
-                      const rendered = actions(row, i);
-                      if (Array.isArray(rendered)) {
-                        return rendered.map((child, idx) =>
-                          child && child.props && child.props.icon === 'delete'
-                            ? React.cloneElement(child, {
+                  {actions && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
+                    <div className="flex gap-2">
+                      {(() => {
+                        const rendered = actions(row, i);
+                        if (Array.isArray(rendered)) {
+                          return rendered.map((child, idx) => {
+                            if (!child || !React.isValidElement(child)) return null;
+                            
+                            // Handle delete actions specially
+                            if (child.props && child.props.icon === 'delete') {
+                              return React.cloneElement(child, {
                                 onClick: (e) => {
                                   e.stopPropagation();
                                   handleDeleteClick(row, i, child.props.onClick);
                                 },
                                 key: child.key || `action-${idx}`
-                              })
-                            : child && React.isValidElement(child)
-                              ? React.cloneElement(child, { key: child.key || `action-${idx}` })
-                              : child
-                        );
-                      } else if (rendered && rendered.props && rendered.props.icon === 'delete') {
-                        return React.cloneElement(rendered, {
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            handleDeleteClick(row, i, rendered.props.onClick);
-                          },
-                          key: rendered.key || 'action-delete'
-                        });
-                      }
-                      return rendered;
-                    })()
-                  }</td>}
+                              });
+                            }
+                            
+                            // Handle other actions with event propagation prevention
+                            return React.cloneElement(child, {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                if (child.props.onClick) {
+                                  child.props.onClick(e);
+                                }
+                              },
+                              key: child.key || `action-${idx}`
+                            });
+                          });
+                        } else if (rendered && React.isValidElement(rendered)) {
+                          // Handle single action
+                          if (rendered.props && rendered.props.icon === 'delete') {
+                            return React.cloneElement(rendered, {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(row, i, rendered.props.onClick);
+                              },
+                              key: rendered.key || 'action-delete'
+                            });
+                          }
+                          
+                          return React.cloneElement(rendered, {
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              if (rendered.props.onClick) {
+                                rendered.props.onClick(e);
+                              }
+                            },
+                            key: rendered.key || 'action-single'
+                          });
+                        }
+                        return rendered;
+                      })()}
+                    </div>
+                  </td>}
                 </tr>
                 {renderDetail && expanded === i && (
                   <tr key={`detail-${row.id || row._id || (currentPage - 1) * currentPageSize + i}`}>
