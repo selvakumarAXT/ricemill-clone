@@ -288,11 +288,7 @@ const BranchManagement = () => {
                 onClick={() => setTab(t.key)}
                 variant={tab === t.key ? "primary" : "secondary"}
                 icon={t.key === "branches" ? "branch" : "users"}
-                className={`flex-1 sm:flex-none ${
-                  tab === t.key 
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="flex-1 sm:flex-none"
               >
                 {t.label}
               </Button>
@@ -305,8 +301,9 @@ const BranchManagement = () => {
             <h2 className="text-xl font-semibold">Branches</h2>
               <Button
                 onClick={() => openBranchModal()}
-                variant="primary"
+                variant="success"
                 icon="add"
+                className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 New Branch
               </Button>
@@ -337,8 +334,9 @@ const BranchManagement = () => {
               <div className="flex gap-2">
                 <Button
                   onClick={() => openBranchModal(b)}
-                  variant="secondary"
+                  variant="info"
                   icon="edit"
+                  className="text-xs px-2 py-1"
                 >
                   Edit
                 </Button>
@@ -346,6 +344,7 @@ const BranchManagement = () => {
                   onClick={() => confirmDeleteBranch(b)}
                   variant="danger"
                   icon="delete"
+                  className="text-xs px-2 py-1"
                 >
                   Delete
                 </Button>
@@ -375,8 +374,9 @@ const BranchManagement = () => {
                 <div className="flex gap-2">
                 <Button
                   onClick={() => openBranchModal(b)}
-                   variant="secondary"
+                   variant="info"
                   icon="edit"
+                  className="text-xs px-2 py-1"
                 >
                   Edit
                 </Button>
@@ -384,6 +384,7 @@ const BranchManagement = () => {
                   onClick={() => confirmDeleteBranch(b)}
                   variant="danger"
                   icon="delete"
+                  className="text-xs px-2 py-1"
                 >
                   Delete
                 </Button>
@@ -416,6 +417,7 @@ const BranchManagement = () => {
           onSubmit={saveBranch}
           show={showBranchModal}
           loading={loading}
+          size="2xl"
         >
           <form onSubmit={saveBranch} className="space-y-6">
             {/* Basic Info */}
@@ -529,6 +531,7 @@ const BranchManagement = () => {
           onSubmit={saveUser}
           show={showUserModal}
           loading={loading}
+          size="2xl"
         >
           <form onSubmit={saveUser} className="space-y-4">
             <FormInput
@@ -595,7 +598,7 @@ const BranchManagement = () => {
         </DialogBox>
       )}
       {showDeleteBranchDialog && (
-        <DialogBox title="Delete Branch" onClose={cancelDeleteBranch}>
+        <DialogBox title="Delete Branch" onClose={cancelDeleteBranch} size="2xl">
           <WarningBox>
             Deleting this branch will also delete all users and related data for
             this branch. This action cannot be undone. Are you sure you want to

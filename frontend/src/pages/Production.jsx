@@ -11,6 +11,7 @@ import DialogBox from '../components/common/DialogBox';
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import FileUpload from '../components/common/FileUpload';
+import DateRangeFilter from '../components/common/DateRangeFilter';
 
 const Production = () => {
   const [production, setProduction] = useState([]);
@@ -19,8 +20,11 @@ const Production = () => {
   const [success, setSuccess] = useState('');
   const [productionFilter, setProductionFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [qualityFilter, setQualityFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
   const [expandedProduction, setExpandedProduction] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editingProduction, setEditingProduction] = useState(null);
@@ -38,9 +42,11 @@ const Production = () => {
   });
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const { currentBranchId } = useSelector((state) => state.branch);
-  const { user } = useSelector((state) => state.auth);
+  const { user, token } = useSelector((state) => state.auth);
 
   const units = [
     { value: 'kg', label: 'Kilograms (kg)' },
@@ -88,6 +94,41 @@ const Production = () => {
 
   const handleFilesChange = (files) => {
     setSelectedFiles(files);
+  };
+
+  const handleUploadSuccess = (uploadedFiles) => {
+    console.log('Production: handleUploadSuccess called with:', uploadedFiles);
+    setUploadedFiles(prev => {
+      const newFiles = [...prev, ...uploadedFiles];
+      console.log('Production: Updated uploadedFiles:', newFiles);
+      return newFiles;
+    });
+  };
+
+  const openPreview = (file) => {
+    setPreviewFile(file);
+    setShowPreviewModal(true);
+  };
+
+  const closePreview = () => {
+    setPreviewFile(null);
+    setShowPreviewModal(false);
+  };
+
+  const getFileIcon = (file) => {
+    if (file.mimetype?.startsWith('image/')) {
+      return '🖼️';
+    } else if (file.mimetype?.includes('pdf')) {
+      return '📄';
+    } else if (file.mimetype?.includes('word') || file.mimetype?.includes('document')) {
+      return '📝';
+    } else if (file.mimetype?.includes('excel') || file.mimetype?.includes('spreadsheet')) {
+      return '📊';
+    } else if (file.mimetype?.includes('text')) {
+      return '📄';
+    } else {
+      return '📎';
+    }
   };
 
   const saveProduction = async (e) => {
@@ -150,7 +191,14 @@ const Production = () => {
         operator: editProduction.operator || '',
         notes: editProduction.notes || ''
       });
-      setUploadedFiles(editProduction.documents || []);
+      // Handle existing documents - convert string URLs to file objects
+      const existingDocs = editProduction.documents || [];
+      const docFiles = existingDocs.map((doc, index) => ({
+        url: typeof doc === 'string' ? doc : doc.url,
+        originalName: typeof doc === 'string' ? `Document ${index + 1}` : doc.originalName,
+        mimetype: typeof doc === 'string' ? 'application/octet-stream' : doc.mimetype
+      }));
+      setUploadedFiles(docFiles);
     } else {
       setEditingProduction(null);
       setProductionForm({
@@ -201,8 +249,20 @@ const Production = () => {
       item.operator?.toLowerCase().includes(q)
     );
     const matchesStatus = statusFilter ? item.status === statusFilter : true;
-    const matchesQuality = qualityFilter ? item.quality === qualityFilter : true;
-    return matchesText && matchesStatus && matchesQuality;
+    
+    // Date range filter
+    let matchesDate = true;
+    if (dateRange.startDate || dateRange.endDate) {
+      const itemDate = new Date(item.productionDate);
+      if (dateRange.startDate) {
+        matchesDate = matchesDate && itemDate >= new Date(dateRange.startDate);
+      }
+      if (dateRange.endDate) {
+        matchesDate = matchesDate && itemDate <= new Date(dateRange.endDate + 'T23:59:59.999Z');
+      }
+    }
+    
+    return matchesText && matchesStatus && matchesDate;
   });
 
   const renderFilePreview = (files) => {
@@ -230,7 +290,7 @@ const Production = () => {
                   href={`http://localhost:3001${file.url}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-blue-500 text-white p-1 rounded text-xs hover:bg-blue-600"
+                  className="bg-blue-600 text-white p-1 rounded text-xs hover:bg-blue-700"
                 >
                   View
                 </a>
@@ -315,34 +375,32 @@ const Production = () => {
 
         {/* Filters */}
         <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <TableFilters
-            searchValue={productionFilter}
-            searchPlaceholder="Search production records..."
-            onSearchChange={(e) => setProductionFilter(e.target.value)}
-            selectValue={statusFilter}
-            selectOptions={statuses}
-            onSelectChange={(e) => setStatusFilter(e.target.value)}
-            selectPlaceholder="All Statuses"
-            showSelect={true}
-          />
-          <FormSelect
-            label="Quality"
-            name="qualityFilter"
-            value={qualityFilter}
-            onChange={(e) => setQualityFilter(e.target.value)}
-            className="w-full"
-          >
-            <option value="">All Qualities</option>
-            {qualities.map((quality) => (
-              <option key={quality.value} value={quality.value}>
-                {quality.label}
-              </option>
-            ))}
-          </FormSelect>
-          <BranchFilter
-            value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
-            onChange={(e) => setBranchFilter(e.target.value)}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <TableFilters
+              searchValue={productionFilter}
+              searchPlaceholder="Search production records..."
+              onSearchChange={(e) => setProductionFilter(e.target.value)}
+              selectValue={statusFilter}
+              selectOptions={statuses}
+              onSelectChange={(e) => setStatusFilter(e.target.value)}
+              selectPlaceholder="All Statuses"
+              showSelect={true}
+            />
+            <BranchFilter
+              value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+            />
+          </div>
+          <div className="mt-4">
+            <DateRangeFilter
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+              onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              startDateLabel="Production Date From"
+              endDateLabel="Production Date To"
+            />
+          </div>
         </ResponsiveFilters>
 
         {/* Desktop Table View */}
@@ -616,6 +674,7 @@ const Production = () => {
           cancelText="Cancel"
           error={error}
           success={success}
+          size="2xl"
         >
           <form onSubmit={saveProduction} className="space-y-4">
             <FormInput
@@ -723,6 +782,7 @@ const Production = () => {
               label="Upload Documents & Images"
               module="production"
               onFilesChange={handleFilesChange}
+              onUploadSuccess={handleUploadSuccess}
               files={selectedFiles}
               accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
               maxFiles={10}
@@ -732,38 +792,197 @@ const Production = () => {
             
             {/* Show existing uploaded files */}
             {uploadedFiles.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <h4 className="text-sm font-medium text-gray-700">Existing Documents</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {uploadedFiles.map((file, index) => (
-                    <div key={index} className="relative">
-                      {file.mimetype?.startsWith('image/') ? (
-                        <img
-                          src={`http://localhost:3001${file.url}`}
-                          alt={file.originalName}
-                          className="w-full h-20 object-cover rounded border"
-                        />
-                      ) : (
-                        <div className="w-full h-20 bg-gray-100 rounded border flex items-center justify-center">
-                          <span className="text-2xl">📄</span>
+                    <div key={index} className="relative group">
+                      <div className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+                        {/* File Preview */}
+                        <div className="relative mb-2">
+                          {file.mimetype?.startsWith('image/') ? (
+                            <img
+                              src={`http://localhost:3001${file.url}`}
+                              alt={file.originalName}
+                              className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => openPreview(file)}
+                            />
+                          ) : (
+                            <div 
+                              className="w-full h-24 bg-gradient-to-br from-blue-50 to-indigo-50 rounded border flex flex-col items-center justify-center cursor-pointer hover:bg-gradient-to-br hover:from-blue-100 hover:to-indigo-100 transition-colors"
+                              onClick={() => openPreview(file)}
+                            >
+                              <span className="text-3xl mb-1">{getFileIcon(file)}</span>
+                              <span className="text-xs text-gray-600 text-center px-1">
+                                {file.originalName?.split('.').pop()?.toUpperCase() || 'FILE'}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Preview Overlay */}
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-white text-sm font-medium">Click to Preview</span>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      <div className="absolute top-1 right-1">
-                        <a
-                          href={`http://localhost:3001${file.url}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-blue-500 text-white p-1 rounded text-xs hover:bg-blue-600"
-                        >
-                          View
-                        </a>
+                        
+                        {/* File Info */}
+                        <div className="text-center">
+                          <p className="text-xs font-medium text-gray-800 truncate" title={file.originalName}>
+                            {file.originalName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => openPreview(file)}
+                            className="bg-blue-600 text-white p-1 rounded text-xs hover:bg-blue-700 transition-colors"
+                            title="Preview"
+                          >
+                            👁️
+                          </button>
+                          <a
+                            href={`http://localhost:3001${file.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-green-600 text-white p-1 rounded text-xs hover:bg-green-700 transition-colors"
+                            title="Download"
+                          >
+                            ⬇️
+                          </a>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+            
+
           </form>
+        </DialogBox>
+      )}
+
+      {/* File Preview Modal */}
+      {showPreviewModal && previewFile && (
+        <DialogBox
+          show={showPreviewModal}
+          onClose={closePreview}
+          title={`Preview: ${previewFile.originalName}`}
+          size="2xl"
+        >
+          <div className="space-y-4">
+            {/* File Info */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">File Name:</span>
+                  <p className="text-gray-900">{previewFile.originalName}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">File Size:</span>
+                  <p className="text-gray-900">{(previewFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">File Type:</span>
+                  <p className="text-gray-900">{previewFile.mimetype}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Uploaded:</span>
+                  <p className="text-gray-900">
+                    {previewFile.uploadedAt ? new Date(previewFile.uploadedAt).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* File Preview */}
+            <div className="max-h-96 overflow-auto">
+              {previewFile.mimetype?.startsWith('image/') ? (
+                <div className="text-center">
+                  <img
+                    src={`http://localhost:3001${previewFile.url}`}
+                    alt={previewFile.originalName}
+                    className="max-w-full max-h-80 object-contain mx-auto rounded-lg shadow-lg"
+                  />
+                </div>
+              ) : previewFile.mimetype?.includes('pdf') ? (
+                <div className="text-center">
+                  <iframe
+                    src={`http://localhost:3001${previewFile.url}`}
+                    className="w-full h-96 border rounded-lg"
+                    title={previewFile.originalName}
+                  />
+                </div>
+              ) : previewFile.mimetype?.includes('text') || previewFile.mimetype?.includes('csv') ? (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-2">Text files cannot be previewed directly.</p>
+                  <a
+                    href={`http://localhost:3001${previewFile.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    📄 Open in New Tab
+                  </a>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">{getFileIcon(previewFile)}</div>
+                  <p className="text-lg font-medium text-gray-800 mb-2">{previewFile.originalName}</p>
+                  <p className="text-gray-600 mb-4">This file type cannot be previewed directly.</p>
+                  <div className="flex gap-3 justify-center">
+                    <a
+                      href={`http://localhost:3001${previewFile.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      📄 Open in New Tab
+                    </a>
+                    <a
+                      href={`http://localhost:3001${previewFile.url}`}
+                      download={previewFile.originalName}
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      ⬇️ Download
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button
+                onClick={closePreview}
+                variant="secondary"
+                icon="close"
+              >
+                Close
+              </Button>
+              <a
+                href={`http://localhost:3001${previewFile.url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                📄 Open in New Tab
+              </a>
+              <a
+                href={`http://localhost:3001${previewFile.url}`}
+                download={previewFile.originalName}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                ⬇️ Download
+              </a>
+            </div>
+          </div>
         </DialogBox>
       )}
     </div>

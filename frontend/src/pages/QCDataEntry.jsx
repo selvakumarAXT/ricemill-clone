@@ -9,6 +9,7 @@ import ResponsiveFilters from '../components/common/ResponsiveFilters';
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
+import FileUpload from '../components/common/FileUpload';
 
 const QCDataEntry = () => {
   const [qcRecords, setQcRecords] = useState([]);
@@ -40,6 +41,8 @@ const QCDataEntry = () => {
   };
 
   const [qcForm, setQcForm] = useState(initialQcForm);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   useEffect(() => {
     fetchQcData();
@@ -155,6 +158,10 @@ const QCDataEntry = () => {
       
       return updated;
     });
+  };
+
+  const handleFilesChange = (files) => {
+    setSelectedFiles(files);
   };
 
   const saveQc = async (e) => {
@@ -301,20 +308,12 @@ const QCDataEntry = () => {
           <div className="flex justify-center sm:justify-start space-x-2">
             <Button
               onClick={() => openQcModal()}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+              variant="success"
+              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             >
               🔬 Add QC Record
             </Button>
-            {qcRecords.length > 0 && (
-              <Button
-                onClick={() => {
-                  openQcModal(qcRecords[0]);
-                }}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                🧪 Test Edit
-              </Button>
-            )}
+            
           </div>
         </div>
       </div>
@@ -640,7 +639,7 @@ const QCDataEntry = () => {
         show={showQcModal}
         onClose={closeQcModal}
         title={editingQc ? 'Edit QC Record' : 'Add New QC Record'}
-        size="lg"
+        size="2xl"
       >
         <form onSubmit={saveQc} className="space-y-4" key={editingQc ? 'edit' : 'add'}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -800,6 +799,19 @@ const QCDataEntry = () => {
             onChange={handleQcFormChange}
             icon="note"
           />
+          
+          {/* File Upload Section */}
+          <FileUpload
+            label="Upload QC Reports & Images"
+            module="qc"
+            onFilesChange={handleFilesChange}
+            files={selectedFiles}
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            maxFiles={10}
+            maxSize={10}
+            showPreview={true}
+          />
+          
           <div className="flex justify-end space-x-3 pt-4">
             <Button type="button" onClick={closeQcModal} variant="secondary">
               Cancel

@@ -9,6 +9,8 @@ import TableFilters from "../components/common/TableFilters";
 import BranchFilter from "../components/common/BranchFilter";
 import ResponsiveFilters from "../components/common/ResponsiveFilters";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import FileUpload from "../components/common/FileUpload";
+import DateRangeFilter from "../components/common/DateRangeFilter";
 import riceDepositService from "../services/riceDepositService";
 import { getAllPaddy } from "../services/paddyService";
 import { formatWeight } from "../utils/calculations";
@@ -21,6 +23,10 @@ const RiceManagement = () => {
   const [showRiceModal, setShowRiceModal] = useState(false);
   const [editingRice, setEditingRice] = useState(null);
   const [riceFilter, setRiceFilter] = useState("");
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
   const [expandedRice, setExpandedRice] = useState(null);
   const [stats, setStats] = useState({
     totalONB: 0,
@@ -82,6 +88,8 @@ const RiceManagement = () => {
   };
 
   const [riceForm, setRiceForm] = useState(initialRiceForm);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   // Fetch rice deposit data
   useEffect(() => {
@@ -248,6 +256,10 @@ const RiceManagement = () => {
     });
   };
 
+  const handleFilesChange = (files) => {
+    setSelectedFiles(files);
+  };
+
   const saveRice = async (e) => {
     e.preventDefault();
     
@@ -323,14 +335,31 @@ const RiceManagement = () => {
   };
 
   // Filter rice deposits
-  const filteredRiceDeposits = riceDeposits.filter(rice =>
-    rice.truckMemo?.toLowerCase().includes(riceFilter.toLowerCase()) ||
-    rice.lorryNumber?.toLowerCase().includes(riceFilter.toLowerCase()) ||
-    rice.depositGodown?.toLowerCase().includes(riceFilter.toLowerCase()) ||
-    rice.variety?.toLowerCase().includes(riceFilter.toLowerCase()) ||
-    rice.ackNo?.toLowerCase().includes(riceFilter.toLowerCase()) ||
-    rice.sampleNumber?.toLowerCase().includes(riceFilter.toLowerCase())
-  );
+  const filteredRiceDeposits = riceDeposits.filter(rice => {
+    const q = riceFilter.toLowerCase();
+    const matchesText = (
+      rice.truckMemo?.toLowerCase().includes(q) ||
+      rice.lorryNumber?.toLowerCase().includes(q) ||
+      rice.depositGodown?.toLowerCase().includes(q) ||
+      rice.variety?.toLowerCase().includes(q) ||
+      rice.ackNo?.toLowerCase().includes(q) ||
+      rice.sampleNumber?.toLowerCase().includes(q)
+    );
+    
+    // Date range filter
+    let matchesDate = true;
+    if (dateRange.startDate || dateRange.endDate) {
+      const riceDate = new Date(rice.date);
+      if (dateRange.startDate) {
+        matchesDate = matchesDate && riceDate >= new Date(dateRange.startDate);
+      }
+      if (dateRange.endDate) {
+        matchesDate = matchesDate && riceDate <= new Date(dateRange.endDate + 'T23:59:59.999Z');
+      }
+    }
+    
+    return matchesText && matchesDate;
+  });
 
   // Grouped headers for the table
   const groupedHeaders = [
@@ -510,12 +539,12 @@ const RiceManagement = () => {
           </div>
           {currentBranchId && currentBranchId !== 'all' && (
             <div className="flex justify-center sm:justify-start">
-              <Button 
-                onClick={() => openRiceModal()} 
-                variant="primary" 
-                icon="plus"
-                className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transition-all duration-300"
-              >
+                              <Button
+                  onClick={() => openRiceModal()}
+                  variant="success" 
+                  icon="plus"
+                  className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
+                >
                 Add Rice Deposit
               </Button>
             </div>
@@ -733,7 +762,7 @@ const RiceManagement = () => {
 
         {/* Responsive Filters */}
         <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <BranchFilter
               value={currentBranchId || ''}
               onChange={(value) => console.log('Branch changed:', value)}
@@ -742,6 +771,16 @@ const RiceManagement = () => {
               searchValue={riceFilter}
               onSearchChange={setRiceFilter}
               searchPlaceholder="Search by memo, lorry, godown, variety..."
+            />
+          </div>
+          <div className="mt-4">
+            <DateRangeFilter
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+              onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              startDateLabel="Date From"
+              endDateLabel="Date To"
             />
           </div>
         </ResponsiveFilters>
@@ -1008,12 +1047,15 @@ const RiceManagement = () => {
       <DialogBox
         show={showRiceModal}
         onClose={closeRiceModal}
+        onSubmit={saveRice}
         title={editingRice ? "Edit Rice Deposit" : "Add Rice Deposit"}
-        maxWidth="max-w-md"
+        submitText={editingRice ? "Update" : "Create"}
+        cancelText="Cancel"
+        size="2xl"
       >
-        <form onSubmit={saveRice} className="space-y-6">
+        <form onSubmit={saveRice} className="space-y-4">
           {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <FormInput
               label="Date"
               name="date"
@@ -1106,7 +1148,7 @@ const RiceManagement = () => {
             {selectedPaddy && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="text-sm font-semibold text-blue-800 mb-2">Selected Paddy Details</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-blue-600 font-medium">Issue Memo:</span>
                     <span className="ml-2 text-gray-700">{selectedPaddy.issueMemo}</span>
@@ -1145,7 +1187,7 @@ const RiceManagement = () => {
           </div>
 
           {/* Rice Bag Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <FormInput
               label="Rice Bags"
               name="riceBag"
@@ -1245,7 +1287,7 @@ const RiceManagement = () => {
                   );
                 })()}
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* NB to ONB */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1412,25 +1454,19 @@ const RiceManagement = () => {
             />
           </div>
 
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-3">
-            <Button 
-              onClick={closeRiceModal} 
-              variant="secondary" 
-              icon="close"
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              variant="primary" 
-              icon="save"
-              disabled={loading}
-            >
-              {loading ? "Saving..." : (editingRice ? "Update" : "Create")}
-            </Button>
-          </div>
+          {/* File Upload Section */}
+          <FileUpload
+            label="Upload Rice Documents & Images"
+            module="rice"
+            onFilesChange={handleFilesChange}
+            files={selectedFiles}
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            maxFiles={10}
+            maxSize={10}
+            showPreview={true}
+          />
+
+
         </form>
       </DialogBox>
     </div>

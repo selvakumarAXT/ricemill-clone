@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 // @access  Private
 const getAllPaddy = asyncHandler(async (req, res) => {
   const { branch_id, isSuperAdmin } = req.user;
-  const { page = 1, limit = 10, search = '', sortBy = 'issueDate', sortOrder = 'desc', branch_id: queryBranchId, variety, source } = req.query;
+  const { page = 1, limit = 10, search = '', sortBy = 'issueDate', sortOrder = 'desc', branch_id: queryBranchId, variety, source, startDate, endDate } = req.query;
 
   // Build query - handle "all branches" case for superadmin
   let query = {};
@@ -41,6 +41,17 @@ const getAllPaddy = asyncHandler(async (req, res) => {
   // Add source filter
   if (source) {
     query.paddyFrom = source;
+  }
+
+  // Add date range filter
+  if (startDate || endDate) {
+    query.issueDate = {};
+    if (startDate) {
+      query.issueDate.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      query.issueDate.$lte = new Date(endDate + 'T23:59:59.999Z');
+    }
   }
 
   // Build sort object

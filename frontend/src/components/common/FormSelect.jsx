@@ -1,18 +1,18 @@
 import Icon from './Icon';
 
-const FormSelect = ({ label, name, value, onChange, required = false, className = '', children, icon, iconClass = 'text-[var(--color-text-gray-light)]', ...rest }) => (
-  <div className="mb-2">
+const FormSelect = ({ label, name, value, onChange, required = false, className = '', children, options = [], icon, iconClass = 'text-gray-400', ...rest }) => (
+  <div className="w-full space-y-2">
     {label && (
-      <label className="block text-sm font-medium text-[var(--color-text-gray-dark)] mb-1" htmlFor={name}>
+      <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor={name}>
         {label}
-        {required && <span className="text-[var(--color-text-red)] ml-0.5">*</span>}
+        {required && <span className="text-red-500 ml-1">*</span>}
       </label>
     )}
-    <div className={`relative flex items-center w-full`}>
+    <div className="relative">
       {icon && (
-        <span className="absolute left-0 pl-3 flex items-center h-full pointer-events-none">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <Icon name={icon} className={`h-5 w-5 ${iconClass}`} />
-        </span>
+        </div>
       )}
       <select
         id={name}
@@ -20,10 +20,24 @@ const FormSelect = ({ label, name, value, onChange, required = false, className 
         value={value}
         onChange={onChange}
         required={required}
-        className={`block w-full border-[var(--color-border-gray)] rounded-md shadow-sm focus:ring-2 focus:ring-[var(--color-bg-accent)] focus:border-[var(--color-bg-accent)] sm:text-sm ${icon ? 'pl-10' : ''} ${className}`}
+        className={`
+          block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm 
+          bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+          disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed
+          ${icon ? 'pl-10' : ''} 
+          ${className}
+        `}
         {...rest}
       >
-        {children}
+        {options.length > 0 ? (
+          options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))
+        ) : (
+          children
+        )}
       </select>
     </div>
   </div>

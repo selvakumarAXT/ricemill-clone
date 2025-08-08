@@ -12,6 +12,8 @@ import ResponsiveFilters from "../components/common/ResponsiveFilters";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import GunnyEntryDetails from "../components/common/GunnyEntryDetails";
 import PaddyEntryDetails from "../components/common/PaddyEntryDetails";
+import FileUpload from "../components/common/FileUpload";
+import DateRangeFilter from "../components/common/DateRangeFilter";
 import { 
   getAllPaddy, 
   createPaddy, 
@@ -33,6 +35,10 @@ const PaddyManagement = () => {
   const [editingPaddy, setEditingPaddy] = useState(null);
   const [paddyFilter, setPaddyFilter] = useState("");
   const [paddyVarietyFilter, setPaddyVarietyFilter] = useState("");
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
 
   const [expandedPaddy, setExpandedPaddy] = useState(null);
   const [error, setError] = useState(null);
@@ -77,6 +83,8 @@ const PaddyManagement = () => {
   };
 
   const [paddyForm, setPaddyForm] = useState(initialPaddyForm);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
 
 
@@ -113,7 +121,7 @@ const PaddyManagement = () => {
   }, [currentBranchId]);
 
   // Fetch paddy data with server-side pagination
-  const fetchPaddies = async (page = 1, limit = 10, search = '', sortBy = 'issueDate', sortOrder = 'desc', variety = '') => {
+  const fetchPaddies = async (page = 1, limit = 10, search = '', sortBy = 'issueDate', sortOrder = 'desc', variety = '', startDate = '', endDate = '') => {
     setLoading(true);
     setError(null);
     try {
@@ -123,7 +131,9 @@ const PaddyManagement = () => {
         search,
         sortBy,
         sortOrder,
-        variety: variety || undefined
+        variety: variety || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined
       };
       
       console.log('Fetching paddies with params:', params);
@@ -152,20 +162,20 @@ const PaddyManagement = () => {
   useEffect(() => {
     // Only fetch if currentBranchId is available
     if (currentBranchId !== undefined) {
-      fetchPaddies(1, paginationData.limit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter);
+      fetchPaddies(1, paginationData.limit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter, dateRange.startDate, dateRange.endDate);
     }
-  }, [currentBranchId]);
+  }, [currentBranchId, dateRange]);
 
 
 
   // Handle page change
   const handlePageChange = (newPage) => {
-    fetchPaddies(newPage, paginationData.limit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter);
+    fetchPaddies(newPage, paginationData.limit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter, dateRange.startDate, dateRange.endDate);
   };
 
   // Handle page size change
   const handlePageSizeChange = (newLimit) => {
-    fetchPaddies(1, newLimit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter);
+    fetchPaddies(1, newLimit, paddyFilter, sortData.col, sortData.dir, paddyVarietyFilter, dateRange.startDate, dateRange.endDate);
   };
 
   // Handle sorting
@@ -173,7 +183,7 @@ const PaddyManagement = () => {
     setSortData(newSort);
     const sortBy = newSort.col !== null ? ['issueDate', 'issueMemo', 'lorryNumber', 'paddyFrom', 'paddyVariety'][newSort.col] : 'issueDate';
     const sortOrder = newSort.dir;
-    fetchPaddies(1, paginationData.limit, paddyFilter, sortBy, sortOrder, paddyVarietyFilter);
+    fetchPaddies(1, paginationData.limit, paddyFilter, sortBy, sortOrder, paddyVarietyFilter, dateRange.startDate, dateRange.endDate);
   };
 
   // Paddy CRUD operations
@@ -240,6 +250,10 @@ const PaddyManagement = () => {
     setCurrentBagWeight(newWeight);
   };
 
+  const handleFilesChange = (files) => {
+    setSelectedFiles(files);
+  };
+
   const savePaddy = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -296,7 +310,14 @@ const PaddyManagement = () => {
   const handleVarietyFilterChange = (newVariety) => {
     setPaddyVarietyFilter(newVariety);
     // Trigger API call with new filters
-    fetchPaddies(1, paginationData.limit, paddyFilter, sortData.col, sortData.dir, newVariety);
+    fetchPaddies(1, paginationData.limit, paddyFilter, sortData.col, sortData.dir, newVariety, dateRange.startDate, dateRange.endDate);
+  };
+
+  const handleDateRangeChange = (field, value) => {
+    setDateRange(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
 
@@ -515,12 +536,12 @@ const groupedHeaders = [
           </div>
           {currentBranchId && currentBranchId !== 'all' && (
             <div className="flex justify-center sm:justify-start">
-              <Button 
-                onClick={() => openPaddyModal()} 
-                variant="primary" 
-                icon="plus"
-                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300"
-              >
+                              <Button
+                  onClick={() => openPaddyModal()}
+                  variant="primary" 
+                  icon="plus"
+                  className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
+                >
                 Add Paddy
               </Button>
             </div>
@@ -646,33 +667,44 @@ const groupedHeaders = [
 
       {/* Responsive Filters */}
       <ResponsiveFilters title="Filters & Search" className="mb-6">
-        <TableFilters
-          searchValue={paddyFilter}
-          searchPlaceholder="Search paddy records..."
-          onSearchChange={(e) => handleFilterChange(e.target.value)}
-          showSelect={false}
-        />
-        <TableFilters
-          searchValue=""
-          selectValue={paddyVarietyFilter}
-          selectOptions={PADDY_VARIETIES.map(variety => ({
-            value: variety,
-            label: `Variety ${variety}`
-          }))}
-          onSelectChange={(e) => handleVarietyFilterChange(e.target.value)}
-          selectPlaceholder="All Varieties"
-          showSearch={false}
-          showSelect={true}
-        />
-
-                 <BranchFilter
-           value={currentBranchId || ''}
-           onChange={(e) => {
-             // The BranchFilter component will handle Redux updates for superadmin users
-             // This will automatically trigger a re-fetch when currentBranchId changes
-             console.log('Branch filter changed:', e.target.value);
-           }}
-         />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <TableFilters
+            searchValue={paddyFilter}
+            searchPlaceholder="Search paddy records..."
+            onSearchChange={(e) => handleFilterChange(e.target.value)}
+            showSelect={false}
+          />
+          <TableFilters
+            searchValue=""
+            selectValue={paddyVarietyFilter}
+            selectOptions={PADDY_VARIETIES.map(variety => ({
+              value: variety,
+              label: `Variety ${variety}`
+            }))}
+            onSelectChange={(e) => handleVarietyFilterChange(e.target.value)}
+            selectPlaceholder="All Varieties"
+            showSearch={false}
+            showSelect={true}
+          />
+          <BranchFilter
+            value={currentBranchId || ''}
+            onChange={(e) => {
+              // The BranchFilter component will handle Redux updates for superadmin users
+              // This will automatically trigger a re-fetch when currentBranchId changes
+              console.log('Branch filter changed:', e.target.value);
+            }}
+          />
+        </div>
+        <div className="mt-4">
+          <DateRangeFilter
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            onStartDateChange={(e) => handleDateRangeChange('startDate', e.target.value)}
+            onEndDateChange={(e) => handleDateRangeChange('endDate', e.target.value)}
+            startDateLabel="Issue Date From"
+            endDateLabel="Issue Date To"
+          />
+        </div>
       </ResponsiveFilters>
 
         {/* Desktop Table View */}
@@ -972,6 +1004,10 @@ const groupedHeaders = [
         title={editingPaddy ? "Edit Paddy Details" : "Add Paddy Details"}
         show={showPaddyModal}
         onClose={closePaddyModal}
+        onSubmit={savePaddy}
+        submitText={editingPaddy ? "Update" : "Create"}
+        cancelText="Cancel"
+        size="2xl"
       >
         <form onSubmit={savePaddy} className="space-y-6">
           {/* Basic Information */}
@@ -1060,15 +1096,19 @@ const groupedHeaders = [
             onBagWeightChange={handleBagWeightChange}
           />
 
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-3">
-            <Button onClick={closePaddyModal} variant="secondary" icon="close">
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" icon="save">
-              {editingPaddy ? "Update" : "Create"}
-            </Button>
-          </div>
+          {/* File Upload Section */}
+          <FileUpload
+            label="Upload Paddy Documents & Images"
+            module="paddy"
+            onFilesChange={handleFilesChange}
+            files={selectedFiles}
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            maxFiles={10}
+            maxSize={10}
+            showPreview={true}
+          />
+
+
         </form>
       </DialogBox>
       </div>

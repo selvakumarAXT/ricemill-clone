@@ -1,66 +1,63 @@
 import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
-import { getMe } from '../store/slices/authSlice';
-import LoadingSpinner from '../components/common/LoadingSpinner';
+import { useSelector } from 'react-redux';
 import Button from '../components/common/Button';
-import dashboardService from '../services/dashboardService';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import BranchFilter from '../components/common/BranchFilter';
+import { dashboardService } from '../services/dashboardService';
 
 const Dashboard = () => {
-  const dispatch = useDispatch();
-  const { user, isLoading } = useSelector((state) => state.auth);
-  const { currentBranchId } = useSelector((state) => state.branch);
-  
-  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [refreshInterval, setRefreshInterval] = useState(null);
+  const [dashboardData, setDashboardData] = useState({});
+  const [selectedPeriod, setSelectedPeriod] = useState('current_month');
+  const [dateRange, setDateRange] = useState({
+    startDate: '2025-01-01',
+    endDate: '2025-06-30'
+  });
+  const { currentBranchId } = useSelector((state) => state.branch);
+  const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    if (!user) {
-      dispatch(getMe());
-    }
     fetchDashboardData();
-    
-    // Set up auto-refresh every 30 seconds for real-time data
-    const interval = setInterval(fetchDashboardData, 30000);
-    setRefreshInterval(interval);
-
-    return () => {
-      if (refreshInterval) clearInterval(refreshInterval);
-    };
-  }, [dispatch, user, currentBranchId]);
+  }, [currentBranchId, selectedPeriod, dateRange]);
 
   const fetchDashboardData = async () => {
+    setLoading(true);
+    setError('');
     try {
-      setError('');
-      let data;
+      let response;
       
       if (user?.role === 'superadmin') {
-        data = await dashboardService.getSuperadminDashboard();
+        // Fetch superadmin dashboard data
+        response = await dashboardService.getDashboardData({
+          period: selectedPeriod,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        });
       } else {
-        data = await dashboardService.getBranchDashboard(currentBranchId);
+        // Fetch branch-specific dashboard data
+        const branchId = currentBranchId || user?.branchId;
+        if (!branchId) {
+          throw new Error('Branch ID not found');
+        }
+        response = await dashboardService.getBranchDashboard(branchId, {
+          period: selectedPeriod,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        });
       }
-      
-      setDashboardData(data.data);
+
+      if (response.success) {
+        setDashboardData(response.data);
+      } else {
+        setError(response.message || 'Failed to fetch dashboard data');
+      }
     } catch (err) {
+      console.error('Dashboard fetch error:', err);
       setError(err.message || 'Failed to fetch dashboard data');
-      console.error('Dashboard error:', err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getGrowthColor = (growth) => {
-    if (growth > 0) return 'text-green-600';
-    if (growth < 0) return 'text-red-600';
-    return 'text-gray-600';
-  };
-
-  const getGrowthIcon = (growth) => {
-    if (growth > 0) return '↗️';
-    if (growth < 0) return '↘️';
-    return '→';
   };
 
   const formatCurrency = (amount) => {
@@ -68,423 +65,432 @@ const Dashboard = () => {
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+      maximumFractionDigits: 0
+    }).format(amount || 0);
   };
 
-  const formatNumber = (num) => {
-    return new Intl.NumberFormat('en-IN').format(num);
+  const formatNumber = (number) => {
+    return new Intl.NumberFormat('en-IN').format(number || 0);
   };
 
-  if (isLoading || loading) {
-    return <LoadingSpinner fullPage />;
-  }
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'current': return 'text-green-600 bg-green-100';
+      case 'overdue_1_15': return 'text-yellow-600 bg-yellow-100';
+      case 'overdue_16_30': return 'text-orange-600 bg-orange-100';
+      case 'overdue_30_plus': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
 
-  if (!dashboardData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">📊</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Dashboard Loading</h2>
-          <p className="text-gray-600">Please wait while we fetch your data...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner fullPage />;
 
-  const isSuperadmin = user?.role === 'superadmin';
-  const overview = dashboardData.overview || dashboardData.stats;
-  const growth = dashboardData.growth || {};
+  // Extract data from API response
+  const {
+    overview = {},
+    growth = {},
+    branchStats = [],
+    recentActivities = [],
+    qualityMetrics = {},
+    efficiencyMetrics = {},
+    alerts = []
+  } = dashboardData;
+
+  const {
+    totalPaddy = 0,
+    totalRice = 0,
+    totalGunny = 0,
+    totalInventory = 0,
+    totalBranches = 0,
+    totalUsers = 0,
+    totalRevenue = 0,
+    totalExpenses = 0,
+    profit = 0,
+    efficiency = 0,
+    qualityScore = 0
+  } = overview;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
-        <div className="flex flex-col space-y-4">
-          <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              {isSuperadmin ? 'Superadmin Dashboard' : 'Branch Dashboard'}
-            </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">
-              Welcome back, {user?.name}! Here's your comprehensive overview.
-            </p>
-            {isSuperadmin && (
-              <p className="text-xs text-blue-600 mt-1">
-                📡 Live data • Auto-refreshing every 30 seconds
-              </p>
-            )}
+    <div className="min-h-screen bg-white">
+    
+
+      {/* Controls */}
+      <div className="px-4 py-4 bg-gray-50">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+          <div className="flex space-x-2">
+           
+          </div>
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600">Last Updated: {new Date().toLocaleString()}</span>
+            <div className="flex items-center space-x-2">
+              <input
+                type="date"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+              <span className="text-gray-500">To</span>
+              <input
+                type="date"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <Button variant="secondary" onClick={fetchDashboardData} className="p-2">
+              🔄 Refresh
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="mx-4 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center">
-            <span className="text-red-500 mr-2">⚠️</span>
-            <span className="text-red-700">{error}</span>
+      {/* Main Content */}
+      <div className="px-4 pb-6">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {/* Sales/Revenue */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Total Revenue</h3>
+              <span className="text-green-500">📈</span>
+            </div>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(totalRevenue)}
+              </div>
+              <div className="text-sm text-gray-600">
+                Growth: {growth.revenue || 0}%
+              </div>
+            </div>
+            {/* Bar chart */}
+            <div className="mt-4 flex items-end space-x-1 h-16">
+              {[60, 80, 45, 90, 70, 85].map((height, index) => (
+                <div
+                  key={index}
+                  className="bg-green-500 rounded-t"
+                  style={{ height: `${height}%`, width: '12px' }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Purchase/Expenses */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Total Expenses</h3>
+              <span className="text-blue-500">💰</span>
+            </div>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-blue-600">
+                {formatCurrency(totalExpenses)}
+              </div>
+              <div className="text-sm text-gray-600">
+                This month
+              </div>
+            </div>
+            {/* Bar chart */}
+            <div className="mt-4 flex items-end space-x-1 h-16">
+              {[0, 0, 0, 40, 0, 0].map((height, index) => (
+                <div
+                  key={index}
+                  className="bg-blue-500 rounded-t"
+                  style={{ height: `${height}%`, width: '12px' }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Profit */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Net Profit</h3>
+              <span className="text-green-500">💵</span>
+            </div>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(profit)}
+              </div>
+              <div className="text-sm text-gray-600">
+                Growth: {growth.profit || 0}%
+              </div>
+            </div>
+          </div>
+
+          {/* Efficiency */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Production Efficiency</h3>
+              <span className="text-purple-500">⚡</span>
+            </div>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-purple-600">
+                {efficiency}%
+              </div>
+              <div className="text-sm text-gray-600">
+                Quality Score: {qualityScore}%
+              </div>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Main Content */}
-      <div className="px-4 py-6 sm:px-6">
-        {/* Primary KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Production Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* Total Paddy */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Paddy</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatNumber(overview.totalPaddy || 0)} kg
-                </p>
-                {growth.paddy !== undefined && (
-                  <div className="flex items-center mt-1">
-                    <span className={`text-xs font-medium ${getGrowthColor(growth.paddy)}`}>
-                      {getGrowthIcon(growth.paddy)} {Math.abs(growth.paddy).toFixed(1)}%
-                    </span>
-                    <span className="text-xs text-gray-500 ml-1">from last month</span>
-                  </div>
-                )}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Total Paddy</h3>
+              <span className="text-yellow-500">🌾</span>
+            </div>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-yellow-600">
+                {formatNumber(totalPaddy)} kg
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">🌾</span>
+              <div className="text-sm text-gray-600">
+                Growth: {growth.paddy || 0}%
               </div>
             </div>
           </div>
 
           {/* Total Rice */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Rice</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {formatNumber(overview.totalRice || 0)} kg
-                </p>
-                {growth.rice !== undefined && (
-                  <div className="flex items-center mt-1">
-                    <span className={`text-xs font-medium ${getGrowthColor(growth.rice)}`}>
-                      {getGrowthIcon(growth.rice)} {Math.abs(growth.rice).toFixed(1)}%
-                    </span>
-                    <span className="text-xs text-gray-500 ml-1">from last month</span>
-                  </div>
-                )}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Total Rice</h3>
+              <span className="text-white-500">🍚</span>
+            </div>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-gray-600">
+                {formatNumber(totalRice)} kg
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">🍚</span>
+              <div className="text-sm text-gray-600">
+                Growth: {growth.rice || 0}%
               </div>
             </div>
           </div>
 
-          {/* Total Revenue */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {formatCurrency(overview.totalRevenue || 0)}
-                </p>
-                {growth.revenue !== undefined && (
-                  <div className="flex items-center mt-1">
-                    <span className={`text-xs font-medium ${getGrowthColor(growth.revenue)}`}>
-                      {getGrowthIcon(growth.revenue)} {Math.abs(growth.revenue).toFixed(1)}%
-                    </span>
-                    <span className="text-xs text-gray-500 ml-1">from last month</span>
-                  </div>
-                )}
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">💰</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Net Profit */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Net Profit</p>
-                <p className="text-2xl font-bold text-indigo-600">
-                  {formatCurrency(overview.profit || 0)}
-                </p>
-                {growth.profit !== undefined && (
-                  <div className="flex items-center mt-1">
-                    <span className={`text-xs font-medium ${getGrowthColor(growth.profit)}`}>
-                      {getGrowthIcon(growth.profit)} {Math.abs(growth.profit).toFixed(1)}%
-                    </span>
-                    <span className="text-xs text-gray-500 ml-1">from last month</span>
-                  </div>
-                )}
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">📈</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Secondary Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Total Gunny */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Gunny Bags</p>
-                <p className="text-xl font-bold text-orange-600">
-                  {formatNumber(overview.totalGunny || 0)}
-                </p>
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Total Gunny</h3>
+              <span className="text-brown-500">👜</span>
+            </div>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-amber-600">
+                {formatNumber(totalGunny)} bags
               </div>
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <span className="text-xl">👜</span>
+              <div className="text-sm text-gray-600">
+                Inventory items
               </div>
             </div>
           </div>
 
           {/* Total Inventory */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Inventory Items</p>
-                <p className="text-xl font-bold text-teal-600">
-                  {formatNumber(overview.totalInventory || 0)}
-                </p>
-              </div>
-              <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                <span className="text-xl">📦</span>
-              </div>
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Total Inventory</h3>
+              <span className="text-blue-500">📦</span>
             </div>
-          </div>
-
-          {/* Total Branches */}
-          {isSuperadmin && (
-            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Branches</p>
-                  <p className="text-xl font-bold text-cyan-600">
-                    {overview.totalBranches || 0}
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">🏢</span>
-                </div>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-blue-600">
+                {formatNumber(totalInventory)} items
               </div>
-            </div>
-          )}
-
-          {/* Total Users */}
-          {isSuperadmin && (
-            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-xl font-bold text-pink-600">
-                    {overview.totalUsers || 0}
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">👥</span>
-                </div>
+              <div className="text-sm text-gray-600">
+                Stock items
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Performance Metrics */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Efficiency Chart */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Efficiency</h3>
-            <div className="text-center">
-              <div className="relative inline-flex items-center justify-center w-32 h-32">
-                <svg className="w-32 h-32 transform -rotate-90">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    fill="transparent"
-                    className="text-gray-200"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    fill="transparent"
-                    strokeDasharray={`${2 * Math.PI * 56}`}
-                    strokeDashoffset={`${2 * Math.PI * 56 * (1 - (overview.efficiency || 0) / 100)}`}
-                    className="text-green-500"
-                  />
-                </svg>
-                <div className="absolute">
-                  <span className="text-2xl font-bold text-gray-900">
-                    {(overview.efficiency || 0).toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 mt-2">Rice extraction rate</p>
-            </div>
-          </div>
-
-          {/* Quality Score */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quality Score</h3>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-green-600 mb-2">
-                {(overview.qualityScore || 0).toFixed(1)}
-              </div>
-              <div className="flex justify-center space-x-1">
-                {[...Array(5)].map((_, i) => (
-                  <span key={i} className={`text-2xl ${i < Math.floor((overview.qualityScore || 0) / 20) ? 'text-yellow-400' : 'text-gray-300'}`}>
-                    ⭐
-                  </span>
-                ))}
-              </div>
-              <p className="text-sm text-gray-600 mt-2">Average quality rating</p>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="space-y-3">
-              <Link to="/paddy-management">
-                <Button className="w-full justify-center" variant="primary">
-                  🌾 Add Paddy Entry
-                </Button>
-              </Link>
-              <Link to="/production">
-                <Button className="w-full justify-center" variant="secondary">
-                  🍚 Record Production
-                </Button>
-              </Link>
-              <Link to="/inventory">
-                <Button className="w-full justify-center" variant="outline">
-                  📦 Check Inventory
-                </Button>
-              </Link>
-              <Link to="/reports">
-                <Button className="w-full justify-center" variant="outline">
-                  📊 View Reports
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
 
-        {/* Branch Statistics (Superadmin Only) */}
-        {isSuperadmin && dashboardData.branchStats && (
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-8">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Branch Performance Overview</h3>
+        {/* System Overview */}
+        {user?.role === 'superadmin' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-6">
+            {/* Total Branches */}
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Total Branches</h3>
+                <span className="text-green-500">🏢</span>
+              </div>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-green-600">
+                  {formatNumber(totalBranches)}
+                </div>
+                <div className="text-sm text-gray-600">
+                  Active branches
+                </div>
+              </div>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {dashboardData.branchStats.map((branch) => (
-                  <div key={branch.id} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-gray-900">{branch.name}</h4>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        branch.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {branch.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Paddy Entries:</span>
-                        <span className="font-medium">{branch.paddyCount}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Production Records:</span>
-                        <span className="font-medium">{branch.productionCount}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Active Users:</span>
-                        <span className="font-medium">{branch.userCount}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+
+            {/* Total Users */}
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Total Users</h3>
+                <span className="text-blue-500">👥</span>
+              </div>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatNumber(totalUsers)}
+                </div>
+                <div className="text-sm text-gray-600">
+                  Active users
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* System Alerts */}
-        {dashboardData.alerts && dashboardData.alerts.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-8">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-yellow-50 to-orange-50">
-              <h3 className="text-lg font-semibold text-gray-900">System Alerts</h3>
-            </div>
-            <div className="p-6">
-              <div className="space-y-3">
-                {dashboardData.alerts.map((alert, index) => (
-                  <div key={index} className={`flex items-center p-3 rounded-lg ${
-                    alert.type === 'warning' ? 'bg-red-50 border border-red-200' :
-                    alert.type === 'info' ? 'bg-blue-50 border border-blue-200' :
-                    'bg-yellow-50 border border-yellow-200'
-                  }`}>
-                    <span className="mr-3">
-                      {alert.type === 'warning' ? '⚠️' : alert.type === 'info' ? 'ℹ️' : '🔔'}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">{alert.message}</span>
-                  </div>
-                ))}
+        {/* Quality & Efficiency Metrics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Quality Metrics */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Quality Metrics</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Average Quality Score</span>
+                <span className="text-lg font-bold text-green-600">{qualityMetrics.averageQuality || 0}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Quality Trend</span>
+                <span className={`text-sm font-medium ${
+                  qualityMetrics.qualityTrend === 'improving' ? 'text-green-600' : 
+                  qualityMetrics.qualityTrend === 'declining' ? 'text-red-600' : 'text-gray-600'
+                }`}>
+                  {qualityMetrics.qualityTrend || 'stable'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Quality Issues</span>
+                <span className="text-sm text-red-600">{qualityMetrics.qualityIssues || 0}</span>
               </div>
             </div>
           </div>
-        )}
+
+          {/* Efficiency Metrics */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Efficiency Metrics</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Overall Efficiency</span>
+                <span className="text-lg font-bold text-blue-600">{efficiencyMetrics.overallEfficiency || 0}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Max Efficiency</span>
+                <span className="text-sm text-green-600">{efficiencyMetrics.maxEfficiency || 0}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Min Efficiency</span>
+                <span className="text-sm text-red-600">{efficiencyMetrics.minEfficiency || 0}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Recent Activities */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Activities</h3>
-              <Button 
-                onClick={fetchDashboardData}
-                variant="outline"
-                className="text-xs"
-              >
-                🔄 Refresh
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Recent Activities */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Recent Activities</h3>
+              <Button variant="secondary" className="text-sm px-3 py-1">
+                View All
               </Button>
             </div>
-          </div>
-          <div className="p-6">
-            {(!dashboardData.recentActivities || dashboardData.recentActivities.length === 0) ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">📋</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No recent activities</h3>
-                <p className="text-gray-500">Activities will appear here as they happen</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {dashboardData.recentActivities.map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-lg">
-                      {activity.type === 'paddy' ? '🌾' : 
-                       activity.type === 'production' ? '🍚' : 
-                       activity.type === 'inventory' ? '📦' : '📋'}
+            <div className="space-y-3">
+              {recentActivities.slice(0, 5).map((activity, index) => (
+                <div key={index} className="flex items-center space-x-3 p-2 rounded-lg bg-gray-50">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{activity.action}</div>
+                    <div className="text-xs text-gray-600">
+                      {activity.branchName} • {activity.timeAgo}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                      <p className="text-xs text-gray-500">
-                        {activity.amount} • {activity.branchName || ''} • {activity.timeAgo || 'Recently'}
-                      </p>
-                    </div>
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {activity.status}
-                    </span>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="text-sm text-gray-600">{activity.amount}</div>
+                </div>
+              ))}
+              {recentActivities.length === 0 && (
+                <div className="text-center text-gray-500 py-4">
+                  No recent activities
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* System Alerts */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">System Alerts</h3>
+              <Button variant="secondary" className="text-sm px-3 py-1">
+                View All
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {alerts.slice(0, 5).map((alert, index) => (
+                <div key={index} className={`flex items-center space-x-3 p-2 rounded-lg ${
+                  alert.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                  alert.type === 'error' ? 'bg-red-50 border border-red-200' :
+                  alert.type === 'success' ? 'bg-green-50 border border-green-200' :
+                  'bg-blue-50 border border-blue-200'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    alert.type === 'warning' ? 'bg-yellow-500' :
+                    alert.type === 'error' ? 'bg-red-500' :
+                    alert.type === 'success' ? 'bg-green-500' :
+                    'bg-blue-500'
+                  }`}></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{alert.message}</div>
+                    {alert.count > 0 && (
+                      <div className="text-xs text-gray-600">{alert.count} items affected</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {alerts.length === 0 && (
+                <div className="text-center text-gray-500 py-4">
+                  No alerts
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Branch Statistics (Superadmin only) */}
+        {user?.role === 'superadmin' && branchStats.length > 0 && (
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Branch Statistics</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {branchStats.slice(0, 6).map((branch, index) => (
+                <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-gray-800">{branch.name}</h4>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      branch.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {branch.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600 mb-1">Code: {branch.millCode}</div>
+                  <div className="space-y-1 text-xs text-gray-500">
+                    <div>Paddy Entries: {branch.paddyCount}</div>
+                    <div>Production: {branch.productionCount}</div>
+                    <div>Users: {branch.userCount}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-red-700 font-medium">{error}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

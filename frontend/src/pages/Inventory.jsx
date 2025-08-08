@@ -9,6 +9,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ResponsiveFilters from '../components/common/ResponsiveFilters';
 import DialogBox from '../components/common/DialogBox';
 import FormInput from '../components/common/FormInput';
+import FileUpload from '../components/common/FileUpload';
+import DateRangeFilter from '../components/common/DateRangeFilter';
 
 const Inventory = () => {
   const [inventory, setInventory] = useState([]);
@@ -16,6 +18,10 @@ const Inventory = () => {
   const [error, setError] = useState('');
   const [inventoryFilter, setInventoryFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
   const [expandedInventory, setExpandedInventory] = useState(null);
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [editingInventory, setEditingInventory] = useState(null);
@@ -24,6 +30,8 @@ const Inventory = () => {
     quantity: '',
     description: ''
   });
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   const { currentBranchId } = useSelector((state) => state.branch);
 
   useEffect(() => {
@@ -63,6 +71,10 @@ const Inventory = () => {
 
   const handleInventoryFormChange = (e) => {
     setInventoryForm({ ...inventoryForm, [e.target.name]: e.target.value });
+  };
+
+  const handleFilesChange = (files) => {
+    setSelectedFiles(files);
   };
 
   const saveInventory = async (e) => {
@@ -117,7 +129,19 @@ const Inventory = () => {
       item.description?.toLowerCase().includes(q)
     );
 
-    return matchesText;
+    // Date range filter
+    let matchesDate = true;
+    if (dateRange.startDate || dateRange.endDate) {
+      const itemDate = new Date(item.createdAt);
+      if (dateRange.startDate) {
+        matchesDate = matchesDate && itemDate >= new Date(dateRange.startDate);
+      }
+      if (dateRange.endDate) {
+        matchesDate = matchesDate && itemDate <= new Date(dateRange.endDate + 'T23:59:59.999Z');
+      }
+    }
+
+    return matchesText && matchesDate;
   });
 
   if (loading) return (
@@ -164,16 +188,28 @@ const Inventory = () => {
         )}
 
         <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <TableFilters
-            searchValue={inventoryFilter}
-            searchPlaceholder="Search inventory items..."
-            onSearchChange={(e) => setInventoryFilter(e.target.value)}
-            showSelect={false}
-          />
-          <BranchFilter
-            value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
-            onChange={(e) => setBranchFilter(e.target.value)}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <TableFilters
+              searchValue={inventoryFilter}
+              searchPlaceholder="Search inventory items..."
+              onSearchChange={(e) => setInventoryFilter(e.target.value)}
+              showSelect={false}
+            />
+            <BranchFilter
+              value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+            />
+          </div>
+          <div className="mt-4">
+            <DateRangeFilter
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+              onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              startDateLabel="Created Date From"
+              endDateLabel="Created Date To"
+            />
+          </div>
         </ResponsiveFilters>
 
         {/* Desktop Table View */}
@@ -311,6 +347,7 @@ const Inventory = () => {
           onSubmit={saveInventory}
           show={showInventoryModal}
           loading={loading}
+          size="2xl"
         >
           <form onSubmit={saveInventory} className="space-y-6">
             <FormInput
@@ -337,6 +374,18 @@ const Inventory = () => {
               onChange={handleInventoryFormChange}
               required
               icon="info"
+            />
+            
+            {/* File Upload Section */}
+            <FileUpload
+              label="Upload Inventory Documents & Images"
+              module="inventory"
+              onFilesChange={handleFilesChange}
+              files={selectedFiles}
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+              maxFiles={10}
+              maxSize={10}
+              showPreview={true}
             />
           </form>
         </DialogBox>

@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import BranchFilter from '../components/common/BranchFilter';
+import ResponsiveFilters from '../components/common/ResponsiveFilters';
 
 const Reports = () => {
   const [loading, setLoading] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [dateRange, setDateRange] = useState('month');
   const [reportData, setReportData] = useState(null);
+  const [branchFilter, setBranchFilter] = useState('');
   const { currentBranchId } = useSelector((state) => state.branch);
 
   const reportTypes = [
@@ -68,9 +71,12 @@ const Reports = () => {
   };
 
   const generateMockReportData = (reportType) => {
+    // Use effective branch filter
+    const effectiveBranchFilter = currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter;
+    
     const baseData = {
       period: dateRange,
-      branch: currentBranchId || 'All Branches',
+      branch: effectiveBranchFilter || 'All Branches',
       generatedAt: new Date().toLocaleString(),
       summary: {
         total: 0,
@@ -511,8 +517,8 @@ const Reports = () => {
 
       {/* Main Content */}
       <div className="px-4 py-6 sm:px-6">
-        {/* Date Range Selector */}
-        <div className="mb-6">
+        {/* Filters */}
+        <ResponsiveFilters title="Report Filters" className="mb-6">
           <div className="flex flex-wrap items-center gap-4">
             <label className="text-sm font-medium text-gray-700">Report Period:</label>
             <select
@@ -526,7 +532,11 @@ const Reports = () => {
               <option value="year">Last Year</option>
             </select>
           </div>
-        </div>
+          <BranchFilter
+            value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+          />
+        </ResponsiveFilters>
 
         {/* Report Types Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

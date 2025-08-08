@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -36,7 +37,7 @@ app.use(helmet());
 
 // CORS - Allow frontend origin and credentials for development
 app.use(cors({
-  origin: 'http://localhost:5173', // Frontend URL
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176'], // Frontend URLs
   credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -71,6 +72,15 @@ app.use('/api/financial-transactions', require('./routes/financialTransactions')
 
 // Upload routes
 app.use('/api/uploads', require('./routes/uploads'));
+
+// Document routes
+app.use('/api/documents', require('./routes/documents'));
+
+// Sales Invoice routes
+app.use('/api/sales-invoices', require('./routes/salesInvoices'));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // app.use('/api/checkstacks', require('./routes/checkstacks'));
 // app.use('/api/holds', require('./routes/holds'));

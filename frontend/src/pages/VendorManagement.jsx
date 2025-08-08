@@ -9,6 +9,7 @@ import ResponsiveFilters from '../components/common/ResponsiveFilters';
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
+import FileUpload from '../components/common/FileUpload';
 
 const VendorManagement = () => {
   const [vendors, setVendors] = useState([]);
@@ -41,6 +42,8 @@ const VendorManagement = () => {
   };
 
   const [vendorForm, setVendorForm] = useState(initialVendorForm);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   useEffect(() => {
     fetchVendorData();
@@ -137,6 +140,10 @@ const VendorManagement = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleFilesChange = (files) => {
+    setSelectedFiles(files);
   };
 
   const saveVendor = async (e) => {
@@ -288,20 +295,12 @@ const VendorManagement = () => {
           <div className="flex justify-center sm:justify-start space-x-2">
             <Button
               onClick={() => openVendorModal()}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+              variant="success"
+              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             >
               🏢 Add New Vendor
             </Button>
-            {vendors.length > 0 && (
-              <Button
-                onClick={() => {
-                  openVendorModal(vendors[0]);
-                }}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                🧪 Test Edit
-              </Button>
-            )}
+           
           </div>
         </div>
       </div>
@@ -630,7 +629,7 @@ const VendorManagement = () => {
         show={showVendorModal}
         onClose={closeVendorModal}
         title={editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
-        size="lg"
+        size="2xl"
       >
         <form onSubmit={saveVendor} className="space-y-4" key={editingVendor ? 'edit' : 'add'}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -792,6 +791,19 @@ const VendorManagement = () => {
             onChange={handleVendorFormChange}
             icon="note"
           />
+          
+          {/* File Upload Section */}
+          <FileUpload
+            label="Upload Vendor Documents"
+            module="vendor"
+            onFilesChange={handleFilesChange}
+            files={selectedFiles}
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            maxFiles={10}
+            maxSize={10}
+            showPreview={true}
+          />
+          
           <div className="flex justify-end space-x-3 pt-4">
             <Button type="button" onClick={closeVendorModal} variant="secondary">
               Cancel

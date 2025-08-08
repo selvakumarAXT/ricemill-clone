@@ -10,11 +10,13 @@ const FileUpload = ({
   maxSize = 10, // MB
   onFilesChange,
   onFileRemove,
+  onUploadSuccess,
   files = [],
   disabled = false,
   className = "",
   showPreview = true,
-  module = "documents"
+  module = "documents",
+  disableAutoUpload = false
 }) => {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -76,6 +78,11 @@ const FileUpload = ({
     setUploading(true);
     
     try {
+      console.log('Starting file upload for module:', module);
+      console.log('Files to upload:', files);
+      console.log('Token available:', !!token);
+      console.log('Token length:', token ? token.length : 0);
+      
       const formData = new FormData();
       formData.append('module', module);
       
@@ -83,19 +90,33 @@ const FileUpload = ({
         formData.append('files', file);
       });
       
+      console.log('FormData created, sending request...');
+      
+      // Try to get token from multiple sources
+      const authToken = token || localStorage.getItem('token') || sessionStorage.getItem('token');
+      console.log('Using token:', authToken ? 'Available' : 'Not available');
+      
       const response = await fetch(`http://localhost:3001/api/uploads/upload/${module}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${authToken}`
         },
         body: formData
       });
       
+      console.log('Response received:', response.status);
+      
       const result = await response.json();
+      console.log('Upload result:', result);
       
       if (result.success) {
         // Clear files after successful upload
         onFilesChange([]);
+        // Call the callback with uploaded file data
+        if (onUploadSuccess) {
+          console.log('Calling onUploadSuccess with:', result.files);
+          onUploadSuccess(result.files);
+        }
         alert('Files uploaded successfully!');
       } else {
         alert(result.message || 'Upload failed');
@@ -210,15 +231,17 @@ const FileUpload = ({
             <h4 className="text-sm font-medium text-gray-700">
               Selected Files ({files.length}/{maxFiles})
             </h4>
-            <Button
-              onClick={handleFileUpload}
-              variant="primary"
-              icon="upload"
-              disabled={uploading || disabled}
-              className="text-xs"
-            >
-              {uploading ? 'Uploading...' : 'Upload Files'}
-            </Button>
+            {!disableAutoUpload && (
+              <Button
+                onClick={handleFileUpload}
+                variant="primary"
+                icon="upload"
+                disabled={uploading || disabled}
+                className="text-xs"
+              >
+                {uploading ? 'Uploading...' : 'Upload Files'}
+              </Button>
+            )}
           </div>
           
           <div className="space-y-2 max-h-60 overflow-y-auto">

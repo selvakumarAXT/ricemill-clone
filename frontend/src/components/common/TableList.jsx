@@ -496,7 +496,7 @@ const TableList = ({
       )}
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && (
-        <DialogBox title="Delete Confirmation" onClose={cancelDelete}>
+        <DialogBox title="Delete Confirmation" onClose={cancelDelete} size="2xl">
           <WarningBox>
             {typeof getDeleteWarning === 'function'
               ? getDeleteWarning(rowToDelete?.row)

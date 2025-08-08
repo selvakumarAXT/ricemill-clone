@@ -9,6 +9,7 @@ import ResponsiveFilters from '../components/common/ResponsiveFilters';
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
+import FileUpload from '../components/common/FileUpload';
 
 const EBMeterCalculation = () => {
   const [meterReadings, setMeterReadings] = useState([]);
@@ -35,6 +36,8 @@ const EBMeterCalculation = () => {
   };
 
   const [meterForm, setMeterForm] = useState(initialMeterForm);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   useEffect(() => {
     fetchMeterData();
@@ -133,6 +136,10 @@ const EBMeterCalculation = () => {
       
       return updated;
     });
+  };
+
+  const handleFilesChange = (files) => {
+    setSelectedFiles(files);
   };
 
   const saveMeter = async (e) => {
@@ -264,20 +271,12 @@ const EBMeterCalculation = () => {
           <div className="flex justify-center sm:justify-start space-x-2">
             <Button
               onClick={() => openMeterModal()}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+              variant="success"
+              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             >
               ⚡ Add Meter Reading
             </Button>
-            {meterReadings.length > 0 && (
-              <Button
-                onClick={() => {
-                  openMeterModal(meterReadings[0]);
-                }}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                🧪 Test Edit
-              </Button>
-            )}
+            
           </div>
         </div>
       </div>
@@ -586,109 +585,147 @@ const EBMeterCalculation = () => {
         show={showMeterModal}
         onClose={closeMeterModal}
         title={editingMeter ? 'Edit Meter Reading' : 'Add New Meter Reading'}
-        size="lg"
+        size="2xl"
       >
-        <form onSubmit={saveMeter} className="space-y-4" key={editingMeter ? 'edit' : 'add'}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              label="Reading Date"
-              name="readingDate"
-              type="date"
-              value={meterForm.readingDate}
-              onChange={handleMeterFormChange}
-              required
-              icon="calendar"
-            />
-            <FormInput
-              label="Meter Number"
-              name="meterNumber"
-              value={meterForm.meterNumber}
-              onChange={handleMeterFormChange}
-              required
-              icon="hash"
-            />
-            <FormInput
-              label="Previous Reading"
-              name="previousReading"
-              type="number"
-              value={meterForm.previousReading}
-              onChange={handleMeterFormChange}
-              required
-              icon="gauge"
-            />
-            <FormInput
-              label="Current Reading"
-              name="currentReading"
-              type="number"
-              value={meterForm.currentReading}
-              onChange={handleMeterFormChange}
-              required
-              icon="gauge"
-            />
-            <FormInput
-              label="Units Consumed"
-              name="unitsConsumed"
-              type="number"
-              value={meterForm.unitsConsumed}
-              readOnly
-              icon="calculator"
-            />
-            <FormInput
-              label="Rate per Unit (₹)"
-              name="ratePerUnit"
-              type="number"
-              step="0.01"
-              value={meterForm.ratePerUnit}
-              onChange={handleMeterFormChange}
-              required
-              icon="dollar-sign"
-            />
-            <FormInput
-              label="Total Amount (₹)"
-              name="totalAmount"
-              type="number"
-              value={meterForm.totalAmount}
-              readOnly
-              icon="calculator"
-            />
-            <FormInput
-              label="Bill Number"
-              name="billNumber"
-              value={meterForm.billNumber}
-              onChange={handleMeterFormChange}
-              required
-              icon="file-text"
-            />
-            <FormInput
-              label="Due Date"
-              name="dueDate"
-              type="date"
-              value={meterForm.dueDate}
-              onChange={handleMeterFormChange}
-              required
-              icon="calendar"
-            />
-            <FormSelect
-              label="Payment Status"
-              name="paymentStatus"
-              value={meterForm.paymentStatus}
-              onChange={handleMeterFormChange}
-              options={[
-                { value: 'pending', label: 'Pending' },
-                { value: 'paid', label: 'Paid' },
-                { value: 'overdue', label: 'Overdue' }
-              ]}
-              icon="credit-card"
-            />
+        <form onSubmit={saveMeter} className="space-y-6" key={editingMeter ? 'edit' : 'add'}>
+          {/* Basic Information Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Basic Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormInput
+                label="Reading Date"
+                name="readingDate"
+                type="date"
+                value={meterForm.readingDate}
+                onChange={handleMeterFormChange}
+                required
+                icon="calendar"
+              />
+              <FormInput
+                label="Meter Number"
+                name="meterNumber"
+                value={meterForm.meterNumber}
+                onChange={handleMeterFormChange}
+                required
+                icon="hash"
+              />
+              <FormInput
+                label="Bill Number"
+                name="billNumber"
+                value={meterForm.billNumber}
+                onChange={handleMeterFormChange}
+                required
+                icon="file-text"
+              />
+              <FormInput
+                label="Due Date"
+                name="dueDate"
+                type="date"
+                value={meterForm.dueDate}
+                onChange={handleMeterFormChange}
+                required
+                icon="calendar"
+              />
+            </div>
           </div>
-          <FormInput
-            label="Remarks"
-            name="remarks"
-            value={meterForm.remarks}
-            onChange={handleMeterFormChange}
-            icon="note"
-          />
-          <div className="flex justify-end space-x-3 pt-4">
+
+          {/* Meter Readings Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Meter Readings</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormInput
+                label="Previous Reading"
+                name="previousReading"
+                type="number"
+                value={meterForm.previousReading}
+                onChange={handleMeterFormChange}
+                required
+                icon="gauge"
+              />
+              <FormInput
+                label="Current Reading"
+                name="currentReading"
+                type="number"
+                value={meterForm.currentReading}
+                onChange={handleMeterFormChange}
+                required
+                icon="gauge"
+              />
+              <FormInput
+                label="Units Consumed"
+                name="unitsConsumed"
+                type="number"
+                value={meterForm.unitsConsumed}
+                readOnly
+                icon="calculator"
+              />
+              <FormInput
+                label="Rate per Unit (₹)"
+                name="ratePerUnit"
+                type="number"
+                step="0.01"
+                value={meterForm.ratePerUnit}
+                onChange={handleMeterFormChange}
+                required
+                icon="dollar-sign"
+              />
+            </div>
+          </div>
+
+          {/* Financial Information Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Financial Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormInput
+                label="Total Amount (₹)"
+                name="totalAmount"
+                type="number"
+                value={meterForm.totalAmount}
+                readOnly
+                icon="calculator"
+              />
+              <FormSelect
+                label="Payment Status"
+                name="paymentStatus"
+                value={meterForm.paymentStatus}
+                onChange={handleMeterFormChange}
+                options={[
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'paid', label: 'Paid' },
+                  { value: 'overdue', label: 'Overdue' }
+                ]}
+                icon="credit-card"
+              />
+            </div>
+          </div>
+
+          {/* Additional Information Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Additional Information</h3>
+            <FormInput
+              label="Remarks"
+              name="remarks"
+              value={meterForm.remarks}
+              onChange={handleMeterFormChange}
+              icon="note"
+            />
+            
+            {/* File Upload Section */}
+            <div className="space-y-2">
+              <FileUpload
+                label="Upload Meter Bills & Documents"
+                module="meter"
+                onFilesChange={handleFilesChange}
+                files={selectedFiles}
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                maxFiles={10}
+                maxSize={10}
+                showPreview={true}
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
             <Button type="button" onClick={closeMeterModal} variant="secondary">
               Cancel
             </Button>

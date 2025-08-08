@@ -469,6 +469,7 @@ const UserManagement = () => {
           cancelText="Cancel"
           error={error}
           success={success}
+          size="2xl"
         >
           <form onSubmit={saveUser} className="space-y-4">
             <FormInput

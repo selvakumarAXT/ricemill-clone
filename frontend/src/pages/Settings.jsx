@@ -420,6 +420,7 @@ const Settings = () => {
           cancelText="Cancel"
           error={error}
           success={success}
+          size="2xl"
         >
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <FormInput

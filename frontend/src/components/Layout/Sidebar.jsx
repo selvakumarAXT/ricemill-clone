@@ -48,13 +48,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
       name: 'User Management',
       path: '/users',
       icon: <Icon name="users" />,
-      roles: ['admin', 'superadmin']
-    },
-    {
-      name: 'Production',
-      path: '/production',
-      icon: <Icon name="production" />,
-      roles: ['admin', 'manager', 'superadmin']
+      roles: ['admin']
     },
     {
       name: 'Paddy Entry',
@@ -63,9 +57,16 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
       roles: ['admin', 'manager','superadmin']
     },
     {
-      name: 'Gunny Management',
-      path: '/gunny-management',
-      icon: <Icon name="gunny" />,
+      name: 'Inventory',
+      path: '/inventory',
+      icon: <Icon name="inventory" />,
+      roles: ['admin', 'manager', 'superadmin']
+    },
+    
+    {
+      name: 'Production',
+      path: '/production',
+      icon: <Icon name="production" />,
       roles: ['admin', 'manager', 'superadmin']
     },
     {
@@ -75,27 +76,9 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
       roles: ['admin', 'manager', 'superadmin']
     },
     {
-      name: 'Inventory',
-      path: '/inventory',
-      icon: <Icon name="inventory" />,
-      roles: ['admin', 'manager', 'superadmin']
-    },
-    {
-      name: 'Reports',
-      path: '/reports',
-      icon: <Icon name="reports" />,
-      roles: ['admin', 'manager', 'superadmin']
-    },
-    {
-      name: 'Settings',
-      path: '/settings',
-      icon: <Icon name="settings" />,
-      roles: ['admin', 'manager', 'superadmin']
-    },
-    {
-      name: 'Sales & Dispatch',
-      path: '/sales-dispatch',
-      icon: <Icon name="sales" />,
+      name: 'Gunny Management',
+      path: '/gunny-management',
+      icon: <Icon name="gunny" />,
       roles: ['admin', 'manager', 'superadmin']
     },
     {
@@ -110,12 +93,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
       icon: <Icon name="vendor" />,
       roles: ['admin', 'manager', 'superadmin']
     },
-    {
-      name: 'Financial Ledger',
-      path: '/financial-ledger',
-      icon: <Icon name="financial" />,
-      roles: ['admin', 'manager', 'superadmin']
-    },
+   
     {
       name: 'EB Meter Calculation',
       path: '/eb-meter-calculation',
@@ -123,18 +101,17 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
       roles: ['admin', 'manager', 'superadmin']
     },
     {
-      name: 'Document Uploads',
-      path: '/document-uploads',
-      icon: <Icon name="documents" />,
+      name: 'Financial Ledger',
+      path: '/financial-ledger',
+      icon: <Icon name="financial" />,
       roles: ['admin', 'manager', 'superadmin']
     },
     {
-      name: 'Production',
-      path: '/production',
-      icon: <Icon name="production" />,
+      name: 'Sales & Dispatch',
+      path: '/sales-dispatch',
+      icon: <Icon name="sales" />,
       roles: ['admin', 'manager', 'superadmin']
     },
-
     // Branch Management (superadmin only)
     ...(user?.role === 'superadmin' ? [
       {
@@ -143,7 +120,25 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
         icon: <Icon name="branch" />,
         roles: ['superadmin']
       }
-    ] : [])
+    ] : []),
+    {
+      name: 'Document Uploads',
+      path: '/document-uploads',
+      icon: <Icon name="documents" />,
+      roles: ['admin', 'manager', 'superadmin']
+    },
+    {
+      name: 'Reports',
+      path: '/reports',
+      icon: <Icon name="reports" />,
+      roles: ['admin', 'manager', 'superadmin']
+    },
+    {
+      name: 'Settings',
+      path: '/settings',
+      icon: <Icon name="settings" />,
+      roles: ['admin', 'manager', 'superadmin']
+    },
   ];
 
   const filteredMenuItems = menuItems.filter(item => 
@@ -166,91 +161,106 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-center h-16 bg-gray-800">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Icon name="production" className="h-8 w-8 text-white" />
-            </div>
-            <div className="ml-3">
-              <h1 className="text-white text-lg font-semibold hidden sm:block">Rice Mill</h1>
+        {/* Sidebar Container with Flex Layout */}
+        <div className="flex flex-col h-full">
+          {/* Header - Fixed */}
+          <div className="flex-shrink-0 flex items-center justify-center h-16 bg-gray-800">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Icon name="production" className="h-8 w-8 text-white" />
+              </div>
+              <div className="ml-3">
+                <h1 className="text-white text-lg font-semibold hidden sm:block">Rice Mill</h1>
+              </div>
             </div>
           </div>
-        </div>
 
-        <nav className="mt-5 px-2">
-          <div className="space-y-1">
-            {/* Branches tree for superadmin */}
-            {user?.role === 'superadmin' && branches.length > 0 && (
-              <div>
-                <button
-                  className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors duration-150"
-                  onClick={() => setBranchesOpen((open) => !open)}
-                >
-                  <span className="mr-2">🌳</span>
-                  Branches
-                  <span className="ml-auto">{branchesOpen ? '▼' : '▶'}</span>
-                </button>
-                {branchesOpen && (
-                  <ul className="ml-6 mt-1 space-y-1">
-                    <li key="all-branches">
-                      <button
-                        className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${!currentBranchId ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
-                        onClick={() => handleBranchSelect('')}
-                      >
-                        All Branches
-                      </button>
-                    </li>
-                    {branches.map(branch => (
-                      <li key={branch._id}>
-                        <button
-                          className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${currentBranchId === branch._id ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
-                          onClick={() => handleBranchSelect(branch._id)}
-                        >
-                          {branch.name} ({branch.millCode})
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+          {/* Navigation - Scrollable */}
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="px-2 py-4">
+              <div className="space-y-1">
+                {/* Only show other menu items if a branch is selected or not superadmin */}
+                {(user?.role === 'superadmin' || user?.branch) && filteredMenuItems.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      className={`${
+                        isActive
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      } group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150`}
+                      onClick={() => window.innerWidth < 1024 && toggleSidebar()}
+                    >
+                      <span className="mr-3 flex-shrink-0">
+                        {item.icon}
+                      </span>
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </nav>
+
+          {/* Branches Selection - Fixed above user info */}
+          {(user?.role === 'superadmin' || user?.branch) && (
+            <div className="flex-shrink-0 border-t border-gray-700">
+              <div className="px-2 py-3">
+                {/* Branches tree for superadmin */}
+                {user?.role === 'superadmin' && branches.length > 0 && (
+                  <div>
+                    <button
+                      className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors duration-150"
+                      onClick={() => setBranchesOpen((open) => !open)}
+                    >
+                      <span className="mr-2">🌳</span>
+                      Branches
+                      <span className="ml-auto">{branchesOpen ? '▼' : '▶'}</span>
+                    </button>
+                    {branchesOpen && (
+                      <ul className="ml-6 mt-1 space-y-1">
+                        <li key="all-branches">
+                          <button
+                            className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${!currentBranchId ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+                            onClick={() => handleBranchSelect('')}
+                          >
+                            All Branches
+                          </button>
+                        </li>
+                        {branches.slice().reverse().map(branch => (
+                          <li key={branch._id}>
+                            <button
+                              className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${currentBranchId === branch._id ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+                              onClick={() => handleBranchSelect(branch._id)}
+                            >
+                              {branch.name} ({branch.millCode})
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+                {/* Show only the user's branch for non-superadmin */}
+                {user?.role !== 'superadmin' && user?.branch && (
+                  <div>
+                    <button
+                      className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 bg-indigo-600 text-white`}
+                      disabled
+                    >
+                      {user.branch.name} ({user.branch.millCode})
+                    </button>
+                  </div>
                 )}
               </div>
-            )}
-            {/* Show only the user's branch for non-superadmin */}
-            {user?.role !== 'superadmin' && user?.branch && (
-              <div className="mb-2">
-                <button
-                  className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 bg-indigo-600 text-white`}
-                  disabled
-                >
-                  {user.branch.name} ({user.branch.millCode})
-                </button>
-              </div>
-            )}
-            {/* Only show other menu items if a branch is selected or not superadmin */}
-            {(user?.role === 'superadmin' || user?.branch) && filteredMenuItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`${
-                    isActive
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  } group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150`}
-                  onClick={() => window.innerWidth < 1024 && toggleSidebar()}
-                >
-                  <span className="mr-3 flex-shrink-0">
-                    {item.icon}
-                  </span>
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
+            </div>
+          )}
 
-          {/* User info and logout */}
-          <div className="mt-8 pt-8 border-t border-gray-700">
-            <div className="px-2 space-y-1">
+          {/* User info and logout - Fixed at bottom */}
+          <div className="flex-shrink-0 border-t border-gray-700">
+            <div className="px-2 py-4 space-y-1">
               <div className="flex items-center px-2 py-2 text-sm text-gray-300">
                 <div className="flex-shrink-0">
                   <div className="h-8 w-8 bg-gray-600 rounded-full flex items-center justify-center">
@@ -259,18 +269,15 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
                     </span>
                   </div>
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-white">{user?.name}</p>
-                  <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+                <div className="ml-3 min-w-0 flex-1">
+                  <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                  <p className="text-xs text-gray-400 capitalize truncate">{user?.role}</p>
                   {user?.branch_id && (
-                    <p className="text-xs text-gray-500">{user.branch_id.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{user.branch_id.name}</p>
                   )}
-                  {/* Branch select for superadmin */}
-                 
                 </div>
-                
               </div>
-         
+       
               <button
                 onClick={handleLogout}
                 className="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150"
@@ -280,7 +287,7 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
               </button>
             </div>
           </div>
-        </nav>
+        </div>
       </div>
     </>
   );

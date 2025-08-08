@@ -176,7 +176,7 @@ const BagWeightOptionsManager = ({ isOpen, onClose }) => {
         title="Bag Weight Options Management"
         show={isOpen}
         onClose={onClose}
-        size="lg"
+        size="2xl"
       >
         <div className="space-y-4">
           {/* Header */}
@@ -285,6 +285,7 @@ const BagWeightOptionsManager = ({ isOpen, onClose }) => {
         title={editingOption ? "Edit Bag Weight Option" : "Add New Bag Weight Option"}
         show={showCreateModal}
         onClose={closeModal}
+        size="2xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <FormInput

@@ -35,7 +35,7 @@ const UserTable = ({
           <p className="text-sm text-gray-600 mt-1">Total: {filteredUsers.length} users</p>
         </div>
         {showAddButton && (
-          <Button onClick={() => openUserModal()} variant="primary" icon="add">
+          <Button onClick={() => openUserModal()} variant="success" icon="add" className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200">
             New User
           </Button>
         )}

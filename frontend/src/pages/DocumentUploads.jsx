@@ -9,77 +9,91 @@ import ResponsiveFilters from '../components/common/ResponsiveFilters';
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
+import FileUpload from '../components/common/FileUpload';
+import documentService from '../services/documentService';
 
 const DocumentUploads = () => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [documentFilter, setDocumentFilter] = useState('');
+  const [stats, setStats] = useState({});
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
   const [expandedDocument, setExpandedDocument] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [viewMode, setViewMode] = useState('all'); // 'all', 'module'
+  const [selectedModule, setSelectedModule] = useState('');
   const { currentBranchId } = useSelector((state) => state.branch);
+  const { user } = useSelector((state) => state.auth);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    search: '',
+    module: '',
+    category: '',
+    fileType: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+
+  // Pagination states
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
 
   const initialDocumentForm = {
     title: '',
     description: '',
-    category: 'invoice',
-    fileType: 'pdf',
-    uploadDate: '',
-    uploadedBy: '',
+    module: 'general',
+    category: 'other',
     version: '1.0',
     status: 'active',
-    remarks: ''
+    remarks: '',
+    tags: ''
   };
 
   const [documentForm, setDocumentForm] = useState(initialDocumentForm);
 
   useEffect(() => {
     fetchDocumentData();
-  }, [currentBranchId]);
+    fetchDocumentStats();
+  }, [currentBranchId, filters, pagination.page, pagination.limit, viewMode, selectedModule]);
 
   const fetchDocumentData = async () => {
     setLoading(true);
     setError('');
     try {
-      // Simulate API call - replace with actual service
-      const mockDocuments = [
-        {
-          _id: '1',
-          title: 'Rice Sales Invoice - January 2024',
-          description: 'Monthly rice sales invoice for ABC Traders',
-          category: 'invoice',
-          fileType: 'pdf',
-          fileName: 'rice_sales_invoice_jan2024.pdf',
-          fileSize: '2.5 MB',
-          uploadDate: '2024-01-15',
-          uploadedBy: 'John Doe',
-          version: '1.0',
-          status: 'active',
-          remarks: 'Important document for accounting',
-          downloadCount: 5,
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:30:00Z'
-        },
-        {
-          _id: '2',
-          title: 'Paddy Quality Report',
-          description: 'Quality assessment report for paddy batch QC-001',
-          category: 'quality_report',
-          fileType: 'pdf',
-          fileName: 'paddy_quality_report_qc001.pdf',
-          fileSize: '1.8 MB',
-          uploadDate: '2024-01-16',
-          uploadedBy: 'Jane Smith',
-          version: '1.0',
-          status: 'active',
-          remarks: 'QC report for batch processing',
-          downloadCount: 3,
-          createdAt: '2024-01-16T11:00:00Z',
-          updatedAt: '2024-01-16T11:15:00Z'
-        }
-      ];
-      setDocuments(mockDocuments);
+      const params = {
+        page: pagination.page,
+        limit: pagination.limit,
+        ...filters
+      };
+
+      if (currentBranchId) {
+        params.branch_id = currentBranchId;
+      }
+
+      let response;
+      if (viewMode === 'module' && selectedModule) {
+        response = await documentService.getDocumentsByModule(selectedModule, params);
+      } else {
+        response = await documentService.getDocuments(params);
+      }
+      
+      if (response.success) {
+        setDocuments(response.data);
+        setPagination(prev => ({
+          ...prev,
+          total: response.pagination.total,
+          totalPages: response.pagination.totalPages
+        }));
+      } else {
+        setError(response.message || 'Failed to fetch documents');
+      }
     } catch (err) {
       setError(err.message || 'Failed to fetch document data');
     } finally {
@@ -87,15 +101,34 @@ const DocumentUploads = () => {
     }
   };
 
+  const fetchDocumentStats = async () => {
+    try {
+      const params = {};
+      if (currentBranchId) {
+        params.branch_id = currentBranchId;
+      }
+      if (filters.startDate) params.startDate = filters.startDate;
+      if (filters.endDate) params.endDate = filters.endDate;
+      if (viewMode === 'module' && selectedModule) params.module = selectedModule;
+      else if (filters.module) params.module = filters.module;
+
+      const response = await documentService.getDocumentStats(params);
+      if (response.success) {
+        setStats(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
+
   const openDocumentModal = (document = null) => {
     setEditingDocument(document);
+    setSelectedFile(null);
     if (document) {
-      // Format date for HTML date input (YYYY-MM-DD)
-      const formattedUploadDate = new Date(document.uploadDate).toISOString().split('T')[0];
       const formData = {
         ...initialDocumentForm,
         ...document,
-        uploadDate: formattedUploadDate
+        tags: document.tags ? document.tags.join(', ') : ''
       };
       setDocumentForm(formData);
     } else {
@@ -107,6 +140,7 @@ const DocumentUploads = () => {
   const closeDocumentModal = () => {
     setShowDocumentModal(false);
     setEditingDocument(null);
+    setSelectedFile(null);
     setDocumentForm(initialDocumentForm);
   };
 
@@ -118,31 +152,66 @@ const DocumentUploads = () => {
     }));
   };
 
+  const handleFileSelect = (files) => {
+    if (files && files.length > 0) {
+      setSelectedFile(files[0]);
+    }
+  };
+
   const saveDocument = async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
-      // Simulate API call - replace with actual service
+      setError('');
+      
+      console.log('Starting document save...');
+      console.log('Editing document:', editingDocument);
+      console.log('Selected file:', selectedFile);
+      console.log('Document form:', documentForm);
+      console.log('Current branch ID:', currentBranchId);
+      
       if (editingDocument) {
         // Update existing document
-        setDocuments(prev => prev.map(doc => 
-          doc._id === editingDocument._id ? { ...documentForm, _id: doc._id } : doc
-        ));
+        const response = await documentService.updateDocument(editingDocument._id, documentForm);
+        if (response.success) {
+          setDocuments(prev => prev.map(doc => 
+            doc._id === editingDocument._id ? response.data : doc
+          ));
+          closeDocumentModal();
+        } else {
+          setError(response.message || 'Failed to update document');
+        }
       } else {
         // Create new document
-        const newDocument = {
+        if (!selectedFile) {
+          setError('Please select a file to upload');
+          return;
+        }
+
+        // Prepare document data with branch ID and proper module mapping
+        const documentData = {
           ...documentForm,
-          _id: Date.now().toString(),
-          fileName: 'sample_document.pdf',
-          fileSize: '1.0 MB',
-          downloadCount: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          branchId: currentBranchId || 'default',
+          // Map module names to match the new upload structure
+          // 'general' in form maps to 'documents' for upload, then back to 'general' for database
+          module: documentForm.module === 'general' ? 'documents' : documentForm.module
         };
-        setDocuments(prev => [newDocument, ...prev]);
+
+        console.log('Document data prepared:', documentData);
+
+        const response = await documentService.uploadDocument(selectedFile, documentData);
+        console.log('Upload response:', response);
+        
+        if (response.success) {
+          setDocuments(prev => [response.data, ...prev]);
+          closeDocumentModal();
+          fetchDocumentStats(); // Refresh stats
+        } else {
+          setError(response.message || 'Failed to create document');
+        }
       }
-      closeDocumentModal();
     } catch (error) {
+      console.error('Error in saveDocument:', error);
       setError('Error saving document: ' + error.message);
     } finally {
       setLoading(false);
@@ -153,8 +222,13 @@ const DocumentUploads = () => {
     if (window.confirm('Are you sure you want to delete this document?')) {
       try {
         setLoading(true);
-        // Simulate API call - replace with actual service
-        setDocuments(prev => prev.filter(doc => doc._id !== documentId));
+        const response = await documentService.deleteDocument(documentId);
+        if (response.success) {
+          setDocuments(prev => prev.filter(doc => doc._id !== documentId));
+          fetchDocumentStats(); // Refresh stats
+        } else {
+          setError(response.message || 'Failed to delete document');
+        }
       } catch (error) {
         setError('Error deleting document: ' + error.message);
       } finally {
@@ -163,70 +237,81 @@ const DocumentUploads = () => {
     }
   };
 
-  const downloadDocument = (document) => {
-    // Simulate download - replace with actual download logic
-    console.log('Downloading document:', document.fileName);
-    alert(`Downloading ${document.fileName}`);
-  };
+  const downloadDocument = async (document) => {
+    try {
+      setLoading(true);
+      
+      // First increment download count
+      const downloadResponse = await documentService.downloadDocument(document._id);
+      if (downloadResponse.success) {
+        // Update the document in the list with new download count
+        setDocuments(prev => prev.map(doc => 
+          doc._id === document._id 
+            ? { ...doc, downloadCount: downloadResponse.data.downloadCount }
+            : doc
+        ));
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active':
-        return 'text-green-600 bg-green-100';
-      case 'archived':
-        return 'text-gray-600 bg-gray-100';
-      case 'deleted':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
+        // Then download the actual file
+        await documentService.downloadFile(document.fileUrl, document.originalName);
+      } else {
+        setError(downloadResponse.message || 'Failed to download document');
+      }
+    } catch (error) {
+      setError('Error downloading document: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'invoice': return '📄';
-      case 'quality_report': return '🔬';
-      case 'contract': return '📋';
-      case 'license': return '📜';
-      case 'manual': return '📚';
-      case 'other': return '📁';
-      default: return '📄';
-    }
+  const handleFilterChange = (name, value) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
 
-  const getFileTypeIcon = (fileType) => {
-    switch (fileType) {
-      case 'pdf': return '📄';
-      case 'doc': return '📝';
-      case 'xls': return '📊';
-      case 'jpg': return '🖼️';
-      case 'png': return '🖼️';
-      default: return '📄';
-    }
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
   };
 
-  // Calculate summary statistics
-  const totalDocuments = documents.length;
-  const totalSize = documents.reduce((sum, doc) => {
-    const size = parseFloat(doc.fileSize.replace(' MB', ''));
-    return sum + size;
-  }, 0);
-  const totalDownloads = documents.reduce((sum, doc) => sum + doc.downloadCount, 0);
-  const activeDocuments = documents.filter(doc => doc.status === 'active').length;
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    setSelectedModule('');
+    setFilters(prev => ({ ...prev, module: '' }));
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleModuleSelect = (module) => {
+    setSelectedModule(module);
+    setFilters(prev => ({ ...prev, module }));
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
 
   // Define columns for the table
   const columns = [
     { 
       key: "title", 
       label: "Document Title",
-      renderCell: (value) => <span className="font-medium text-gray-900">{value}</span>
+      renderCell: (value, document) => (
+        <div className="min-w-0 flex-1">
+          <div className="font-medium text-gray-900 truncate">{value}</div>
+          <div className="text-sm text-gray-500 truncate">{document.originalName}</div>
+        </div>
+      )
+    },
+    { 
+      key: "module", 
+      label: "Module",
+      renderCell: (value) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          {documentService.getModuleOptions().find(opt => opt.value === value)?.label || value}
+        </span>
+      )
     },
     { 
       key: "category", 
       label: "Category",
       renderCell: (value) => (
         <span className="flex items-center">
-          <span className="mr-1">{getCategoryIcon(value)}</span>
+          <span className="mr-1">{documentService.getCategoryIcon(value)}</span>
           <span className="capitalize">{value.replace('_', ' ')}</span>
         </span>
       )
@@ -236,49 +321,48 @@ const DocumentUploads = () => {
       label: "File Type",
       renderCell: (value) => (
         <span className="flex items-center">
-          <span className="mr-1">{getFileTypeIcon(value)}</span>
+          <span className="mr-1">{documentService.getFileTypeIcon(value)}</span>
           <span className="uppercase">{value}</span>
         </span>
       )
     },
     { 
-      key: "fileSize", 
+      key: "fileSizeFormatted", 
       label: "File Size",
       renderCell: (value) => <span className="text-gray-700">{value}</span>
     },
     { 
-      key: "uploadDate", 
-      label: "Upload Date",
-      renderCell: (value) => new Date(value).toLocaleDateString()
-    },
-    { 
-      key: "uploadedBy", 
+      key: "uploadedBy_name", 
       label: "Uploaded By",
       renderCell: (value) => <span className="text-gray-700">{value}</span>
+    },
+    { 
+      key: "createdAt", 
+      label: "Created Time",
+      renderCell: (value) => (
+        <div className="text-sm">
+          <div className="text-gray-900">{new Date(value).toLocaleDateString()}</div>
+          <div className="text-gray-500">{new Date(value).toLocaleTimeString()}</div>
+        </div>
+      )
+    },
+    { 
+      key: "downloadCount", 
+      label: "Downloads",
+      renderCell: (value) => <span className="text-purple-600 font-medium">{value}</span>
     },
     { 
       key: "status", 
       label: "Status",
       renderCell: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${documentService.getStatusColor(value)}`}>
           {value.charAt(0).toUpperCase() + value.slice(1)}
         </span>
       )
     }
   ];
 
-  const filteredDocuments = documents.filter(doc => {
-    const q = documentFilter.toLowerCase();
-    return (
-      doc.title?.toLowerCase().includes(q) ||
-      doc.description?.toLowerCase().includes(q) ||
-      doc.category?.toLowerCase().includes(q) ||
-      doc.uploadedBy?.toLowerCase().includes(q) ||
-      doc.status?.toLowerCase().includes(q)
-    );
-  });
-
-  if (loading) return <LoadingSpinner fullPage />;
+  if (loading && documents.length === 0) return <LoadingSpinner fullPage />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -287,16 +371,31 @@ const DocumentUploads = () => {
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Document Uploads & History
+              All Modules - Document Uploads & History
             </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage file uploads and document tracking</p>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">View and manage uploaded files from all modules</p>
           </div>
-          <div className="flex justify-center sm:justify-start">
+          <div className="flex justify-center sm:justify-start space-x-2">
             <Button
               onClick={() => openDocumentModal()}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+              variant="success"
+              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             >
               📁 Upload Document
+            </Button>
+            <Button
+              onClick={() => handleViewModeChange('all')}
+              variant={viewMode === 'all' ? 'primary' : 'secondary'}
+              className="px-4 py-2 rounded-lg font-medium"
+            >
+              📋 All Documents
+            </Button>
+            <Button
+              onClick={() => handleViewModeChange('module')}
+              variant={viewMode === 'module' ? 'primary' : 'secondary'}
+              className="px-4 py-2 rounded-lg font-medium"
+            >
+              📁 By Module
             </Button>
           </div>
         </div>
@@ -316,6 +415,46 @@ const DocumentUploads = () => {
           </div>
         )}
 
+        {/* Module Selection (when in module view) */}
+        {viewMode === 'module' && (
+          <div className="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">Select Module</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+              {documentService.getModuleOptions().map((module) => (
+                <button
+                  key={module.value}
+                  onClick={() => handleModuleSelect(module.value)}
+                  className={`p-3 rounded-lg border-2 transition-all duration-200 text-sm font-medium ${
+                    selectedModule === module.value
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="text-lg mb-1">
+                      {module.value === 'production' && '🏭'}
+                      {module.value === 'paddy' && '🌾'}
+                      {module.value === 'rice' && '🍚'}
+                      {module.value === 'gunny' && '🛍️'}
+                      {module.value === 'inventory' && '📦'}
+                      {module.value === 'financial' && '💰'}
+                      {module.value === 'quality' && '🔬'}
+                      {module.value === 'sales' && '📈'}
+                      {module.value === 'vendor' && '👥'}
+                      {module.value === 'eb_meter' && '⚡'}
+                      {module.value === 'reports' && '📊'}
+                      {module.value === 'users' && '👤'}
+                      {module.value === 'branches' && '🏢'}
+                      {module.value === 'general' && '📁'}
+                    </div>
+                    <div className="truncate">{module.label}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
@@ -324,8 +463,13 @@ const DocumentUploads = () => {
                 <span className="text-blue-600 text-lg">📁</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Documents</p>
-                <p className="text-xl font-bold text-blue-600">{totalDocuments}</p>
+                <p className="text-sm text-gray-600">
+                  {viewMode === 'module' && selectedModule 
+                    ? `${documentService.getModuleOptions().find(opt => opt.value === selectedModule)?.label} Documents`
+                    : 'Total Documents'
+                  }
+                </p>
+                <p className="text-xl font-bold text-blue-600">{stats.totalDocuments || 0}</p>
               </div>
             </div>
           </div>
@@ -336,7 +480,7 @@ const DocumentUploads = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Size</p>
-                <p className="text-xl font-bold text-green-600">{totalSize.toFixed(1)} MB</p>
+                <p className="text-xl font-bold text-green-600">{stats.totalSize || '0 B'}</p>
               </div>
             </div>
           </div>
@@ -347,7 +491,7 @@ const DocumentUploads = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Downloads</p>
-                <p className="text-xl font-bold text-purple-600">{totalDownloads}</p>
+                <p className="text-xl font-bold text-purple-600">{stats.totalDownloads || 0}</p>
               </div>
             </div>
           </div>
@@ -358,19 +502,94 @@ const DocumentUploads = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Active Documents</p>
-                <p className="text-xl font-bold text-yellow-600">{activeDocuments}</p>
+                <p className="text-xl font-bold text-yellow-600">{stats.activeDocuments || 0}</p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Module Statistics (when viewing all) */}
+        {viewMode === 'all' && stats.moduleStats && stats.moduleStats.length > 0 && (
+          <div className="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">Documents by Module</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              {stats.moduleStats.map((moduleStat) => (
+                <div key={moduleStat._id} className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-lg mb-1">
+                    {moduleStat._id === 'production' && '🏭'}
+                    {moduleStat._id === 'paddy' && '🌾'}
+                    {moduleStat._id === 'rice' && '🍚'}
+                    {moduleStat._id === 'gunny' && '🛍️'}
+                    {moduleStat._id === 'inventory' && '📦'}
+                    {moduleStat._id === 'financial' && '💰'}
+                    {moduleStat._id === 'quality' && '🔬'}
+                    {moduleStat._id === 'sales' && '📈'}
+                    {moduleStat._id === 'vendor' && '👥'}
+                    {moduleStat._id === 'eb_meter' && '⚡'}
+                    {moduleStat._id === 'reports' && '📊'}
+                    {moduleStat._id === 'users' && '👤'}
+                    {moduleStat._id === 'branches' && '🏢'}
+                    {moduleStat._id === 'general' && '📁'}
+                  </div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {documentService.getModuleOptions().find(opt => opt.value === moduleStat._id)?.label || moduleStat._id}
+                  </div>
+                  <div className="text-lg font-bold text-blue-600">{moduleStat.count}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
         <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <TableFilters
-            searchValue={documentFilter}
-            searchPlaceholder="Search by title, description, category..."
-            onSearchChange={(e) => setDocumentFilter(e.target.value)}
-            showSelect={false}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <TableFilters
+              searchValue={filters.search}
+              searchPlaceholder="Search documents..."
+              onSearchChange={(e) => handleFilterChange('search', e.target.value)}
+              showSelect={false}
+            />
+            {viewMode === 'all' && (
+              <FormSelect
+                label="Module"
+                name="module"
+                value={filters.module}
+                onChange={(e) => handleFilterChange('module', e.target.value)}
+                options={[{ value: '', label: 'All Modules' }, ...documentService.getModuleOptions()]}
+              />
+            )}
+            <FormSelect
+              label="Category"
+              name="category"
+              value={filters.category}
+              onChange={(e) => handleFilterChange('category', e.target.value)}
+              options={[{ value: '', label: 'All Categories' }, ...documentService.getCategoryOptions()]}
+            />
+            <FormSelect
+              label="Status"
+              name="status"
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              options={[{ value: '', label: 'All Status' }, ...documentService.getStatusOptions()]}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <FormInput
+              label="Start Date"
+              name="startDate"
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+            />
+            <FormInput
+              label="End Date"
+              name="endDate"
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+            />
+          </div>
           <BranchFilter
             value={currentBranchId || ''}
             onChange={(value) => {
@@ -382,11 +601,18 @@ const DocumentUploads = () => {
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Document Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredDocuments.length} records</p>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {viewMode === 'module' && selectedModule 
+                ? `${documentService.getModuleOptions().find(opt => opt.value === selectedModule)?.label} Documents`
+                : 'All Modules - Document Records'
+              }
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Total: {pagination.total} records • Page {pagination.page} of {pagination.totalPages}
+            </p>
           </div>
           <TableList
-            data={filteredDocuments}
+            data={documents}
             columns={columns}
             actions={(document) => [
               <Button
@@ -426,32 +652,38 @@ const DocumentUploads = () => {
                       <span className="text-gray-900 font-medium">{document.title}</span>
                     </div>
                     <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Module:</span>
+                      <span className="text-gray-900 font-medium">
+                        {documentService.getModuleOptions().find(opt => opt.value === document.module)?.label || document.module}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
                       <span className="w-24 text-sm font-medium text-gray-600">Category:</span>
                       <span className="flex items-center">
-                        <span className="mr-1">{getCategoryIcon(document.category)}</span>
+                        <span className="mr-1">{documentService.getCategoryIcon(document.category)}</span>
                         <span className="text-gray-900 font-medium capitalize">{document.category.replace('_', ' ')}</span>
                       </span>
                     </div>
                     <div className="flex items-center">
                       <span className="w-24 text-sm font-medium text-gray-600">File Name:</span>
-                      <span className="text-gray-900 font-medium">{document.fileName}</span>
+                      <span className="text-gray-900 font-medium">{document.originalName}</span>
                     </div>
                     <div className="flex items-center">
                       <span className="w-24 text-sm font-medium text-gray-600">Uploaded By:</span>
-                      <span className="text-gray-900 font-medium">{document.uploadedBy}</span>
+                      <span className="text-gray-900 font-medium">{document.uploadedBy_name}</span>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center">
                       <span className="w-24 text-sm font-medium text-gray-600">File Type:</span>
                       <span className="flex items-center">
-                        <span className="mr-1">{getFileTypeIcon(document.fileType)}</span>
+                        <span className="mr-1">{documentService.getFileTypeIcon(document.fileType)}</span>
                         <span className="text-gray-900 font-medium uppercase">{document.fileType}</span>
                       </span>
                     </div>
                     <div className="flex items-center">
                       <span className="w-24 text-sm font-medium text-gray-600">File Size:</span>
-                      <span className="text-gray-900 font-medium">{document.fileSize}</span>
+                      <span className="text-gray-900 font-medium">{document.fileSizeFormatted}</span>
                     </div>
                     <div className="flex items-center">
                       <span className="w-24 text-sm font-medium text-gray-600">Version:</span>
@@ -461,6 +693,12 @@ const DocumentUploads = () => {
                       <span className="w-24 text-sm font-medium text-gray-600">Downloads:</span>
                       <span className="text-purple-600 font-medium">{document.downloadCount}</span>
                     </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Created:</span>
+                      <span className="text-gray-900 font-medium">
+                        {new Date(document.createdAt).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
@@ -469,7 +707,7 @@ const DocumentUploads = () => {
                   <h4 className="text-sm font-semibold text-gray-800 mb-3">Document Details</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
-                      <div className="text-lg font-bold text-blue-600">{document.fileSize}</div>
+                      <div className="text-lg font-bold text-blue-600">{document.fileSizeFormatted}</div>
                       <div className="text-xs text-gray-600">File Size</div>
                     </div>
                     <div className="text-center">
@@ -481,7 +719,7 @@ const DocumentUploads = () => {
                       <div className="text-xs text-gray-600">Version</div>
                     </div>
                     <div className="text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(document.status)}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${documentService.getStatusColor(document.status)}`}>
                         {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
                       </span>
                       <div className="text-xs text-gray-600 mt-1">Status</div>
@@ -491,12 +729,18 @@ const DocumentUploads = () => {
                   <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Upload Date:</span>
-                      <span className="font-medium">{new Date(document.uploadDate).toLocaleDateString()}</span>
+                      <span className="font-medium">{new Date(document.createdAt).toLocaleDateString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Last Modified:</span>
-                      <span className="font-medium">{new Date(document.updatedAt).toLocaleDateString()}</span>
+                      <span className="text-gray-600">Upload Time:</span>
+                      <span className="font-medium">{new Date(document.createdAt).toLocaleTimeString()}</span>
                     </div>
+                    {document.lastDownloadedAt && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Last Downloaded:</span>
+                        <span className="font-medium">{new Date(document.lastDownloadedAt).toLocaleString()}</span>
+                      </div>
+                    )}
                   </div>
                   
                   {document.description && (
@@ -512,6 +756,19 @@ const DocumentUploads = () => {
                       <p className="text-gray-700 text-sm">{document.remarks}</p>
                     </div>
                   )}
+
+                  {document.tags && document.tags.length > 0 && (
+                    <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">Tags</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {document.tags.map((tag, index) => (
+                          <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -521,12 +778,19 @@ const DocumentUploads = () => {
         {/* Mobile Table View */}
         <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Document Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredDocuments.length} records</p>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {viewMode === 'module' && selectedModule 
+                ? `${documentService.getModuleOptions().find(opt => opt.value === selectedModule)?.label} Documents`
+                : 'All Modules - Document Records'
+              }
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Total: {pagination.total} records • Page {pagination.page} of {pagination.totalPages}
+            </p>
           </div>
           
           <div className="p-4">
-            {filteredDocuments.length === 0 ? (
+            {documents.length === 0 ? (
               <div className="text-center py-8">
                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -536,7 +800,7 @@ const DocumentUploads = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredDocuments.map((document) => (
+                {documents.map((document) => (
                   <div key={document._id} className="border border-gray-200 rounded-lg overflow-hidden">
                     <div 
                       className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -545,9 +809,17 @@ const DocumentUploads = () => {
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
                           <div className="font-medium text-gray-900">{document.title}</div>
-                          <div className="text-sm text-gray-600">{document.fileName}</div>
+                          <div className="text-sm text-gray-600">{document.originalName}</div>
                           <div className="text-xs text-gray-500">
-                            {document.fileSize} • {document.uploadedBy} • {new Date(document.uploadDate).toLocaleDateString()}
+                            {document.fileSizeFormatted} • {document.uploadedBy_name} • {new Date(document.createdAt).toLocaleDateString()}
+                          </div>
+                          <div className="flex items-center mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mr-2">
+                              {documentService.getModuleOptions().find(opt => opt.value === document.module)?.label || document.module}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${documentService.getStatusColor(document.status)}`}>
+                              {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
+                            </span>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -617,6 +889,12 @@ const DocumentUploads = () => {
                             <span className="text-gray-600">Downloads:</span>
                             <span className="ml-1 font-medium text-purple-600">{document.downloadCount}</span>
                           </div>
+                          <div>
+                            <span className="text-gray-600">Created:</span>
+                            <span className="ml-1 font-medium text-gray-900">
+                              {new Date(document.createdAt).toLocaleString()}
+                            </span>
+                          </div>
                         </div>
                         {document.description && (
                           <div className="p-3 bg-white rounded-lg border border-gray-200 mb-3">
@@ -638,6 +916,33 @@ const DocumentUploads = () => {
             )}
           </div>
         </div>
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="mt-6 flex justify-center">
+            <nav className="flex items-center space-x-2">
+              <Button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+                variant="secondary"
+                className="px-3 py-2"
+              >
+                Previous
+              </Button>
+              <span className="px-3 py-2 text-sm text-gray-700">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+              <Button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.totalPages}
+                variant="secondary"
+                className="px-3 py-2"
+              >
+                Next
+              </Button>
+            </nav>
+          </div>
+        )}
       </div>
 
       {/* Document Modal */}
@@ -645,9 +950,28 @@ const DocumentUploads = () => {
         show={showDocumentModal}
         onClose={closeDocumentModal}
         title={editingDocument ? 'Edit Document' : 'Upload New Document'}
-        size="lg"
+        size="2xl"
+        onSubmit={saveDocument}
+        submitText={editingDocument ? 'Update Document' : 'Upload Document'}
+        cancelText="Cancel"
       >
-        <form onSubmit={saveDocument} className="space-y-4">
+        <div className="space-y-4">
+          {!editingDocument && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select File
+              </label>
+              <FileUpload
+                module="documents"
+                onFilesChange={handleFileSelect}
+                multiple={false}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.csv"
+                disableAutoUpload={true}
+                showPreview={true}
+              />
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput
               label="Document Title"
@@ -658,33 +982,20 @@ const DocumentUploads = () => {
               icon="file-text"
             />
             <FormSelect
+              label="Module"
+              name="module"
+              value={documentForm.module}
+              onChange={handleDocumentFormChange}
+              options={documentService.getModuleOptions()}
+              icon="folder"
+            />
+            <FormSelect
               label="Category"
               name="category"
               value={documentForm.category}
               onChange={handleDocumentFormChange}
-              options={[
-                { value: 'invoice', label: 'Invoice' },
-                { value: 'quality_report', label: 'Quality Report' },
-                { value: 'contract', label: 'Contract' },
-                { value: 'license', label: 'License' },
-                { value: 'manual', label: 'Manual' },
-                { value: 'other', label: 'Other' }
-              ]}
-              icon="folder"
-            />
-            <FormSelect
-              label="File Type"
-              name="fileType"
-              value={documentForm.fileType}
-              onChange={handleDocumentFormChange}
-              options={[
-                { value: 'pdf', label: 'PDF' },
-                { value: 'doc', label: 'DOC' },
-                { value: 'xls', label: 'XLS' },
-                { value: 'jpg', label: 'JPG' },
-                { value: 'png', label: 'PNG' }
-              ]}
-              icon="file"
+              options={documentService.getCategoryOptions()}
+              icon="tag"
             />
             <FormInput
               label="Version"
@@ -694,34 +1005,20 @@ const DocumentUploads = () => {
               required
               icon="hash"
             />
-            <FormInput
-              label="Upload Date"
-              name="uploadDate"
-              type="date"
-              value={documentForm.uploadDate}
-              onChange={handleDocumentFormChange}
-              required
-              icon="calendar"
-            />
-            <FormInput
-              label="Uploaded By"
-              name="uploadedBy"
-              value={documentForm.uploadedBy}
-              onChange={handleDocumentFormChange}
-              required
-              icon="user"
-            />
             <FormSelect
               label="Status"
               name="status"
               value={documentForm.status}
               onChange={handleDocumentFormChange}
-              options={[
-                { value: 'active', label: 'Active' },
-                { value: 'archived', label: 'Archived' },
-                { value: 'deleted', label: 'Deleted' }
-              ]}
+              options={documentService.getStatusOptions()}
               icon="check-circle"
+            />
+            <FormInput
+              label="Tags (comma separated)"
+              name="tags"
+              value={documentForm.tags}
+              onChange={handleDocumentFormChange}
+              icon="tag"
             />
           </div>
           <FormInput
@@ -738,15 +1035,7 @@ const DocumentUploads = () => {
             onChange={handleDocumentFormChange}
             icon="note"
           />
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button type="button" onClick={closeDocumentModal} variant="secondary">
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              {editingDocument ? 'Update Document' : 'Upload Document'}
-            </Button>
-          </div>
-        </form>
+        </div>
       </DialogBox>
     </div>
   );

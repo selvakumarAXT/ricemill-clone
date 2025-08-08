@@ -100,6 +100,12 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
       </span>
     ),
     
+    invoice: (
+      <span className={className} {...props}>
+        📋
+      </span>
+    ),
+    
     // Action Icons
     add: (
       <span className={className} {...props}>

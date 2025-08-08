@@ -11,6 +11,8 @@ import ResponsiveFilters from "../components/common/ResponsiveFilters";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import GunnyEntryDetails from "../components/common/GunnyEntryDetails";
 import PaddyEntryDetails from "../components/common/PaddyEntryDetails";
+import FileUpload from "../components/common/FileUpload";
+import DateRangeFilter from "../components/common/DateRangeFilter";
 import gunnyService from "../services/gunnyService";
 import gunnyAggregationService from "../services/gunnyAggregationService";
 import branchService from "../services/branchService";
@@ -33,6 +35,10 @@ const GunnyManagement = () => {
   const [editingGunny, setEditingGunny] = useState(null);
   const [gunnyFilter, setGunnyFilter] = useState("");
   const [branchFilter, setBranchFilter] = useState("");
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
   const [expandedGunny, setExpandedGunny] = useState(null);
   const [selectedSource, setSelectedSource] = useState("all");
   const [stats, setStats] = useState({
@@ -93,6 +99,8 @@ const GunnyManagement = () => {
   };
 
   const [gunnyForm, setGunnyForm] = useState(initialGunnyForm);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   // Fetch gunny data
   useEffect(() => {
@@ -237,6 +245,10 @@ const GunnyManagement = () => {
     }
   };
 
+  const handleFilesChange = (files) => {
+    setSelectedFiles(files);
+  };
+
   const saveGunny = async (e) => {
     e.preventDefault();
     try {
@@ -308,6 +320,23 @@ const GunnyManagement = () => {
       });
     }
 
+    // Filter by date range
+    if (dateRange.startDate || dateRange.endDate) {
+      filteredRecords = filteredRecords.filter(record => {
+        const recordDate = new Date(record.issueDate || record.date || record.createdAt);
+        let matchesDate = true;
+        
+        if (dateRange.startDate) {
+          matchesDate = matchesDate && recordDate >= new Date(dateRange.startDate);
+        }
+        if (dateRange.endDate) {
+          matchesDate = matchesDate && recordDate <= new Date(dateRange.endDate + 'T23:59:59.999Z');
+        }
+        
+        return matchesDate;
+      });
+    }
+
     return filteredRecords;
   };
 
@@ -357,7 +386,7 @@ const GunnyManagement = () => {
     });
 
     return stats;
-  }, [allGunnyData, currentBranchId, selectedSource, gunnyFilter]);
+  }, [allGunnyData, currentBranchId, selectedSource, gunnyFilter, dateRange]);
 
   // Calculate comprehensive gunny balance statistics
   const gunnyBalanceStats = useMemo(() => {
@@ -604,27 +633,7 @@ const GunnyManagement = () => {
         </div>
       )
     },
-    { key: "createdBy", label: "Created By", render: (user) => user?.name || "N/A" },
-    {
-      key: "actions",
-      label: "Actions",
-      render: (_, record) => (
-        <div className="flex gap-2">
-          <Button
-            onClick={() => openGunnyModal(record)}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 text-xs"
-          >
-            Edit
-          </Button>
-          <Button
-            onClick={() => deleteGunny(record._id)}
-            className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 text-xs"
-          >
-            Delete
-          </Button>
-        </div>
-      ),
-    },
+    { key: "createdBy", label: "Created By", render: (user) => user?.name || "N/A" }
   ];
 
   if (loading) return (
@@ -646,12 +655,12 @@ const GunnyManagement = () => {
           </div>
           {currentBranchId && currentBranchId !== 'all' && (
             <div className="flex justify-center sm:justify-start">
-              <Button 
-                onClick={() => openGunnyModal()} 
-                variant="primary" 
-                icon="plus"
-                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300"
-              >
+                              <Button
+                  onClick={() => openGunnyModal()}
+                  variant="primary" 
+                  icon="plus"
+                  className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
+                >
                 Add New Gunny Record
               </Button>
             </div>
@@ -891,15 +900,13 @@ const GunnyManagement = () => {
 
         {/* Mobile Filters */}
         <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <div className="flex-1 min-w-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <TableFilters
               searchValue={gunnyFilter}
               searchPlaceholder="Search by memo, lorry number, or source..."
               onSearchChange={(e) => setGunnyFilter(e.target.value)}
               showSelect={false}
             />
-          </div>
-          <div className="flex-shrink-0 space-y-2 sm:space-y-0 sm:space-x-2 sm:flex">
             <FormSelect
               value={selectedSource}
               onChange={(e) => setSelectedSource(e.target.value)}
@@ -919,6 +926,16 @@ const GunnyManagement = () => {
               }}
             />
           </div>
+          <div className="mt-4">
+            <DateRangeFilter
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+              onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              startDateLabel="Issue Date From"
+              endDateLabel="Issue Date To"
+            />
+          </div>
         </ResponsiveFilters>
 
         {/* Desktop Table View - Comprehensive Gunny Data */}
@@ -936,7 +953,27 @@ const GunnyManagement = () => {
             <TableList
               data={getAllRecords()}
               columns={comprehensiveColumns}
-                          renderDetail={(record) => (
+              actions={(record) => [
+                <Button
+                  key="edit"
+                  onClick={() => openGunnyModal(record)}
+                  variant="info"
+                  icon="edit"
+                  className="text-xs px-2 py-1"
+                >
+                  Edit
+                </Button>,
+                <Button
+                  key="delete"
+                  onClick={() => deleteGunny(record._id)}
+                  variant="danger"
+                  icon="delete"
+                  className="text-xs px-2 py-1"
+                >
+                  Delete
+                </Button>
+              ]}
+              renderDetail={(record) => (
                 <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-amber-500">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
@@ -1237,8 +1274,11 @@ const GunnyManagement = () => {
       <DialogBox
         show={showGunnyModal}
         onClose={closeGunnyModal}
+        onSubmit={saveGunny}
         title={editingGunny ? "Edit Gunny Record" : "Add New Gunny Record"}
-        size="lg"
+        submitText={editingGunny ? "Update" : "Create"}
+        cancelText="Cancel"
+        size="2xl"
       >
         <form onSubmit={saveGunny} className="space-y-6">
           {/* Basic Information */}
@@ -1302,23 +1342,19 @@ const GunnyManagement = () => {
             onChange={handleGunnyFormChange}
           />
 
-          {/* Form Actions */}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              onClick={closeGunnyModal}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-              disabled={loading}
-            >
-              {loading ? "Saving..." : editingGunny ? "Update" : "Save"}
-            </Button>
-          </div>
+          {/* File Upload Section */}
+          <FileUpload
+            label="Upload Gunny Documents & Images"
+            module="gunny"
+            onFilesChange={handleFilesChange}
+            files={selectedFiles}
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            maxFiles={10}
+            maxSize={10}
+            showPreview={true}
+          />
+
+
         </form>
       </DialogBox>
     </div>

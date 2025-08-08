@@ -9,6 +9,8 @@ import ResponsiveFilters from '../components/common/ResponsiveFilters';
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
+import FileUpload from '../components/common/FileUpload';
+import DateRangeFilter from '../components/common/DateRangeFilter';
 import financialService from '../services/financialService';
 
 const FinancialLedger = () => {
@@ -16,6 +18,10 @@ const FinancialLedger = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [transactionFilter, setTransactionFilter] = useState('');
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [expandedTransaction, setExpandedTransaction] = useState(null);
@@ -36,6 +42,10 @@ const FinancialLedger = () => {
   };
 
   const [transactionForm, setTransactionForm] = useState(initialTransactionForm);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   useEffect(() => {
     fetchTransactionData();
@@ -99,6 +109,40 @@ const FinancialLedger = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleFilesChange = (files) => {
+    setSelectedFiles(files);
+  };
+
+  const handleUploadSuccess = (uploadedFiles) => {
+    setUploadedFiles(prev => [...prev, ...uploadedFiles]);
+  };
+
+  const openPreview = (file) => {
+    setPreviewFile(file);
+    setShowPreviewModal(true);
+  };
+
+  const closePreview = () => {
+    setPreviewFile(null);
+    setShowPreviewModal(false);
+  };
+
+  const getFileIcon = (file) => {
+    if (file.mimetype?.startsWith('image/')) {
+      return '🖼️';
+    } else if (file.mimetype?.includes('pdf')) {
+      return '📄';
+    } else if (file.mimetype?.includes('word') || file.mimetype?.includes('document')) {
+      return '📝';
+    } else if (file.mimetype?.includes('excel') || file.mimetype?.includes('spreadsheet')) {
+      return '📊';
+    } else if (file.mimetype?.includes('text')) {
+      return '📄';
+    } else {
+      return '📎';
+    }
   };
 
   const saveTransaction = async (e) => {
@@ -242,7 +286,7 @@ const FinancialLedger = () => {
 
   const filteredTransactions = transactions.filter(transaction => {
     const q = transactionFilter.toLowerCase();
-    return (
+    const matchesText = (
       transaction.description?.toLowerCase().includes(q) ||
       transaction.category?.toLowerCase().includes(q) ||
       transaction.transactionType?.toLowerCase().includes(q) ||
@@ -250,6 +294,20 @@ const FinancialLedger = () => {
       transaction.vendor?.toLowerCase().includes(q) ||
       transaction.customer?.toLowerCase().includes(q)
     );
+    
+    // Date range filter
+    let matchesDate = true;
+    if (dateRange.startDate || dateRange.endDate) {
+      const transactionDate = new Date(transaction.transactionDate);
+      if (dateRange.startDate) {
+        matchesDate = matchesDate && transactionDate >= new Date(dateRange.startDate);
+      }
+      if (dateRange.endDate) {
+        matchesDate = matchesDate && transactionDate <= new Date(dateRange.endDate + 'T23:59:59.999Z');
+      }
+    }
+    
+    return matchesText && matchesDate;
   });
 
   if (loading) return <LoadingSpinner fullPage />;
@@ -268,7 +326,8 @@ const FinancialLedger = () => {
           <div className="flex justify-center sm:justify-start space-x-2">
             <Button
               onClick={() => openTransactionModal()}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+              variant="success"
+              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             >
               💰 Add Transaction
             </Button>
@@ -341,18 +400,30 @@ const FinancialLedger = () => {
         </div>
 
         <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <TableFilters
-            searchValue={transactionFilter}
-            searchPlaceholder="Search by description, category, reference..."
-            onSearchChange={(e) => setTransactionFilter(e.target.value)}
-            showSelect={false}
-          />
-          <BranchFilter
-            value={currentBranchId || ''}
-            onChange={(value) => {
-              console.log('Branch changed in Financial:', value);
-            }}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <TableFilters
+              searchValue={transactionFilter}
+              searchPlaceholder="Search by description, category, reference..."
+              onSearchChange={(e) => setTransactionFilter(e.target.value)}
+              showSelect={false}
+            />
+            <BranchFilter
+              value={currentBranchId || ''}
+              onChange={(value) => {
+                console.log('Branch changed in Financial:', value);
+              }}
+            />
+          </div>
+          <div className="mt-4">
+            <DateRangeFilter
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+              onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              startDateLabel="Transaction Date From"
+              endDateLabel="Transaction Date To"
+            />
+          </div>
         </ResponsiveFilters>
 
         {/* Desktop Table View */}
@@ -571,7 +642,7 @@ const FinancialLedger = () => {
         show={showTransactionModal}
         onClose={closeTransactionModal}
         title={editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}
-        size="lg"
+        size="2xl"
       >
         {console.log('🎭 Modal rendering with editingTransaction:', editingTransaction)}
         {console.log('📝 Current form state:', transactionForm)}
@@ -699,6 +770,93 @@ const FinancialLedger = () => {
             onChange={handleTransactionFormChange}
             icon="note"
           />
+          
+          {/* File Upload Section */}
+          <FileUpload
+            label="Upload Documents & Receipts"
+            module="financial"
+            onFilesChange={handleFilesChange}
+            onUploadSuccess={handleUploadSuccess}
+            files={selectedFiles}
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            maxFiles={10}
+            maxSize={10}
+            showPreview={true}
+          />
+          
+          {/* Show existing uploaded files */}
+          {uploadedFiles.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-700">Existing Documents</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {uploadedFiles.map((file, index) => (
+                  <div key={index} className="relative group">
+                    <div className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+                      {/* File Preview */}
+                      <div className="relative mb-2">
+                        {file.mimetype?.startsWith('image/') ? (
+                          <img
+                            src={`http://localhost:3001${file.url}`}
+                            alt={file.originalName}
+                            className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => openPreview(file)}
+                          />
+                        ) : (
+                          <div 
+                            className="w-full h-24 bg-gradient-to-br from-blue-50 to-indigo-50 rounded border flex flex-col items-center justify-center cursor-pointer hover:bg-gradient-to-br hover:from-blue-100 hover:to-indigo-100 transition-colors"
+                            onClick={() => openPreview(file)}
+                          >
+                            <span className="text-3xl mb-1">{getFileIcon(file)}</span>
+                            <span className="text-xs text-gray-600 text-center px-1">
+                              {file.originalName?.split('.').pop()?.toUpperCase() || 'FILE'}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Preview Overlay */}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white text-sm font-medium">Click to Preview</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* File Info */}
+                      <div className="text-center">
+                        <p className="text-xs font-medium text-gray-800 truncate" title={file.originalName}>
+                          {file.originalName}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      
+                      {/* Action Buttons */}
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openPreview(file)}
+                          className="bg-blue-600 text-white p-1 rounded text-xs hover:bg-blue-700 transition-colors"
+                          title="Preview"
+                        >
+                          👁️
+                        </button>
+                        <a
+                          href={`http://localhost:3001${file.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-green-600 text-white p-1 rounded text-xs hover:bg-green-700 transition-colors"
+                          title="Download"
+                        >
+                          ⬇️
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <div className="flex justify-end space-x-3 pt-4">
             <Button type="button" onClick={closeTransactionModal} variant="secondary">
               Cancel
@@ -709,6 +867,124 @@ const FinancialLedger = () => {
           </div>
         </form>
       </DialogBox>
+
+      {/* File Preview Modal */}
+      {showPreviewModal && previewFile && (
+        <DialogBox
+          show={showPreviewModal}
+          onClose={closePreview}
+          title={`Preview: ${previewFile.originalName}`}
+          size="2xl"
+        >
+          <div className="space-y-4">
+            {/* File Info */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">File Name:</span>
+                  <p className="text-gray-900">{previewFile.originalName}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">File Size:</span>
+                  <p className="text-gray-900">{(previewFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">File Type:</span>
+                  <p className="text-gray-900">{previewFile.mimetype}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Uploaded:</span>
+                  <p className="text-gray-900">
+                    {previewFile.uploadedAt ? new Date(previewFile.uploadedAt).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* File Preview */}
+            <div className="max-h-96 overflow-auto">
+              {previewFile.mimetype?.startsWith('image/') ? (
+                <div className="text-center">
+                  <img
+                    src={`http://localhost:3001${previewFile.url}`}
+                    alt={previewFile.originalName}
+                    className="max-w-full max-h-80 object-contain mx-auto rounded-lg shadow-lg"
+                  />
+                </div>
+              ) : previewFile.mimetype?.includes('pdf') ? (
+                <div className="text-center">
+                  <iframe
+                    src={`http://localhost:3001${previewFile.url}`}
+                    className="w-full h-96 border rounded-lg"
+                    title={previewFile.originalName}
+                  />
+                </div>
+              ) : previewFile.mimetype?.includes('text') || previewFile.mimetype?.includes('csv') ? (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-2">Text files cannot be previewed directly.</p>
+                  <a
+                    href={`http://localhost:3001${previewFile.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    📄 Open in New Tab
+                  </a>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">{getFileIcon(previewFile)}</div>
+                  <p className="text-lg font-medium text-gray-800 mb-2">{previewFile.originalName}</p>
+                  <p className="text-gray-600 mb-4">This file type cannot be previewed directly.</p>
+                  <div className="flex gap-3 justify-center">
+                    <a
+                      href={`http://localhost:3001${previewFile.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      📄 Open in New Tab
+                    </a>
+                    <a
+                      href={`http://localhost:3001${previewFile.url}`}
+                      download={previewFile.originalName}
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      ⬇️ Download
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button
+                onClick={closePreview}
+                variant="secondary"
+                icon="close"
+              >
+                Close
+              </Button>
+              <a
+                href={`http://localhost:3001${previewFile.url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                📄 Open in New Tab
+              </a>
+              <a
+                href={`http://localhost:3001${previewFile.url}`}
+                download={previewFile.originalName}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                ⬇️ Download
+              </a>
+            </div>
+          </div>
+        </DialogBox>
+      )}
     </div>
   );
 };
