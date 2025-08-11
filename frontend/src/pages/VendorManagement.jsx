@@ -20,6 +20,7 @@ const VendorManagement = () => {
   const [editingVendor, setEditingVendor] = useState(null);
   const [expandedVendor, setExpandedVendor] = useState(null);
   const { currentBranchId } = useSelector((state) => state.branch);
+  const { user } = useSelector((state) => state.auth);
 
   const initialVendorForm = {
     vendorCode: '',
@@ -293,14 +294,17 @@ const VendorManagement = () => {
             <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage suppliers and vendor relationships</p>
           </div>
           <div className="flex justify-center sm:justify-start space-x-2">
-            <Button
-              onClick={() => openVendorModal()}
-              variant="success"
-              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              🏢 Add New Vendor
-            </Button>
-           
+            {/* Only show Add button when a specific branch is selected (not "All Branches") */}
+            {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
+              (!user?.isSuperAdmin && user?.branch?.id)) && (
+              <Button
+                onClick={() => openVendorModal()}
+                variant="success"
+                className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                🏢 Add New Vendor
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -33,6 +33,7 @@ const Inventory = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const { currentBranchId } = useSelector((state) => state.branch);
+  const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     fetchInventory();
@@ -162,13 +163,17 @@ const Inventory = () => {
             <p className="text-gray-600 mt-1 text-sm sm:text-base">Track and manage rice mill inventory</p>
           </div>
           <div className="flex justify-center sm:justify-end">
-            <Button
-              onClick={() => openInventoryModal()}
-              variant="primary"
-              icon="add"
-            >
-              Add New Inventory
-            </Button>
+            {/* Only show Add button when a specific branch is selected (not "All Branches") */}
+            {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
+              (!user?.isSuperAdmin && user?.branch?.id)) && (
+              <Button
+                onClick={() => openInventoryModal()}
+                variant="primary"
+                icon="add"
+              >
+                Add New Inventory
+              </Button>
+            )}
           </div>
         </div>
       </div>

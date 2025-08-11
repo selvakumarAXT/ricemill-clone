@@ -29,6 +29,7 @@ const SalesDispatch = () => {
   const [selectedSaleForInvoice, setSelectedSaleForInvoice] = useState(null);
   const [expandedSale, setExpandedSale] = useState(null);
   const { currentBranchId } = useSelector((state) => state.branch);
+  const { user } = useSelector((state) => state.auth);
 
   const initialSalesForm = {
     orderNumber: '',
@@ -858,14 +859,17 @@ const SalesDispatch = () => {
             <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage rice sales, orders, and delivery tracking</p>
           </div>
           <div className="flex justify-center sm:justify-start space-x-2">
-            <Button
-              onClick={() => openSalesModal()}
-              variant="success"
-              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              🛒 Add New Sale
-            </Button>
-            
+            {/* Only show Add button when a specific branch is selected (not "All Branches") */}
+            {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
+              (!user?.isSuperAdmin && user?.branch?.id)) && (
+              <Button
+                onClick={() => openSalesModal()}
+                variant="success"
+                className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                🛒 Add New Sale
+              </Button>
+            )}
           </div>
         </div>
       </div>

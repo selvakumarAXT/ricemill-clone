@@ -326,14 +326,18 @@ const Production = () => {
           
           {/* Add Production Button */}
           <div className="flex justify-center sm:justify-start">
-            <Button
-              onClick={() => openProductionModal()}
-              variant="primary"
-              icon="add"
-              className="w-full sm:w-auto"
-            >
-              Add Production Record
-            </Button>
+            {/* Only show Add button when a specific branch is selected (not "All Branches") */}
+            {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
+              (!user?.isSuperAdmin && user?.branch?.id)) && (
+              <Button
+                onClick={() => openProductionModal()}
+                variant="primary"
+                icon="add"
+                className="w-full sm:w-auto"
+              >
+                Add Production Record
+              </Button>
+            )}
           </div>
         </div>
       </div>
