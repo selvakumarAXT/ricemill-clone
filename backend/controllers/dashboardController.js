@@ -22,8 +22,6 @@ const getSuperadminDashboard = asyncHandler(async (req, res) => {
   }
 
   try {
-    console.log('Dashboard request received for user:', req.user.email);
-
     // Get comprehensive dashboard data
     const [
       overview,
@@ -34,20 +32,20 @@ const getSuperadminDashboard = asyncHandler(async (req, res) => {
       invoices,
       geographical,
       recentActivities,
-      alerts
+      alerts,
+      purchaseInvoices
     ] = await Promise.all([
       getOverviewData(),
-      getSalesAnalytics(req.query),
-      getOutstandingBalances(req.query),
-      getProductAnalytics(req.query),
-      getCustomerAnalytics(req.query),
-      getInvoiceAnalytics(req.query),
-      getGeographicalSales(req.query),
+      getSalesAnalyticsData(req.query),      
+      getOutstandingBalancesData(req.query),  
+      getProductAnalyticsData(req.query),    
+      getCustomerAnalyticsData(req.query),  
+      getInvoiceAnalyticsData(req.query),  
+      getGeographicalSalesData(req.query),  
       getRecentActivities(5),
-      getSystemAlerts()
+      getSystemAlerts(),
+      getPurchaseInvoiceDueData(req.query)
     ]);
-
-    console.log('Dashboard data prepared successfully');
 
     res.status(200).json({
       success: true,
@@ -60,7 +58,8 @@ const getSuperadminDashboard = asyncHandler(async (req, res) => {
         invoices,
         geographical,
         recentActivities,
-        alerts
+        alerts,
+        purchaseInvoices
       }
     });
   } catch (error) {
@@ -325,7 +324,9 @@ const getOverviewData = async () => {
     gunnyStats,
     inventoryStats,
     totalBranches,
-    totalUsers
+    totalUsers,
+    totalPurchase,
+    totalIncome
   ] = await Promise.all([
     Paddy.aggregate([
       { $group: { _id: null, totalWeight: { $sum: '$paddy.weight' }, totalBags: { $sum: '$paddy.bags' } } }
@@ -340,13 +341,46 @@ const getOverviewData = async () => {
       { $group: { _id: null, totalQuantity: { $sum: '$quantity' }, totalItems: { $sum: 1 } } }
     ]),
     Branch.countDocuments({ isActive: true }),
-    User.countDocuments({ isActive: true })
+    User.countDocuments({ isActive: true }),
+    // Get total purchase amount from FinancialTransaction
+    FinancialTransaction.aggregate([
+      {
+        $match: {
+          transactionType: 'expense',
+          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance'] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' }
+        }
+      }
+    ]),
+    // Get total income amount from FinancialTransaction
+    FinancialTransaction.aggregate([
+      {
+        $match: {
+          transactionType: 'income'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' }
+        }
+      }
+    ])
   ]);
 
   const totalPaddy = paddyStats[0]?.totalWeight || 0;
   const totalRice = productionStats[0]?.totalQuantity || 0;
   const totalGunny = gunnyStats[0]?.totalBags || 0;
   const totalInventory = inventoryStats[0]?.totalItems || 0;
+
+  // Get actual financial data
+  const actualPurchase = totalPurchase[0]?.totalAmount || 0;
+  const actualIncome = totalIncome[0]?.totalAmount || 0;
 
   // Calculate revenue and expenses based on actual data
   const estimatedPricePerKg = 25;
@@ -365,16 +399,27 @@ const getOverviewData = async () => {
     totalRevenue,
     totalExpenses,
     profit,
-    gstAmount
+    gstAmount,
+    totalPurchase: actualPurchase,
+    totalIncome: actualIncome
   };
 };
 
 const getSalesAnalyticsData = async (params = {}) => {
   const { startDate, endDate } = params;
   
-  // Get actual sales data from the last 6 months
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  // Use provided dates or default to last 6 months
+  let startDateObj, endDateObj;
+  
+  if (startDate && endDate) {
+    startDateObj = new Date(startDate);
+    endDateObj = new Date(endDate);
+  } else {
+    // Default to last 6 months
+    endDateObj = new Date();
+    startDateObj = new Date();
+    startDateObj.setMonth(startDateObj.getMonth() - 6);
+  }
   
   const months = [];
   const salesData = [];
@@ -384,10 +429,12 @@ const getSalesAnalyticsData = async (params = {}) => {
   const invoiceCounts = { sales: [], purchases: [] };
   const invoiceAmounts = { sales: [], purchases: [] };
 
-  // Generate monthly data for the last 6 months
-  for (let i = 5; i >= 0; i--) {
-    const monthDate = new Date();
-    monthDate.setMonth(monthDate.getMonth() - i);
+  // Generate monthly data based on date range
+  const monthCount = Math.ceil((endDateObj - startDateObj) / (1000 * 60 * 60 * 24 * 30)); // Approximate months
+  
+  for (let i = 0; i < monthCount; i++) {
+    const monthDate = new Date(startDateObj);
+    monthDate.setMonth(monthDate.getMonth() + i);
     const monthName = monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     months.push(monthName);
 
@@ -395,55 +442,128 @@ const getSalesAnalyticsData = async (params = {}) => {
     const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
     const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
 
-    const [monthlySales, monthlyPurchases] = await Promise.all([
-      // Get sales data from Production model (assuming rice production represents sales)
-      Production.aggregate([
+    const [monthlySales, monthlyPurchases, monthlyFinancial] = await Promise.all([
+      // Get actual sales data from SalesInvoice model
+      SalesInvoice.aggregate([
         {
-          $match: {
-            createdAt: { $gte: monthStart, $lte: monthEnd }
-          }
+                  $match: {
+          invoiceDate: { $gte: monthStart, $lte: monthEnd }, // Use invoiceDate for SalesInvoice
+          status: { $in: ['paid', 'partial'] }  // Only count paid invoices
+        }
         },
         {
           $group: {
             _id: null,
-            totalQuantity: { $sum: '$quantity' },
+            totalAmount: { $sum: '$totals.grandTotal' },
             count: { $sum: 1 }
           }
         }
       ]),
-      // Get purchase data from Paddy model
-      Paddy.aggregate([
+      // Get actual purchase data from FinancialTransaction model
+      FinancialTransaction.aggregate([
         {
-          $match: {
-            createdAt: { $gte: monthStart, $lte: monthEnd }
-          }
+                  $match: {
+          transactionDate: { $gte: monthStart, $lte: monthEnd }, // Use transactionDate for FinancialTransaction
+          transactionType: 'expense',
+          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance'] }
+        }
         },
         {
           $group: {
             _id: null,
-            totalWeight: { $sum: '$paddy.weight' },
+            totalAmount: { $sum: '$amount' },
+            count: { $sum: 1 }
+          }
+        }
+      ]),
+      // Get income data from FinancialTransaction model
+      FinancialTransaction.aggregate([
+        {
+                  $match: {
+          transactionDate: { $gte: monthStart, $lte: monthEnd }, // Use transactionDate for FinancialTransaction
+          transactionType: 'income'
+        }
+        },
+        {
+          $group: {
+            _id: null,
+            totalAmount: { $sum: '$amount' },
             count: { $sum: 1 }
           }
         }
       ])
     ]);
 
-    const salesValue = monthlySales[0]?.totalQuantity || 0;
-    const purchaseValue = monthlyPurchases[0]?.totalWeight || 0;
+    const salesValue = monthlySales[0]?.totalAmount || 0;  // Real sales amount
+    const purchaseValue = monthlyPurchases[0]?.totalAmount || 0;  // Real purchase amount
+    const incomeValue = monthlyFinancial[0]?.totalAmount || 0;  // Real income amount
     
-    // Normalize data for charts (0-100 scale)
-    salesData.push(Math.min(100, Math.round((salesValue / 1000) * 10)));
-    purchaseData.push(Math.min(100, Math.round((purchaseValue / 1000) * 10)));
+    // Use actual financial values
+    salesData.push(Math.round(salesValue / 1000));  // Convert to thousands
+    purchaseData.push(Math.round(purchaseValue / 1000));  // Convert to thousands
     
-    // Mock customer data for now (replace with actual customer analytics)
-    newCustomerSales.push(Math.random() * 50);
-    existingCustomerSales.push(100 - (Math.random() * 50));
+    // Get actual customer data from SalesInvoice to distinguish new vs existing customers
+    const monthlyInvoices = await SalesInvoice.aggregate([
+      {
+        $match: {
+          invoiceDate: { $gte: monthStart, $lte: monthEnd } // Use invoiceDate instead of createdAt
+        }
+      },
+      {
+        $lookup: {
+          from: 'salesinvoices',
+          let: { customerName: '$customer.name' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$customer.name', '$$customerName'] },
+                    { $lt: ['$invoiceDate', monthStart] } // Use invoiceDate instead of createdAt
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'previousPurchases'
+        }
+      },
+      {
+        $addFields: {
+          isNewCustomer: { $eq: [{ $size: '$previousPurchases' }, 0] }
+        }
+      },
+      {
+        $group: {
+          _id: '$isNewCustomer',
+          totalAmount: { $sum: '$totals.grandTotal' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Calculate new vs existing customer sales
+    let newCustomerAmount = 0;
+    let existingCustomerAmount = 0;
+    
+    monthlyInvoices.forEach(invoice => {
+      if (invoice._id === true) { // New customer
+        newCustomerAmount += invoice.totalAmount;
+      } else { // Existing customer
+        existingCustomerAmount += invoice.totalAmount;
+      }
+    });
+    
+    newCustomerSales.push(Math.round(newCustomerAmount / 1000)); // Convert to thousands
+    existingCustomerSales.push(Math.round(existingCustomerAmount / 1000)); // Convert to thousands
     
     invoiceCounts.sales.push(monthlySales[0]?.count || 0);
     invoiceCounts.purchases.push(monthlyPurchases[0]?.count || 0);
     
-    invoiceAmounts.sales.push(Math.round((salesValue * 25) / 1000)); // Convert to thousands
-    invoiceAmounts.purchases.push(Math.round((purchaseValue * 25) / 1000));
+    // Calculate total sales amount for invoice amounts
+    const totalSalesAmount = newCustomerAmount + existingCustomerAmount;
+    invoiceAmounts.sales.push(Math.round(totalSalesAmount / 1000)); // Convert to thousands
+    invoiceAmounts.purchases.push(Math.round(purchaseValue / 1000)); // Convert to thousands
   }
 
   return {
@@ -467,7 +587,7 @@ const getOutstandingBalancesData = async (params = {}) => {
     const salesInvoices = await SalesInvoice.aggregate([
       {
         $match: {
-          status: { $in: ['pending', 'partial'] },
+          status: { $in: ['pending', 'overdue'] }, // Use correct status values
           dueDate: { $exists: true }
         }
       },
@@ -477,6 +597,84 @@ const getOutstandingBalancesData = async (params = {}) => {
             $floor: {
               $divide: [
                 { $subtract: [now, '$dueDate'] },
+                1000 * 60 * 60 * 24
+              ]
+            }
+          },
+          outstandingAmount: {
+            $subtract: ['$totals.totalAmount', { $ifNull: ['$paidAmount', 0] }]
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          current: {
+            $sum: {
+              $cond: [
+                { $lte: ['$daysOverdue', 0] },
+                '$outstandingAmount',
+                0
+              ]
+            }
+          },
+          overdue_1_15: {
+            $sum: {
+              $cond: [
+                { $and: [{ $gt: ['$daysOverdue', 0] }, { $lte: ['$daysOverdue', 15] }] },
+                '$outstandingAmount',
+                0
+              ]
+            }
+          },
+          overdue_16_30: {
+            $sum: {
+              $cond: [
+                { $and: [{ $gt: ['$daysOverdue', 15] }, { $lte: ['$daysOverdue', 30] }] },
+                '$outstandingAmount',
+                0
+              ]
+            }
+          },
+          overdue_30_plus: {
+            $sum: {
+              $cond: [
+                { $gt: ['$daysOverdue', 30] },
+                '$outstandingAmount',
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    // Debug logging for outstanding balances
+    // console.log('📊 Outstanding balances query result:', salesInvoices);
+    
+    const salesOutstanding = salesInvoices[0] || {
+      current: 0,
+      overdue_1_15: 0,
+      overdue_16_30: 0,
+      overdue_30_plus: 0
+    };
+
+    // Calculate purchase outstanding from FinancialTransaction expenses
+    // This represents unpaid expenses that are overdue
+    const purchaseExpenses = await FinancialTransaction.aggregate([
+      {
+        $match: {
+          transactionType: 'expense',
+          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance', 'transport', 'rent', 'utilities', 'insurance', 'taxes'] },
+          status: 'pending' // Only pending expenses are outstanding
+        }
+      },
+      {
+        $addFields: {
+          daysOverdue: {
+            $floor: {
+              $divide: [
+                { $subtract: [now, '$transactionDate'] },
                 1000 * 60 * 60 * 24
               ]
             }
@@ -490,7 +688,7 @@ const getOutstandingBalancesData = async (params = {}) => {
             $sum: {
               $cond: [
                 { $lte: ['$daysOverdue', 0] },
-                { $subtract: ['$totalAmount', { $ifNull: ['$paidAmount', 0] }] },
+                '$amount',
                 0
               ]
             }
@@ -499,7 +697,7 @@ const getOutstandingBalancesData = async (params = {}) => {
             $sum: {
               $cond: [
                 { $and: [{ $gt: ['$daysOverdue', 0] }, { $lte: ['$daysOverdue', 15] }] },
-                { $subtract: ['$totalAmount', { $ifNull: ['$paidAmount', 0] }] },
+                '$amount',
                 0
               ]
             }
@@ -508,7 +706,7 @@ const getOutstandingBalancesData = async (params = {}) => {
             $sum: {
               $cond: [
                 { $and: [{ $gt: ['$daysOverdue', 15] }, { $lte: ['$daysOverdue', 30] }] },
-                { $subtract: ['$totalAmount', { $ifNull: ['$paidAmount', 0] }] },
+                '$amount',
                 0
               ]
             }
@@ -517,7 +715,7 @@ const getOutstandingBalancesData = async (params = {}) => {
             $sum: {
               $cond: [
                 { $gt: ['$daysOverdue', 30] },
-                { $subtract: ['$totalAmount', { $ifNull: ['$paidAmount', 0] }] },
+                '$amount',
                 0
               ]
             }
@@ -526,15 +724,7 @@ const getOutstandingBalancesData = async (params = {}) => {
       }
     ]);
 
-    const salesOutstanding = salesInvoices[0] || {
-      current: 0,
-      overdue_1_15: 0,
-      overdue_16_30: 0,
-      overdue_30_plus: 0
-    };
-
-    // For now, set purchase outstanding to 0 (implement when purchase invoice model is available)
-    const purchaseOutstanding = {
+    const purchaseOutstanding = purchaseExpenses[0] || {
       current: 0,
       overdue_1_15: 0,
       overdue_16_30: 0,
@@ -573,7 +763,7 @@ const getProductAnalyticsData = async (params = {}) => {
       Production.aggregate([
         {
           $group: {
-            _id: '$productName',
+            _id: '$name', // Fixed: Production model uses 'name' field
             totalQuantity: { $sum: '$quantity' }
           }
         },
@@ -585,7 +775,7 @@ const getProductAnalyticsData = async (params = {}) => {
       Production.aggregate([
         {
           $group: {
-            _id: '$productName',
+            _id: '$name', // Fixed: Production model uses 'name' field
             totalQuantity: { $sum: '$quantity' }
           }
         },
@@ -598,14 +788,14 @@ const getProductAnalyticsData = async (params = {}) => {
         {
           $match: {
             $or: [
-              { quantity: { $lt: 100 } },
+              { quantity: { $lt: 1000 } }, // Adjusted: Show items with less than 1000 units
               { quantity: { $lt: 0 } }
             ]
           }
         },
         {
           $group: {
-            _id: '$name',
+            _id: '$name', // Fixed: Inventory model uses 'name' field
             quantity: { $sum: '$quantity' }
           }
         },
@@ -614,7 +804,7 @@ const getProductAnalyticsData = async (params = {}) => {
       ])
     ]);
 
-    return {
+    const result = {
       bestSelling: bestSelling.map(item => ({
         name: item._id || 'Unknown Product',
         quantity: item.totalQuantity
@@ -628,6 +818,8 @@ const getProductAnalyticsData = async (params = {}) => {
         quantity: item.quantity
       }))
     };
+
+    return result;
   } catch (error) {
     console.error('Error fetching product analytics:', error);
     // Return default data if there's an error
@@ -657,8 +849,8 @@ const getCustomerAnalyticsData = async (params = {}) => {
       SalesInvoice.aggregate([
         {
           $group: {
-            _id: '$customerName',
-            totalAmount: { $sum: '$totalAmount' }
+            _id: '$customer.name', // Fixed: Customer name is nested under customer.name
+            totalAmount: { $sum: '$totals.grandTotal' } // Fixed: Use totals.grandTotal instead of totalAmount
           }
         },
         { $sort: { totalAmount: -1 } },
@@ -669,7 +861,7 @@ const getCustomerAnalyticsData = async (params = {}) => {
       []
     ]);
 
-    return {
+    const result = {
       topCustomers: topCustomers.map(customer => ({
         name: customer._id || 'Unknown Customer',
         amount: customer.totalAmount
@@ -681,6 +873,8 @@ const getCustomerAnalyticsData = async (params = {}) => {
         { name: 'Venkatesan', amount: 100000 }
       ]
     };
+
+    return result;
   } catch (error) {
     console.error('Error fetching customer analytics:', error);
     // Return default data if there's an error
@@ -720,11 +914,11 @@ const getInvoiceAnalyticsData = async (params = {}) => {
       {
         $project: {
           invoiceNo: '$invoiceNumber',
-          companyName: '$customerName',
-          name: '$customerName',
-          dueDate: { $dateToString: { format: '%d-%b-%y', date: '$dueDate' } },
+          companyName: '$customer.name', // Fixed: Use nested customer.name
+          name: '$customer.name', // Fixed: Use nested customer.name
+          dueDate: { $dateToString: { format: '%d-%b-%Y', date: '$dueDate' } },
           dueFrom: { $concat: [{ $toString: '$daysOverdue' }, ' Days'] },
-          remainingPayment: { $subtract: ['$totalAmount', { $ifNull: ['$paidAmount', 0] }] }
+          remainingPayment: { $subtract: ['$totals.grandTotal', { $ifNull: ['$paidAmount', 0] }] } // Fixed: Use totals.grandTotal
         }
       },
       { $sort: { dueDate: 1 } },
@@ -767,8 +961,8 @@ const getGeographicalSalesData = async (params = {}) => {
     const geographicalData = await SalesInvoice.aggregate([
       {
         $group: {
-          _id: '$customerState', // Assuming there's a customerState field
-          totalSales: { $sum: '$totalAmount' }
+          _id: '$customer.placeOfSupply', // Use the correct field path
+          totalSales: { $sum: '$totals.grandTotal' }
         }
       },
       { $sort: { totalSales: -1 } }
@@ -863,6 +1057,76 @@ const getFinancialSummaryData = async (params = {}) => {
       profit: 0,
       gstAmount: 0
     };
+  }
+};
+
+const getPurchaseInvoiceDueData = async (params = {}) => {
+  try {
+    // Get pending expense transactions (purchase invoices due)
+    const pendingPurchases = await FinancialTransaction.aggregate([
+      {
+        $match: {
+          transactionType: 'expense',
+          status: 'pending',
+          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance', 'transport', 'rent', 'utilities', 'insurance', 'taxes', 'other'] }
+        }
+      },
+      {
+        $addFields: {
+          daysOverdue: {
+            $floor: {
+              $divide: [
+                { $subtract: [new Date(), '$transactionDate'] },
+                1000 * 60 * 60 * 24
+              ]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          invoiceNo: '$reference',
+          companyName: '$vendor',
+          name: '$vendor',
+          dueDate: { $dateToString: { format: '%d-%b-%Y', date: '$transactionDate' } },
+          dueFrom: { $concat: [{ $toString: '$daysOverdue' }, ' Days'] },
+          remainingPayment: '$amount',
+          category: '$category',
+          description: '$description'
+        }
+      },
+      { $sort: { transactionDate: 1 } },
+      { $limit: 5 }
+    ]);
+
+    console.log('📊 Purchase invoice due raw data:', pendingPurchases);
+
+    return pendingPurchases.length > 0 ? pendingPurchases : [
+      {
+        invoiceNo: 'No Data',
+        companyName: 'No pending purchases',
+        name: '',
+        dueDate: '',
+        dueFrom: '',
+        remainingPayment: 0,
+        category: '',
+        description: ''
+      }
+    ];
+  } catch (error) {
+    console.error('Error fetching purchase invoice due data:', error);
+    return [
+      {
+        invoiceNo: 'Error',
+        companyName: 'Failed to fetch data',
+        name: '',
+        dueDate: '',
+        dueFrom: '',
+        remainingPayment: 0,
+        category: '',
+        description: ''
+      }
+    ];
   }
 };
 
@@ -1099,5 +1363,6 @@ module.exports = {
   getInvoiceAnalytics,
   getGeographicalSales,
   getFinancialSummary,
-  getActivityFeed
+  getActivityFeed,
+  getPurchaseInvoiceDueData
 }; 

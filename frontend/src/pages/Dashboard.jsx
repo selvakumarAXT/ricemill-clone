@@ -4,7 +4,9 @@ import ReactApexChart from 'react-apexcharts';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import BranchFilter from '../components/common/BranchFilter';
-import IndiaMap from '../components/charts/IndiaMap';
+import OutstandingProgressBar from '../components/common/OutstandingProgressBar';
+import SouthIndiaSalesChart from '../components/charts/SouthIndiaSalesChart';
+
 import { dashboardService } from '../services/dashboardService';
 
 const Dashboard = () => {
@@ -50,6 +52,7 @@ const Dashboard = () => {
       }
 
       if (response.success) {
+
         setDashboardData(response.data);
         setLastUpdated(new Date());
       } else {
@@ -137,6 +140,93 @@ const Dashboard = () => {
     colors: ['#3B82F6']
   };
 
+  if (loading) return <LoadingSpinner fullPage />;
+
+  // Extract data from API response with defaults
+  const {
+    overview = {},
+    sales = {},
+    outstanding = {},
+    products = {},
+    customers = {},
+    invoices = {},
+    geographical = {},
+    purchaseInvoices = []
+  } = dashboardData;
+
+
+  
+  const {
+    totalRevenue = 0,
+    totalExpenses = 0,
+    gstAmount = 0,
+    totalPurchase = 0,
+    totalIncome = 0
+  } = overview;
+
+  const {
+    salesData = [0, 0, 0, 0, 0, 0],
+    purchaseData = [0, 0, 0, 0, 0, 0],
+    newCustomerSales = [0, 0,0, 0, 0, 0],
+    existingCustomerSales = [0, 0, 0, 0, 0, 0],
+    invoiceCounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] },
+    invoiceAmounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] }
+  } = sales;
+
+  // Generate dynamic month labels based on actual data length
+  const generateMonthLabels = (dataLength) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentDate = new Date();
+    const labels = [];
+    
+    for (let i = dataLength - 1; i >= 0; i--) {
+      const monthDate = new Date(currentDate);
+      monthDate.setMonth(currentDate.getMonth() - i);
+      const monthName = months[monthDate.getMonth()];
+      const year = monthDate.getFullYear();
+      labels.push(`${monthName} ${year}`);
+    }
+    
+    return labels;
+  };
+
+  // Generate dynamic month labels for charts
+  const monthLabels = generateMonthLabels(salesData.length);
+
+  const {
+    salesOutstanding = {
+      current: 0,
+      overdue_1_15: 0,
+      overdue_16_30: 0,
+      overdue_30_plus: 0
+    },
+      purchaseOutstanding = {
+      current: 0,
+      overdue_1_15: 0,
+      overdue_16_30: 0,
+      overdue_30_plus: 0
+    }
+  } = outstanding;
+
+  const {
+    bestSelling = [],
+    leastSelling = [],
+    lowStock = []
+  } = products;
+
+  const {
+    topCustomers = [],
+    topVendors = []
+  } = customers;
+
+  const {
+    dueInvoices = []
+  } = invoices;
+
+  const totalSalesOutstanding = salesOutstanding.current + salesOutstanding.overdue_1_15 + salesOutstanding.overdue_16_30 + salesOutstanding.overdue_30_plus;
+  const totalPurchaseOutstanding = purchaseOutstanding.current + purchaseOutstanding.overdue_1_15 + purchaseOutstanding.overdue_16_30 + purchaseOutstanding.overdue_30_plus;
+
+  // Chart configurations
   const newVsExistingChartOptions = {
     chart: {
       type: 'bar',
@@ -158,7 +248,7 @@ const Dashboard = () => {
       strokeDashArray: 4
     },
     xaxis: {
-      categories: ['Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025'],
+      categories: monthLabels,
       labels: { style: { colors: '#6B7280', fontSize: '12px' } }
     },
     yaxis: {
@@ -200,7 +290,7 @@ const Dashboard = () => {
       strokeDashArray: 4
     },
     xaxis: {
-      categories: ['Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025'],
+      categories: monthLabels,
       labels: { style: { colors: '#6B7280', fontSize: '12px' } }
     },
     yaxis: {
@@ -231,13 +321,13 @@ const Dashboard = () => {
       strokeDashArray: 4
     },
     xaxis: {
-      categories: ['Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025'],
+      categories: monthLabels,
       labels: { style: { colors: '#6B7280', fontSize: '12px' } }
     },
     yaxis: {
       labels: { 
         style: { colors: '#6B7280', fontSize: '12px' },
-        formatter: (value) => `${(value / 1000).toFixed(0)}K`
+        formatter: (value) => `${value}K`
       }
     },
     legend: {
@@ -247,71 +337,10 @@ const Dashboard = () => {
     },
     tooltip: {
       y: {
-        formatter: (value) => `₹${(value / 1000).toFixed(0)}K`
+        formatter: (value) => `₹${value}K`
       }
     }
   };
-
-  if (loading) return <LoadingSpinner fullPage />;
-
-  // Extract data from API response with defaults
-  const {
-    overview = {},
-    sales = {},
-    outstanding = {},
-    products = {},
-    customers = {},
-    invoices = {},
-    geographical = {}
-  } = dashboardData;
-
-  const {
-    totalRevenue = 0,
-    totalExpenses = 0,
-    gstAmount = 0
-  } = overview;
-
-  const {
-    salesData = [0, 0, 0, 0, 0, 0],
-    purchaseData = [0, 0, 0, 0, 0, 0],
-    newCustomerSales = [0, 0, 0, 0, 0, 0],
-    existingCustomerSales = [0, 0, 0, 0, 0, 0],
-    invoiceCounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] },
-    invoiceAmounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] }
-  } = sales;
-
-  const {
-    salesOutstanding = {
-      current: 0,
-      overdue_1_15: 0,
-      overdue_16_30: 0,
-      overdue_30_plus: 0
-    },
-    purchaseOutstanding = {
-      current: 0,
-      overdue_1_15: 0,
-      overdue_16_30: 0,
-      overdue_30_plus: 0
-    }
-  } = outstanding;
-
-  const {
-    bestSelling = [],
-    leastSelling = [],
-    lowStock = []
-  } = products;
-
-  const {
-    topCustomers = [],
-    topVendors = []
-  } = customers;
-
-  const {
-    dueInvoices = []
-  } = invoices;
-
-  const totalSalesOutstanding = salesOutstanding.current + salesOutstanding.overdue_1_15 + salesOutstanding.overdue_16_30 + salesOutstanding.overdue_30_plus;
-  const totalPurchaseOutstanding = purchaseOutstanding.current + purchaseOutstanding.overdue_1_15 + purchaseOutstanding.overdue_16_30 + purchaseOutstanding.overdue_30_plus;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -385,31 +414,15 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Sales */}
             <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Sale - Aug 2025</h3>
-              <div className="h-16 mb-3">
-                <ReactApexChart
-                  options={salesChartOptions}
-                  series={[{ data: salesData }]}
-                  type="bar"
-                  height={64}
-                />
-              </div>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">Sale</h3>
               <div className="text-lg font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
               <div className="text-sm text-gray-600">+GST {formatCurrency(gstAmount)}</div>
             </div>
 
             {/* Purchase */}
             <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Purchase - Aug 2025</h3>
-              <div className="h-16 mb-3">
-                <ReactApexChart
-                  options={purchaseChartOptions}
-                  series={[{ data: purchaseData }]}
-                  type="bar"
-                  height={64}
-                />
-              </div>
-              <div className="text-lg font-bold text-gray-900">{formatCurrency(0)}</div>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">Purchase</h3>
+              <div className="text-lg font-bold text-gray-900">{formatCurrency(totalPurchase)}</div>
             </div>
 
             {/* Expense */}
@@ -421,15 +434,32 @@ const Dashboard = () => {
             {/* Income */}
             <div className="bg-white border border-gray-200 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-600 mb-2">Income</h3>
-              <div className="text-lg font-bold text-gray-900">{formatCurrency(0)}</div>
+              <div className="text-lg font-bold text-gray-900">{formatCurrency(totalIncome)}</div>
             </div>
           </div>
+        </div>
+
+        {/* Outstanding Balances Progress Bars */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Sales Outstanding */}
+          <OutstandingProgressBar
+            title="Sales Outstanding"
+            data={salesOutstanding}
+            total={totalSalesOutstanding}
+          />
+
+          {/* Purchase Outstanding */}
+          <OutstandingProgressBar
+            title="Purchase Outstanding"
+            data={purchaseOutstanding}
+            total={totalPurchaseOutstanding}
+          />
         </div>
 
         {/* Outstanding Balances and Sales Overview */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           {/* Sales Outstanding */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          {/* <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Sales Outstanding</h3>
             <div className="text-2xl font-bold text-gray-900 mb-4">
               Total Receivables {formatCurrency(totalSalesOutstanding)}
@@ -464,10 +494,10 @@ const Dashboard = () => {
                 <span className="text-sm font-medium">{formatCurrency(salesOutstanding.overdue_30_plus)}</span>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Purchase Outstanding */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          {/* <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase Outstanding</h3>
             <div className="text-2xl font-bold text-gray-900 mb-4">
               Total Payables {formatCurrency(totalPurchaseOutstanding)}
@@ -502,13 +532,16 @@ const Dashboard = () => {
                 <span className="text-sm font-medium">{formatCurrency(purchaseOutstanding.overdue_30_plus)}</span>
               </div>
             </div>
-          </div>
-
-          {/* Total Sale Map */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 lg:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Sale (Map)</h3>
-            <IndiaMap data={geographical} />
-          </div>
+          </div> */}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  {/* South India Sales Chart */}
+  <div className="mb-6">
+          <SouthIndiaSalesChart 
+            data={geographical}
+            title="South India Sales Overview"
+            height={300}
+          />
         </div>
 
         {/* New VS Existing Customer Sale */}
@@ -524,6 +557,8 @@ const Dashboard = () => {
             height={300}
           />
         </div>
+          </div>
+      
 
         {/* Invoice Summaries */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -665,24 +700,24 @@ const Dashboard = () => {
               <table className="min-w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Invoice No.</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Company Name</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Name</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Due Date</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Due From</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Remaining Payment</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Invoice No.</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Company Name</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Name</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due Date</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due From</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Remaining Payment</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {dueInvoices.length > 0 ? (
                     dueInvoices.map((invoice, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td className="py-2 text-sm text-gray-900">{invoice.invoiceNo}</td>
-                        <td className="py-2 text-sm text-gray-600">{invoice.companyName}</td>
-                        <td className="py-2 text-sm text-gray-600">{invoice.name}</td>
-                        <td className="py-2 text-sm text-gray-600">{invoice.dueDate}</td>
-                        <td className="py-2 text-sm text-gray-600">{invoice.dueFrom}</td>
-                        <td className="py-2 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900">{invoice.invoiceNo}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.companyName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.name}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueDate}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueFrom}</td>
+                        <td className="py-3 px-4 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
                       </tr>
                     ))
                   ) : (
@@ -705,8 +740,44 @@ const Dashboard = () => {
           {/* Purchase Invoice Due */}
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase Invoice Due</h3>
-            <div className="text-center text-gray-500 py-8">
-              No records found.
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Invoice No.</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Company Name</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Name</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due Date</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due From</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Remaining Payment</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {purchaseInvoices.length > 0 ? (
+                    purchaseInvoices.map((invoice, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="py-3 px-4 text-sm text-gray-900">{invoice.invoiceNo}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.companyName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.name}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueDate}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueFrom}</td>
+                        <td className="py-3 px-4 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="text-center text-gray-500 py-4">
+                        No outstanding purchase invoices
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-lg font-bold text-gray-900">
+                Total Outstanding: {formatCurrency(totalPurchaseOutstanding)}
+              </div>
             </div>
           </div>
         </div>
