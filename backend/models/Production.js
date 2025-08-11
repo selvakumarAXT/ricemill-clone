@@ -119,4 +119,20 @@ productionSchema.virtual('formattedQuantity').get(function() {
 productionSchema.set('toJSON', { virtuals: true });
 productionSchema.set('toObject', { virtuals: true });
 
+// Pre-save hook to sanitize document filenames
+productionSchema.pre('save', function(next) {
+  if (this.documents && Array.isArray(this.documents)) {
+    this.documents = this.documents.map(doc => {
+      if (doc.filename && doc.filename.length > 100) {
+        // Truncate filename if it's too long
+        const ext = doc.filename.split('.').pop();
+        const name = doc.filename.substring(0, 80);
+        doc.filename = `${name}.${ext}`;
+      }
+      return doc;
+    });
+  }
+  next();
+});
+
 module.exports = mongoose.model('Production', productionSchema); 

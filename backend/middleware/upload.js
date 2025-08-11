@@ -108,19 +108,53 @@ const storage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     
-    // Sanitize filename
-    const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_');
+    // Sanitize filename - remove all non-alphanumeric characters and limit length
+    let sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    // Limit filename length to prevent filesystem issues
+    // Maximum 50 characters for the sanitized name
+    if (sanitizedName.length > 50) {
+      sanitizedName = sanitizedName.substring(0, 50);
+    }
+    
+    // Remove consecutive underscores
+    sanitizedName = sanitizedName.replace(/_+/g, '_');
+    
+    // Remove leading/trailing underscores
+    sanitizedName = sanitizedName.replace(/^_+|_+$/g, '');
+    
+    // If sanitized name is empty after cleaning, use a default
+    if (!sanitizedName) {
+      sanitizedName = 'file';
+    }
     
     // Add module prefix for better organization
     const module = req.body.module || req.params.module || req.query.module || 'doc';
     const modulePrefix = module.toLowerCase().substring(0, 3);
     
-    cb(null, `${modulePrefix}_${sanitizedName}_${uniqueSuffix}${ext}`);
+    // Final filename format: modulePrefix_sanitizedName_timestamp.ext
+    // This ensures the filename is never too long
+    const finalFilename = `${modulePrefix}_${sanitizedName}_${uniqueSuffix}${ext}`;
+    
+    // Additional safety check - ensure total filename length is reasonable
+    if (finalFilename.length > 150) {
+      // If still too long, use a shorter version
+      const shortName = sanitizedName.substring(0, 20);
+      cb(null, `${modulePrefix}_${shortName}_${uniqueSuffix}${ext}`);
+    } else {
+      cb(null, finalFilename);
+    }
   }
 });
 
 // File filter function
 const fileFilter = (req, file, cb) => {
+  // Check for extremely long original filenames
+  if (file.originalname && file.originalname.length > 200) {
+    console.warn(`File with extremely long name rejected: ${file.originalname.substring(0, 100)}...`);
+    return cb(new Error('Filename is too long. Please use a shorter filename.'), false);
+  }
+  
   // Allowed file types
   const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
   const allowedDocumentTypes = [
@@ -148,7 +182,10 @@ const upload = multer({
   fileFilter: fileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
-    files: 10 // Maximum 10 files per request
+    files: 10, // Maximum 10 files per request
+    fieldNameSize: 50, // Maximum field name size
+    fieldSize: 1024 * 1024, // Maximum field value size (1MB)
+    fields: 20 // Maximum number of non-file fields
   }
 });
 
@@ -196,6 +233,16 @@ const handleUploadError = (error, req, res, next) => {
       message: error.message
     });
   }
+  
+  if (error.message.includes('Filename is too long')) {
+    return res.status(400).json({
+      success: false,
+      message: 'Filename is too long. Please use a shorter filename (maximum 200 characters).'
+    });
+  }
+  
+  // Log unexpected upload errors
+  console.error('Upload error:', error);
   
   next(error);
 };

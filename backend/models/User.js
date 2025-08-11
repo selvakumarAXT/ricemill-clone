@@ -71,6 +71,12 @@ userSchema.pre("save", async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
+// Set isSuperAdmin based on role
+userSchema.pre("save", function (next) {
+  this.isSuperAdmin = this.role === "superadmin";
+  next();
+});
+
 // Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);

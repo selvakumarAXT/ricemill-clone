@@ -9,6 +9,7 @@ const {
 } = require('../controllers/productionController');
 
 const { protect, authorize } = require('../middleware/auth');
+const { uploadMultiple, handleUploadError } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -19,14 +20,17 @@ router.use(authorize('superadmin', 'admin', 'manager'));
 // Routes
 router.route('/')
   .get(getAllProduction)
-  .post(createProduction);
+  .post(uploadMultiple('documents', 10), createProduction);
 
 router.route('/stats')
   .get(getProductionStats);
 
 router.route('/:id')
   .get(getProduction)
-  .put(updateProduction)
+  .put(uploadMultiple('documents', 10), updateProduction)
   .delete(deleteProduction);
+
+// Error handling for uploads
+router.use(handleUploadError);
 
 module.exports = router; 

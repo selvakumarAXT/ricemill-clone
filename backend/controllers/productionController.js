@@ -119,16 +119,55 @@ exports.createProduction = async (req, res) => {
       });
     }
 
-    // Set branch_id based on user role
-    let branchId = req.body.branch_id;
-    if (!req.user.isSuperAdmin) {
-      branchId = req.user.branch_id;
+    // Set branch_id based on user role and available data
+    let branchId = null;
+    
+    if (req.user.isSuperAdmin) {
+      // For superadmin, use the branch_id from request body if provided
+      if (req.body.branch_id) {
+        branchId = req.body.branch_id;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Branch ID is required for superadmin users'
+        });
+      }
+    } else {
+      // For regular users, use their assigned branch
+      if (req.user.branch_id) {
+        branchId = req.user.branch_id;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'User is not assigned to any branch'
+        });
+      }
+    }
+
+    // Validate that branch exists
+    const Branch = require('../models/Branch');
+    const branchExists = await Branch.findById(branchId);
+    if (!branchExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid branch ID provided'
+      });
     }
 
     // Process documents if provided
     let processedDocuments = [];
+    
+    // Handle uploaded files from multer
+    if (req.files && req.files.documents && req.files.documents.length > 0) {
+      const { getFileInfo } = require('../middleware/upload');
+      processedDocuments = req.files.documents.map(file => {
+        return getFileInfo(file, branchId);
+      });
+    }
+    
+    // Handle documents from request body (for backward compatibility)
     if (documents && Array.isArray(documents)) {
-      processedDocuments = documents.map(doc => {
+      const bodyDocuments = documents.map(doc => {
         if (typeof doc === 'string') {
           // If it's just a URL string, create a basic document object
           return {
@@ -143,6 +182,9 @@ exports.createProduction = async (req, res) => {
         }
         return doc;
       });
+      
+      // Merge uploaded files with body documents
+      processedDocuments = [...processedDocuments, ...bodyDocuments];
     }
 
     const production = await Production.create({
@@ -171,6 +213,7 @@ exports.createProduction = async (req, res) => {
       production: populatedProduction
     });
   } catch (error) {
+    console.error('Production creation error:', error);
     res.status(400).json({
       success: false,
       message: error.message
@@ -219,10 +262,21 @@ exports.updateProduction = async (req, res) => {
     if (notes !== undefined) production.notes = notes;
 
     // Process documents if provided
-    if (documents !== undefined) {
+    if (documents !== undefined || (req.files && req.files.documents)) {
       let processedDocuments = [];
+      
+      // Handle uploaded files from multer
+      if (req.files && req.files.documents && req.files.documents.length > 0) {
+        const { getFileInfo } = require('../middleware/upload');
+        const uploadedDocs = req.files.documents.map(file => {
+          return getFileInfo(file, production.branch_id);
+        });
+        processedDocuments = [...processedDocuments, ...uploadedDocs];
+      }
+      
+      // Handle documents from request body
       if (Array.isArray(documents)) {
-        processedDocuments = documents.map(doc => {
+        const bodyDocuments = documents.map(doc => {
           if (typeof doc === 'string') {
             // If it's just a URL string, create a basic document object
             return {
@@ -237,7 +291,9 @@ exports.updateProduction = async (req, res) => {
           }
           return doc;
         });
+        processedDocuments = [...processedDocuments, ...bodyDocuments];
       }
+      
       production.documents = processedDocuments;
     }
 
