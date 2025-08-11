@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import ReactApexChart from 'react-apexcharts';
 import Button from '../components/common/Button';
@@ -12,19 +12,18 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [dashboardData, setDashboardData] = useState({});
   const [selectedPeriod] = useState('current_month');
-  const [dateRange] = useState({
+  const [dateRange, setDateRange] = useState({
     startDate: '2025-01-01',
     endDate: '2025-06-30'
   });
   const [activeTab, setActiveTab] = useState('analytics');
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const { currentBranchId } = useSelector((state) => state.branch);
   const { user } = useSelector((state) => state.auth);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [currentBranchId, selectedPeriod, dateRange]);
-
-  const fetchDashboardData = async () => {
+  // Memoized fetch function to prevent unnecessary re-renders
+  const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -52,6 +51,7 @@ const Dashboard = () => {
 
       if (response.success) {
         setDashboardData(response.data);
+        setLastUpdated(new Date());
       } else {
         setError(response.message || 'Failed to fetch dashboard data');
       }
@@ -61,6 +61,38 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  }, [user?.role, currentBranchId, user?.branchId, selectedPeriod, dateRange]);
+
+  // Auto-refresh functionality
+  useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(() => {
+        fetchDashboardData();
+      }, 30000); // Refresh every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh, fetchDashboardData]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Handle date range changes
+  const handleDateRangeChange = (newDateRange) => {
+    setDateRange(newDateRange);
+    // Data will be refetched automatically due to useEffect dependency
+  };
+
+  // Toggle auto-refresh
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh);
+  };
+
+  // Manual refresh
+  const handleManualRefresh = () => {
+    fetchDashboardData();
   };
 
   const formatCurrency = (amount) => {
@@ -234,26 +266,26 @@ const Dashboard = () => {
   } = dashboardData;
 
   const {
-    totalRevenue = 1480080,
+    totalRevenue = 0,
     totalExpenses = 0,
-    gstAmount = 53016
+    gstAmount = 0
   } = overview;
 
   const {
-    salesData = [60, 80, 45, 90, 70, 85],
-    purchaseData = [0, 0, 0, 40, 0, 0],
-    newCustomerSales = [0, 35, 0, 0, 0, 0],
-    existingCustomerSales = [100, 65, 100, 100, 100, 100],
-    invoiceCounts = { sales: [15, 22, 20, 18, 16, 14], purchases: [0, 0, 0, 5, 0, 0] },
-    invoiceAmounts = { sales: [1200, 2800, 2500, 1800, 2200, 2000], purchases: [0, 0, 0, 800, 0, 0] }
+    salesData = [0, 0, 0, 0, 0, 0],
+    purchaseData = [0, 0, 0, 0, 0, 0],
+    newCustomerSales = [0, 0, 0, 0, 0, 0],
+    existingCustomerSales = [0, 0, 0, 0, 0, 0],
+    invoiceCounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] },
+    invoiceAmounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] }
   } = sales;
 
   const {
     salesOutstanding = {
-      current: 595088,
-      overdue_1_15: 2238008,
-      overdue_16_30: 1053623,
-      overdue_30_plus: 20558961.80
+      current: 0,
+      overdue_1_15: 0,
+      overdue_16_30: 0,
+      overdue_30_plus: 0
     },
     purchaseOutstanding = {
       current: 0,
@@ -264,52 +296,18 @@ const Dashboard = () => {
   } = outstanding;
 
   const {
-    bestSelling = [
-      { name: 'HUSK', quantity: 607610 },
-      { name: 'BRAN', quantity: 173900 },
-      { name: 'RICE BROKEN', quantity: 161330 },
-      { name: 'BLACKRICE', quantity: 33250 },
-      { name: 'RICE NOOK', quantity: 26140 }
-    ],
-    leastSelling = [
-      { name: 'PADDY', quantity: 1111.79 },
-      { name: 'RICE NOOK', quantity: 26140 },
-      { name: 'BLACKRICE', quantity: 33250 },
-      { name: 'RICE BROKEN', quantity: 161330 },
-      { name: 'BRAN', quantity: 173900 }
-    ],
-    lowStock = [
-      { name: 'HUSK', quantity: -1046710 },
-      { name: 'RICE BROKEN', quantity: -321220 },
-      { name: 'BLACKRICE', quantity: -33250 },
-      { name: 'PADDY', quantity: -1515.37 }
-    ]
+    bestSelling = [],
+    leastSelling = [],
+    lowStock = []
   } = products;
 
   const {
-    topCustomers = [
-      { name: 'SRI BALAMURAGAN TRADERS', amount: 4691295 },
-      { name: 'Oviya Traders', amount: 3608727 },
-      { name: 'HARISH UMI', amount: 1762902 },
-      { name: 'PRAGYA ENTERPRISES', amount: 999999 },
-      { name: 'ESWAR AND CO', amount: 520000 }
-    ],
-    topVendors = [
-      { name: 'ESWAR & CO', amount: 1750000 },
-      { name: 'Priyanka', amount: 410000 },
-      { name: 'Vikram Selvam', amount: 120000 },
-      { name: 'Venkatesan', amount: 100000 }
-    ]
+    topCustomers = [],
+    topVendors = []
   } = customers;
 
   const {
-    dueInvoices = [
-      { invoiceNo: '10', companyName: 'M/S.SVMA AGRO PRODUCTS PVT LTD', name: '', phone: '', dueDate: '08-May-24', dueFrom: '449 Days', remainingPayment: 5903.80 },
-      { invoiceNo: '14', companyName: '', name: 'RAJESH', phone: '', dueDate: '08-May-24', dueFrom: '449 Days', remainingPayment: 300000 },
-      { invoiceNo: '16', companyName: '', name: 'RAJESH', phone: '', dueDate: '09-May-24', dueFrom: '448 Days', remainingPayment: 100000 },
-      { invoiceNo: '18', companyName: 'M/S.SVMA AGRO PRODUCTS PVT LTD', name: '', phone: '', dueDate: '15-May-24', dueFrom: '442 Days', remainingPayment: 513576 },
-      { invoiceNo: '19', companyName: 'M/S.SVMA AGRO PRODUCTS PVT LTD', name: '', phone: '', dueDate: '15-May-24', dueFrom: '442 Days', remainingPayment: 50840 }
-    ]
+    dueInvoices = []
   } = invoices;
 
   const totalSalesOutstanding = salesOutstanding.current + salesOutstanding.overdue_1_15 + salesOutstanding.overdue_16_30 + salesOutstanding.overdue_30_plus;
@@ -317,40 +315,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-green-600 text-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">SREE ESWAR HI-TECH MODERN RICE MILL</h1>
-          <div className="flex items-center space-x-6">
-            <span className="text-red-400 font-medium">Dashboard</span>
-            <span>Customer/Vendor</span>
-            <span>Products/Services</span>
-            <span>Sale Invoice</span>
-            <span>Purchase Invoice</span>
-            <span>Payment</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="secondary" className="bg-white text-green-600">+ Create</Button>
-            <select className="bg-white text-green-600 px-3 py-2 rounded">
-              <option>F.Y. 2025-2026</option>
-            </select>
-            <span>Expense/Income</span>
-            <span>Other Documents</span>
-            <span>Report</span>
-            <span>🔔</span>
-            <span>👤</span>
-            <Button variant="secondary" className="bg-white text-green-600">Send Email</Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Profile Completion */}
-      <div className="px-6 py-4">
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Complete your profile</h3>
-          <p className="text-gray-600">Verify Email! Please check your email and follow the link to verify your email address.</p>
-        </div>
-      </div>
+    
 
       {/* Main Dashboard */}
       <div className="px-6 pb-6">
@@ -380,13 +345,38 @@ const Dashboard = () => {
               </button>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Last Updated 7 days ago</span>
+              <span className="text-sm text-gray-600">
+                Last Updated: {lastUpdated.toLocaleTimeString()}
+              </span>
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">01-01-2025 To 30-06-2025</span>
-                <span className="text-gray-500">📅</span>
+                <input
+                  type="date"
+                  value={dateRange.startDate}
+                  onChange={(e) => handleDateRangeChange({ ...dateRange, startDate: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <span className="text-gray-500">To</span>
+                <input
+                  type="date"
+                  value={dateRange.endDate}
+                  onChange={(e) => handleDateRangeChange({ ...dateRange, endDate: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
               </div>
-              <Button variant="secondary" onClick={fetchDashboardData} className="px-4 py-2">
-                🔄 Refresh
+              <Button 
+                variant="secondary" 
+                onClick={handleManualRefresh} 
+                className="px-4 py-2"
+                disabled={loading}
+              >
+                {loading ? '🔄 Loading...' : '🔄 Refresh'}
+              </Button>
+              <Button 
+                variant={autoRefresh ? "primary" : "secondary"}
+                onClick={toggleAutoRefresh} 
+                className="px-4 py-2"
+              >
+                {autoRefresh ? '⏸️ Stop Auto-refresh' : '▶️ Auto-refresh'}
               </Button>
             </div>
           </div>
@@ -572,56 +562,77 @@ const Dashboard = () => {
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Best Selling Products</h3>
             <div className="space-y-3">
-              {bestSelling.map((product, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">{product.name}</span>
-                  <span className="text-sm font-medium">{formatNumber(product.quantity)}</span>
+              {bestSelling.length > 0 ? (
+                bestSelling.map((product, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">{product.name}</span>
+                    <span className="text-sm font-medium">{formatNumber(product.quantity)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  No data available
                 </div>
-              ))}
+              )}
             </div>
-            <Button variant="secondary" className="w-full mt-4">View All</Button>
           </div>
 
           {/* Least Selling Products */}
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Least Selling Products</h3>
             <div className="space-y-3">
-              {leastSelling.map((product, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">{product.name}</span>
-                  <span className="text-sm font-medium">{formatNumber(product.quantity)}</span>
+              {leastSelling.length > 0 ? (
+                leastSelling.map((product, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">{product.name}</span>
+                    <span className="text-sm font-medium">{formatNumber(product.quantity)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  No data available
                 </div>
-              ))}
+              )}
             </div>
-            <Button variant="secondary" className="w-full mt-4">View All</Button>
           </div>
 
           {/* Low Stock */}
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Low Stock</h3>
             <div className="space-y-3">
-              {lowStock.map((product, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">{product.name}</span>
-                  <span className={`text-sm font-medium ${product.quantity < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                    {formatNumber(product.quantity)}
-                  </span>
+              {lowStock.length > 0 ? (
+                lowStock.map((product, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">{product.name}</span>
+                    <span className={`text-sm font-medium ${product.quantity < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                      {formatNumber(product.quantity)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  No low stock items
                 </div>
-              ))}
+              )}
             </div>
-            <Button variant="secondary" className="w-full mt-4">View All</Button>
           </div>
 
           {/* Top Customers */}
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Customers</h3>
             <div className="space-y-3">
-              {topCustomers.map((customer, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 truncate">{customer.name}</span>
-                  <span className="text-sm font-medium">{formatCurrency(customer.amount)}</span>
+              {topCustomers.length > 0 ? (
+                topCustomers.map((customer, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 truncate">{customer.name}</span>
+                    <span className="text-sm font-medium">{formatCurrency(customer.amount)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  No customer data
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -629,12 +640,18 @@ const Dashboard = () => {
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Vendors</h3>
             <div className="space-y-3">
-              {topVendors.map((vendor, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 truncate">{vendor.name}</span>
-                  <span className="text-sm font-medium">{formatCurrency(vendor.amount)}</span>
+              {topVendors.length > 0 ? (
+                topVendors.map((vendor, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 truncate">{vendor.name}</span>
+                    <span className="text-sm font-medium">{formatCurrency(vendor.amount)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  No vendor data
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -657,16 +674,24 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {dueInvoices.map((invoice, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="py-2 text-sm text-gray-900">{invoice.invoiceNo}</td>
-                      <td className="py-2 text-sm text-gray-600">{invoice.companyName}</td>
-                      <td className="py-2 text-sm text-gray-600">{invoice.name}</td>
-                      <td className="py-2 text-sm text-gray-600">{invoice.dueDate}</td>
-                      <td className="py-2 text-sm text-gray-600">{invoice.dueFrom}</td>
-                      <td className="py-2 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
+                  {dueInvoices.length > 0 ? (
+                    dueInvoices.map((invoice, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="py-2 text-sm text-gray-900">{invoice.invoiceNo}</td>
+                        <td className="py-2 text-sm text-gray-600">{invoice.companyName}</td>
+                        <td className="py-2 text-sm text-gray-600">{invoice.name}</td>
+                        <td className="py-2 text-sm text-gray-600">{invoice.dueDate}</td>
+                        <td className="py-2 text-sm text-gray-600">{invoice.dueFrom}</td>
+                        <td className="py-2 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="text-center text-gray-500 py-4">
+                        No outstanding invoices
+                      </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -674,7 +699,6 @@ const Dashboard = () => {
               <div className="text-lg font-bold text-gray-900">
                 Total Outstanding: {formatCurrency(totalSalesOutstanding)}
               </div>
-              <Button variant="secondary">View All</Button>
             </div>
           </div>
 
