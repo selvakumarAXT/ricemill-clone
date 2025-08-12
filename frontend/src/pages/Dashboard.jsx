@@ -350,8 +350,8 @@ const Dashboard = () => {
       <div className="px-6 pb-6">
         {/* Tabs and Controls */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center justify-end mb-6">
+            {/* <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setActiveTab('analytics')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -372,7 +372,7 @@ const Dashboard = () => {
               >
                 Quick Links
               </button>
-            </div>
+            </div> */}
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
                 Last Updated: {lastUpdated.toLocaleTimeString()}
@@ -395,7 +395,7 @@ const Dashboard = () => {
               <Button 
                 variant="secondary" 
                 onClick={handleManualRefresh} 
-                className="px-4 py-2"
+                className="px-3 py-1.5 text-md"
                 disabled={loading}
               >
                 {loading ? '🔄 Loading...' : '🔄 Refresh'}
@@ -403,7 +403,7 @@ const Dashboard = () => {
               <Button 
                 variant={autoRefresh ? "primary" : "secondary"}
                 onClick={toggleAutoRefresh} 
-                className="px-4 py-2"
+                className="px-3 py-1.5 text-md"
               >
                 {autoRefresh ? '⏸️ Stop Auto-refresh' : '▶️ Auto-refresh'}
               </Button>
