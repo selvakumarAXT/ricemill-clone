@@ -26,7 +26,8 @@ export const createAxiosInstance = () => {
       const currentBranchId = getCurrentBranchId();
       
       // Add branch_id for all cases (including 'all' for superadmin)
-      if (currentBranchId) {
+      // But exclude DELETE requests as they handle branch_id logic in the backend
+      if (currentBranchId && config.method !== 'delete') {
         // For GET requests, add to query parameters
         if (config.method === 'get' && config.params) {
           config.params.branch_id = currentBranchId;
@@ -38,8 +39,6 @@ export const createAxiosInstance = () => {
         if ((config.method === 'post' || config.method === 'put') && config.data) {
           config.data.branch_id = currentBranchId;
         }
-        
-
       }
       
       return config;

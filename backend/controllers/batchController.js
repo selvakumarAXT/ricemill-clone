@@ -113,9 +113,18 @@ const updateBatch = asyncHandler(async (req, res) => {
 // @access  Private
 const deleteBatch = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { branch_id } = req.user;
+  const { branch_id, isSuperAdmin } = req.user;
 
-  const batch = await Batch.findOneAndDelete({ _id: id, branch_id });
+  // Build query - handle superadmin case
+  let query = { _id: id };
+  
+  if (!isSuperAdmin) {
+    // Regular users can only delete from their assigned branch
+    query.branch_id = branch_id;
+  }
+  // Superadmin can delete from any branch - no branch restriction needed
+
+  const batch = await Batch.findOneAndDelete(query);
   
   if (!batch) {
     res.status(404);

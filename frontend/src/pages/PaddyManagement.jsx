@@ -20,11 +20,15 @@ import {
   updatePaddy, 
   deletePaddy, 
   formatPaddyData, 
-  formatPaddyResponse 
+  formatPaddyResponse,
+  testPaddyAPI,
+  testSimplePaddyAPI,
+  testPaddyCreate
 } from "../services/paddyService";
 import { getBagWeightOptions, getDefaultBagWeightOption, formatBagWeightOptions } from "../services/bagWeightOptionService";
 import WarningBox from "../components/common/WarningBox";
 import { formatWeight } from "../utils/calculations";
+import { PADDY_VARIETIES } from "../utils/constants";
 
 const PaddyManagement = () => {
   const { user } = useSelector((state) => state.auth);
@@ -54,8 +58,7 @@ const PaddyManagement = () => {
   });
   const [sortData, setSortData] = useState({ col: null, dir: 'asc' });
 
-  // Paddy varieties options
-  const PADDY_VARIETIES = ["A", "C"];
+
 
 
 
@@ -251,7 +254,44 @@ const PaddyManagement = () => {
   };
 
   const handleFilesChange = (files) => {
+    console.log('Files selected:', files);
     setSelectedFiles(files);
+  };
+
+  const testAPI = async () => {
+    try {
+      console.log('Testing paddy API...');
+      const result = await testPaddyAPI();
+      console.log('API test result:', result);
+      alert('API test successful! Check console for details.');
+    } catch (error) {
+      console.error('API test failed:', error);
+      alert('API test failed! Check console for details.');
+    }
+  };
+
+  const testSimpleAPI = async () => {
+    try {
+      console.log('Testing simple paddy API...');
+      const result = await testSimplePaddyAPI();
+      console.log('Simple API test result:', result);
+      alert('Simple API test successful! Check console for details.');
+    } catch (error) {
+      console.error('Simple API test failed:', error);
+      alert('Simple API test failed! Check console for details.');
+    }
+  };
+
+  const testCreatePaddy = async () => {
+    try {
+      console.log('Testing paddy creation...');
+      const result = await testPaddyCreate();
+      console.log('Paddy creation test result:', result);
+      alert('Paddy creation test successful! Check console for details.');
+    } catch (error) {
+      console.error('Paddy creation test failed:', error);
+      alert('Paddy creation test failed! Check console for details.');
+    }
   };
 
   const savePaddy = async (e) => {
@@ -264,13 +304,16 @@ const PaddyManagement = () => {
       // Add the current bag weight to the data
       formattedPaddy.bagWeight = currentBagWeight;
       
+      console.log('Saving paddy with files:', selectedFiles);
+      console.log('Formatted paddy data:', formattedPaddy);
+      
       if (editingPaddy) {
-        const response = await updatePaddy(editingPaddy.id, formattedPaddy);
+        const response = await updatePaddy(editingPaddy.id, formattedPaddy, selectedFiles);
         setSuccessMessage("Paddy record updated successfully!");
         // Refresh current page data
         fetchPaddies(paginationData.page, paginationData.limit, paddyFilter, sortData.col, sortData.dir);
       } else {
-        const response = await createPaddy(formattedPaddy);
+        const response = await createPaddy(formattedPaddy, selectedFiles);
         setSuccessMessage("Paddy record created successfully!");
         // Refresh current page data
         fetchPaddies(paginationData.page, paginationData.limit, paddyFilter, sortData.col, sortData.dir);
@@ -536,13 +579,37 @@ const groupedHeaders = [
           </div>
           {currentBranchId && currentBranchId !== 'all' && (
             <div className="flex justify-center sm:justify-start">
-                              <Button
-                  onClick={() => openPaddyModal()}
-                  variant="primary" 
-                  icon="plus"
-                  className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                Add Paddy
+              <Button
+                onClick={() => openPaddyModal()}
+                variant="primary"
+                icon="plus"
+                className="px-6 py-3"
+              >
+                Add New Paddy
+              </Button>
+              <Button
+                onClick={testAPI}
+                variant="secondary"
+                icon="test"
+                className="px-4 py-3 ml-2"
+              >
+                Test API
+              </Button>
+              <Button
+                onClick={testSimpleAPI}
+                variant="secondary"
+                icon="test"
+                className="px-4 py-3 ml-2"
+              >
+                Simple Test
+              </Button>
+              <Button
+                onClick={testCreatePaddy}
+                variant="secondary"
+                icon="test"
+                className="px-4 py-3 ml-2"
+              >
+                Test Create
               </Button>
             </div>
           )}
@@ -1047,6 +1114,7 @@ const groupedHeaders = [
               onChange={handlePaddyFormChange}
               required
               icon="location"
+              placeholder="Enter paddy source (e.g., farmer name, location, trader, etc.)"
             />
           </div>
 
@@ -1106,6 +1174,7 @@ const groupedHeaders = [
             maxFiles={10}
             maxSize={10}
             showPreview={true}
+            disableAutoUpload={true}
           />
 
 

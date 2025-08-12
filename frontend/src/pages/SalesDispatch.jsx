@@ -1066,6 +1066,7 @@ const SalesDispatch = () => {
                       <span className="w-24 text-sm font-medium text-gray-600">Total:</span>
                       <span className="text-green-600 font-bold">₹{sale.totalAmount.toLocaleString()}</span>
                     </div>
+
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-200">

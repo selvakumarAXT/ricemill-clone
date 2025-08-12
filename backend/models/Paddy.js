@@ -82,6 +82,36 @@ const paddySchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  documents: [{
+    originalName: {
+      type: String,
+      required: true
+    },
+    filename: {
+      type: String,
+      required: true
+    },
+    path: {
+      type: String,
+      required: true
+    },
+    url: {
+      type: String,
+      required: true
+    },
+    size: {
+      type: Number,
+      required: true
+    },
+    mimetype: {
+      type: String,
+      required: true
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
 }, {
   timestamps: true,
 });
@@ -96,6 +126,15 @@ paddySchema.virtual('totalWeightKg').get(function() {
   return this.paddy.weight || 0;
 });
 
+// Add database indexes for better query performance
+paddySchema.index({ branch_id: 1 });
+paddySchema.index({ issueDate: -1 });
+paddySchema.index({ paddyVariety: 1 });
+paddySchema.index({ paddyFrom: 1 });
+paddySchema.index({ issueMemo: 1 });
+paddySchema.index({ lorryNumber: 1 });
+paddySchema.index({ branch_id: 1, issueDate: -1 }); // Compound index for common queries
+
 // Pre-save middleware to auto-calculate bags from gunny total
 paddySchema.pre('save', function(next) {
   const totalGunny = this.totalGunny;
@@ -108,10 +147,5 @@ paddySchema.pre('save', function(next) {
   
   next();
 });
-
-// Index for better query performance
-paddySchema.index({ branch_id: 1, issueDate: -1 });
-paddySchema.index({ createdBy: 1 });
-paddySchema.index({ paddyVariety: 1 });
 
 module.exports = mongoose.model('Paddy', paddySchema); 

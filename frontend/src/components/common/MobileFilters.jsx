@@ -3,7 +3,6 @@ import Icon from './Icon';
 
 const MobileFilters = ({
   children,
-  title = "Filters & Search",
   isOpen = false,
   onToggle,
   className = "",
@@ -18,7 +17,6 @@ const MobileFilters = ({
         >
           <div className="flex items-center">
             <Icon name="filter" className="w-5 h-5 mr-3 text-gray-600" />
-            <span className="font-semibold text-gray-800">{title}</span>
           </div>
           <Icon 
             name={isOpen ? "chevron-up" : "chevron-down"} 

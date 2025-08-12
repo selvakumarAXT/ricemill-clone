@@ -71,6 +71,19 @@ const createGunny = async (req, res) => {
     } else {
       gunnyData.branch_id = branch_id;
     }
+
+    // Handle file uploads if present
+    if (req.files && req.files.documents) {
+      const uploadedFiles = Array.isArray(req.files.documents) ? req.files.documents : [req.files.documents];
+      
+      gunnyData.documents = uploadedFiles.map(file => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        fileType: file.mimetype,
+        fileSize: file.size,
+        uploadPath: file.path
+      }));
+    }
     
     const newGunny = new Gunny(gunnyData);
     const savedGunny = await newGunny.save();
@@ -95,9 +108,24 @@ const updateGunny = async (req, res) => {
     const { id } = req.params;
     const { branch_id } = req.user;
     
+    const updateData = { ...req.body, updatedAt: Date.now() };
+
+    // Handle file uploads if present
+    if (req.files && req.files.documents) {
+      const uploadedFiles = Array.isArray(req.files.documents) ? req.files.documents : [req.files.documents];
+      
+      updateData.documents = uploadedFiles.map(file => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        fileType: file.mimetype,
+        fileSize: file.size,
+        uploadPath: file.path
+      }));
+    }
+    
     const updatedGunny = await Gunny.findOneAndUpdate(
       { _id: id, branch_id },
-      { ...req.body, updatedAt: Date.now() },
+      updateData,
       { new: true, runValidators: true }
     ).populate('createdBy', 'name email')
       .populate('branch_id', 'name');
@@ -120,14 +148,33 @@ const updateGunny = async (req, res) => {
 const deleteGunny = async (req, res) => {
   try {
     const { id } = req.params;
-    const { branch_id } = req.user;
+    const { branch_id, isSuperAdmin } = req.user;
     
-    const deletedGunny = await Gunny.findOneAndDelete({ _id: id, branch_id });
+    console.log('=== DELETE GUNNY DEBUG ===');
+    console.log('Request params:', req.params);
+    console.log('Request user:', req.user);
+    console.log('User branch_id:', branch_id);
+    console.log('User isSuperAdmin:', isSuperAdmin);
+    
+    // Build query - handle superadmin case
+    let query = { _id: id };
+    
+    if (!isSuperAdmin) {
+      // Regular users can only delete from their assigned branch
+      query.branch_id = branch_id;
+    }
+    // Superadmin can delete from any branch - no branch restriction needed
+    
+    console.log('Final delete query:', JSON.stringify(query, null, 2));
+    
+    const deletedGunny = await Gunny.findOneAndDelete(query);
     
     if (!deletedGunny) {
+      console.log('No gunny record found with query:', query);
       return res.status(404).json({ message: 'Gunny record not found' });
     }
     
+    console.log('Successfully deleted gunny record:', deletedGunny._id);
     res.json({ message: 'Gunny record deleted successfully' });
   } catch (error) {
     console.error('Error deleting gunny record:', error);

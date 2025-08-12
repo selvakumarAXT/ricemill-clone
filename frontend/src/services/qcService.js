@@ -1,38 +1,36 @@
 import { createAxiosInstance } from '../utils/apiUtils';
 
-// Gunny API service
-const gunnyService = {
-  // Get all gunny records
-  getAllGunny: async () => {
+const qcService = {
+  // Get all QC records
+  getAllQC: async (branch_id = '') => {
     try {
-      const response = await createAxiosInstance().get('/gunny');
+      const params = branch_id ? { branch_id } : {};
+      const response = await createAxiosInstance().get('/qc', { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  // Get single gunny record
-  getGunnyById: async (id) => {
+  // Get single QC record
+  getQCById: async (id) => {
     try {
-      const response = await createAxiosInstance().get(`/gunny/${id}`);
+      const response = await createAxiosInstance().get(`/qc/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  // Create new gunny record
-  createGunny: async (gunnyData, files = []) => {
+  // Create new QC record
+  createQC: async (qcData, files = []) => {
     try {
       const formData = new FormData();
       
-      // Add gunny data
-      Object.keys(gunnyData).forEach(key => {
-        if (key === 'gunny' || key === 'paddy') {
-          formData.append(key, JSON.stringify(gunnyData[key]));
-        } else {
-          formData.append(key, gunnyData[key]);
+      // Add QC data
+      Object.keys(qcData).forEach(key => {
+        if (qcData[key] !== null && qcData[key] !== undefined) {
+          formData.append(key, qcData[key]);
         }
       });
       
@@ -43,7 +41,7 @@ const gunnyService = {
         });
       }
       
-      const response = await createAxiosInstance().post('/gunny', formData, {
+      const response = await createAxiosInstance().post('/qc', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -54,17 +52,15 @@ const gunnyService = {
     }
   },
 
-  // Update gunny record
-  updateGunny: async (id, gunnyData, files = []) => {
+  // Update QC record
+  updateQC: async (id, qcData, files = []) => {
     try {
       const formData = new FormData();
       
-      // Add gunny data
-      Object.keys(gunnyData).forEach(key => {
-        if (key === 'gunny' || key === 'paddy') {
-          formData.append(key, JSON.stringify(gunnyData[key]));
-        } else {
-          formData.append(key, gunnyData[key]);
+      // Add QC data
+      Object.keys(qcData).forEach(key => {
+        if (qcData[key] !== null && qcData[key] !== undefined) {
+          formData.append(key, qcData[key]);
         }
       });
       
@@ -75,7 +71,7 @@ const gunnyService = {
         });
       }
       
-      const response = await createAxiosInstance().put(`/gunny/${id}`, formData, {
+      const response = await createAxiosInstance().put(`/qc/${id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -86,29 +82,30 @@ const gunnyService = {
     }
   },
 
-  // Delete gunny record
-  deleteGunny: async (id) => {
+  // Delete QC record
+  deleteQC: async (id) => {
     try {
-      const response = await createAxiosInstance().delete(`/gunny/${id}`);
+      const response = await createAxiosInstance().delete(`/qc/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  // Get gunny statistics
-  getGunnyStats: async () => {
+  // Get QC statistics
+  getQCStats: async (branch_id = '') => {
     try {
-      const response = await createAxiosInstance().get('/gunny/stats');
+      const params = branch_id ? { branch_id } : {};
+      const response = await createAxiosInstance().get('/qc/stats', { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  // Helper function to format gunny data for frontend
-  formatGunnyResponse: (gunnyData) => {
-    // Format issueDate for HTML date input (YYYY-MM-DD)
+  // Helper function to format QC data for frontend
+  formatQCResponse: (qcData) => {
+    // Format sampleDate for HTML date input (YYYY-MM-DD)
     const formatDateForInput = (date) => {
       if (!date) return '';
       const dateObj = new Date(date);
@@ -117,10 +114,10 @@ const gunnyService = {
     };
 
     return {
-      ...gunnyData,
-      issueDate: formatDateForInput(gunnyData.issueDate),
+      ...qcData,
+      sampleDate: formatDateForInput(qcData.sampleDate),
     };
   }
 };
 
-export default gunnyService; 
+export default qcService;

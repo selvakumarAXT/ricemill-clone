@@ -17,6 +17,7 @@ import gunnyService from "../services/gunnyService";
 import gunnyAggregationService from "../services/gunnyAggregationService";
 import branchService from "../services/branchService";
 import { formatWeight } from "../utils/calculations";
+import { PADDY_VARIETIES } from "../utils/constants";
 
 const GunnyManagement = () => {
   const { user } = useSelector((state) => state.auth);
@@ -68,17 +69,7 @@ const GunnyManagement = () => {
 
 
 
-  // Paddy varieties options
-  const PADDY_VARIETIES = ["A", "C"];
 
-  // Paddy sources
-  const PADDY_SOURCES = [
-    "Local Farmers",
-    "Traders",
-    "Cooperative Societies",
-    "Government Procurement",
-    "Other",
-  ];
 
   const initialGunnyForm = {
     issueDate: "",
@@ -223,6 +214,7 @@ const GunnyManagement = () => {
     setShowGunnyModal(false);
     setEditingGunny(null);
     setGunnyForm(initialGunnyForm);
+    setSelectedFiles([]);
   };
 
   const handleGunnyFormChange = (e) => {
@@ -254,13 +246,15 @@ const GunnyManagement = () => {
     try {
       setLoading(true);
       if (editingGunny) {
-        await gunnyService.updateGunny(editingGunny._id, gunnyForm);
+        await gunnyService.updateGunny(editingGunny._id, gunnyForm, selectedFiles);
       } else {
-        await gunnyService.createGunny(gunnyForm);
+        await gunnyService.createGunny(gunnyForm, selectedFiles);
       }
       closeGunnyModal();
       fetchGunnyData();
       fetchGunnyStats();
+      // Clear selected files after successful save
+      setSelectedFiles([]);
     } catch (error) {
       console.error('Error saving gunny:', error);
     } finally {
@@ -272,11 +266,26 @@ const GunnyManagement = () => {
     if (window.confirm("Are you sure you want to delete this gunny record?")) {
       try {
         setLoading(true);
-        await gunnyService.deleteGunny(gunnyId);
+        console.log('Attempting to delete gunny with ID:', gunnyId);
+        
+        // Log the current user context
+        console.log('Current user:', user);
+        console.log('Current branch ID:', currentBranchId);
+        
+        const result = await gunnyService.deleteGunny(gunnyId);
+        console.log('Delete result:', result);
+        
+        // Show success message
+        alert('Gunny record deleted successfully!');
+        
+        // Refresh data
         fetchGunnyData();
         fetchGunnyStats();
+        fetchAllGunnyData();
       } catch (error) {
         console.error('Error deleting gunny:', error);
+        // Show error message to user
+        alert(`Error deleting gunny record: ${error.message || 'Unknown error'}`);
       } finally {
         setLoading(false);
       }
@@ -1311,13 +1320,14 @@ const GunnyManagement = () => {
                 onChange={handleGunnyFormChange}
                 required
               />
-              <FormSelect
+              <FormInput
                 label="Paddy From"
                 name="paddyFrom"
+                type="text"
                 value={gunnyForm.paddyFrom}
                 onChange={handleGunnyFormChange}
-                options={PADDY_SOURCES.map(source => ({ value: source, label: source }))}
                 required
+                placeholder="Enter paddy source (e.g., farmer name, location, trader, etc.)"
               />
               <FormSelect
                 label="Paddy Variety"

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const gunnyController = require('../controllers/gunnyController');
 const { protect } = require('../middleware/auth');
+const { uploadMultiple } = require('../middleware/upload');
 
 // Apply auth middleware to all routes
 router.use(protect);
@@ -16,10 +17,10 @@ router.get('/stats', gunnyController.getGunnyStats);
 router.get('/:id', gunnyController.getGunnyById);
 
 // Create new gunny record
-router.post('/', gunnyController.createGunny);
+router.post('/', uploadMultiple, gunnyController.createGunny);
 
 // Update gunny record
-router.put('/:id', gunnyController.updateGunny);
+router.put('/:id', uploadMultiple, gunnyController.updateGunny);
 
 // Delete gunny record
 router.delete('/:id', gunnyController.deleteGunny);

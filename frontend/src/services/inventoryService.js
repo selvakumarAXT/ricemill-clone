@@ -26,7 +26,57 @@ const inventoryService = {
       throw error.response?.data || error.message;
     }
   },
-  // Add other methods as needed (create, update, delete, etc.)
+
+  // Get single inventory record
+  getInventoryById: async (id) => {
+    try {
+      const response = await api.get(`/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Create new inventory record
+  createInventory: async (inventoryData) => {
+    try {
+      const response = await api.post('/', inventoryData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Update inventory record
+  updateInventory: async (id, inventoryData) => {
+    try {
+      const response = await api.put(`/${id}`, inventoryData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Delete inventory record
+  deleteInventory: async (id) => {
+    try {
+      const response = await api.delete(`/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get inventory statistics
+  getInventoryStats: async (branch_id = '') => {
+    try {
+      const params = branch_id ? { branch_id } : {};
+      const response = await api.get('/stats', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  }
 };
 
 export default inventoryService; 

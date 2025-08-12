@@ -78,6 +78,7 @@ app.use('/api/documents', require('./routes/documents'));
 
 // Sales Invoice routes
 app.use('/api/sales-invoices', require('./routes/salesInvoices'));
+app.use('/api/qc', require('./routes/qc'));
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

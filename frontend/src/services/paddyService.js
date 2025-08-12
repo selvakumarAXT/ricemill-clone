@@ -22,23 +22,153 @@ export const getPaddyById = async (id) => {
   }
 };
 
-// Create new paddy record
-export const createPaddy = async (paddyData) => {
+// Test paddy API endpoint
+export const testPaddyAPI = async () => {
   try {
     const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.post('/paddy', paddyData);
+    console.log('Testing paddy API endpoint...');
+    
+    const response = await axiosInstance.post('/paddy/test', {
+      test: 'data',
+      message: 'Testing paddy creation'
+    });
+    
+    console.log('Test response:', response.data);
     return response.data;
   } catch (error) {
+    console.error('Error testing paddy API:', error);
+    throw error.response?.data || { message: 'Failed to test paddy API' };
+  }
+};
+
+// Test simple endpoint without middleware
+export const testSimplePaddyAPI = async () => {
+  try {
+    const axiosInstance = createAxiosInstance();
+    console.log('Testing simple paddy API endpoint...');
+    
+    const response = await axiosInstance.post('/paddy/simple-test', {
+      test: 'simple data',
+      message: 'Testing simple endpoint'
+    });
+    
+    console.log('Simple test response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error testing simple paddy API:', error);
+    throw error.response?.data || { message: 'Failed to test simple paddy API' };
+  }
+};
+
+// Test paddy creation endpoint
+export const testPaddyCreate = async () => {
+  try {
+    const axiosInstance = createAxiosInstance();
+    console.log('Testing paddy creation endpoint...');
+    
+    const response = await axiosInstance.post('/paddy/test-create');
+    
+    console.log('Test create response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error testing paddy create:', error);
+    throw error.response?.data || { message: 'Failed to test paddy create' };
+  }
+};
+
+// Create new paddy record
+export const createPaddy = async (paddyData, files = []) => {
+  try {
+    const axiosInstance = createAxiosInstance();
+    
+    console.log('Creating paddy with data:', paddyData);
+    console.log('Files to upload:', files);
+    
+    if (files && files.length > 0) {
+      // If files are provided, use FormData
+      const formData = new FormData();
+      
+      console.log('Building FormData...');
+      
+      // Add all paddy data as individual fields
+      Object.keys(paddyData).forEach(key => {
+        if (key === 'gunny' || key === 'paddy') {
+          // Handle nested objects
+          Object.keys(paddyData[key]).forEach(nestedKey => {
+            const fieldName = `${key}[${nestedKey}]`;
+            const fieldValue = paddyData[key][nestedKey];
+            console.log(`Adding field: ${fieldName} = ${fieldValue}`);
+            formData.append(fieldName, fieldValue);
+          });
+        } else {
+          console.log(`Adding field: ${key} = ${paddyData[key]}`);
+          formData.append(key, paddyData[key]);
+        }
+      });
+      
+      // Add files
+      files.forEach((file, index) => {
+        console.log(`Adding file ${index}:`, file.name, file.size);
+        formData.append('documents', file);
+      });
+      
+      console.log('FormData built, sending request...');
+      
+      const response = await axiosInstance.post('/paddy', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } else {
+      // No files, send as regular JSON
+      console.log('No files, sending as JSON...');
+      const response = await axiosInstance.post('/paddy', paddyData);
+      return response.data;
+    }
+  } catch (error) {
+    console.error('Error in createPaddy service:', error);
     throw error.response?.data || { message: 'Failed to create paddy record' };
   }
 };
 
 // Update paddy record
-export const updatePaddy = async (id, paddyData) => {
+export const updatePaddy = async (id, paddyData, files = []) => {
   try {
     const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.put(`/paddy/${id}`, paddyData);
-    return response.data;
+    
+    if (files && files.length > 0) {
+      // If files are provided, use FormData
+      const formData = new FormData();
+      
+      // Add all paddy data as individual fields
+      Object.keys(paddyData).forEach(key => {
+        if (key === 'gunny' || key === 'paddy') {
+          // Handle nested objects
+          Object.keys(paddyData[key]).forEach(nestedKey => {
+            formData.append(`${key}[${nestedKey}]`, paddyData[key][nestedKey]);
+          });
+        } else {
+          formData.append(key, paddyData[key]);
+        }
+      });
+      
+      // Add files
+      files.forEach((file, index) => {
+        formData.append('documents', file);
+      });
+      
+      const response = await axiosInstance.put(`/paddy/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } else {
+      // No files, send as regular JSON
+      const response = await axiosInstance.put(`/paddy/${id}`, paddyData);
+      return response.data;
+    }
   } catch (error) {
     throw error.response?.data || { message: 'Failed to update paddy record' };
   }

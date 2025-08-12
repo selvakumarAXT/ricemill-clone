@@ -20,6 +20,7 @@ const GroupedTable = ({
   onSelectAll = null,
   onSelectRow = null,
   tableTitle = '',
+  childFilters,
 }) => {
   const [expanded, setExpanded] = useState(null); // NEW: Track expanded row
 
@@ -48,6 +49,9 @@ const GroupedTable = ({
       <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
         <h3 className="text-lg font-semibold text-gray-800">{tableTitle}</h3>
         <p className="text-sm text-gray-600 mt-1">Total: {paginationData?.total || data.length} records</p>
+        <div className="mt-4">
+          {childFilters}
+        </div>
       </div>
       
       <div className="overflow-x-auto">

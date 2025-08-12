@@ -149,14 +149,30 @@ const updateRiceDeposit = async (req, res) => {
 const deleteRiceDeposit = async (req, res) => {
   try {
     const { id } = req.params;
-    const { branch_id } = req.user;
+    const { branch_id, isSuperAdmin } = req.user;
     
-    const deletedRiceDeposit = await RiceDeposit.findOneAndDelete({ _id: id, branch_id });
+    // Build query - handle superadmin case
+    let query = { _id: id };
+    
+    if (!isSuperAdmin) {
+      // Regular users can only delete from their assigned branch
+      query.branch_id = branch_id;
+    }
+    // Superadmin can delete from any branch - no branch restriction needed
+    
+    console.log('=== DELETE RICE DEPOSIT DEBUG ===');
+    console.log('Request params:', req.params);
+    console.log('User info:', { branch_id, isSuperAdmin });
+    console.log('Final delete query:', JSON.stringify(query, null, 2));
+    
+    const deletedRiceDeposit = await RiceDeposit.findOneAndDelete(query);
     
     if (!deletedRiceDeposit) {
+      console.log('No rice deposit record found with query:', query);
       return res.status(404).json({ message: 'Rice deposit record not found' });
     }
     
+    console.log('Successfully deleted rice deposit record:', deletedRiceDeposit._id);
     res.json({ message: 'Rice deposit record deleted successfully' });
   } catch (error) {
     console.error('Error deleting rice deposit:', error);

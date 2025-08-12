@@ -167,7 +167,7 @@ db.once('open', async () => {
         issueDate: new Date('2024-01-15'),
         issueMemo: 'PM-001-2024',
         lorryNumber: 'TN-01-AB-1234',
-        paddyFrom: 'Muthu Kumar',
+        paddyFrom: 'Local Farmers',
         paddyVariety: 'A',
         moisture: 12.5,
         gunny: {
@@ -188,7 +188,7 @@ db.once('open', async () => {
         issueDate: new Date('2024-01-20'),
         issueMemo: 'PM-002-2024',
         lorryNumber: 'TN-02-CD-5678',
-        paddyFrom: 'Lakshmi Devi',
+        paddyFrom: 'Traders',
         paddyVariety: 'C',
         moisture: 11.8,
         gunny: {
@@ -209,7 +209,7 @@ db.once('open', async () => {
         issueDate: new Date('2024-01-25'),
         issueMemo: 'PM-003-2024',
         lorryNumber: 'TN-03-EF-9012',
-        paddyFrom: 'Ramesh Singh',
+        paddyFrom: 'Cooperative Societies',
         paddyVariety: 'A',
         moisture: 13.2,
         gunny: {
@@ -281,7 +281,7 @@ db.once('open', async () => {
         issueDate: new Date('2024-01-15'),
         issueMemo: 'GM-001-2024',
         lorryNumber: 'TN-01-AB-1234',
-        paddyFrom: 'Muthu Kumar',
+        paddyFrom: 'Local Farmers',
         paddyVariety: 'A',
         gunny: {
           nb: 180,
@@ -300,7 +300,7 @@ db.once('open', async () => {
         issueDate: new Date('2024-01-20'),
         issueMemo: 'GM-002-2024',
         lorryNumber: 'TN-02-CD-5678',
-        paddyFrom: 'Lakshmi Devi',
+        paddyFrom: 'Traders',
         paddyVariety: 'C',
         gunny: {
           nb: 110,
@@ -319,7 +319,7 @@ db.once('open', async () => {
         issueDate: new Date('2024-01-25'),
         issueMemo: 'GM-003-2024',
         lorryNumber: 'TN-03-EF-9012',
-        paddyFrom: 'Ramesh Singh',
+        paddyFrom: 'Cooperative Societies',
         paddyVariety: 'A',
         gunny: {
           nb: 150,

@@ -97,8 +97,8 @@ exports.validatePaddyData = [
   body('paddyFrom')
     .notEmpty()
     .withMessage('Paddy source is required')
-    .isIn(['Local Farmers', 'Traders', 'Cooperative Societies', 'Government Procurement', 'Other'])
-    .withMessage('Invalid paddy source'),
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Paddy source must be between 1 and 100 characters'),
   body('paddyVariety')
     .notEmpty()
     .withMessage('Paddy variety is required')
