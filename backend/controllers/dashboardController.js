@@ -35,7 +35,7 @@ const getSuperadminDashboard = asyncHandler(async (req, res) => {
       alerts,
       purchaseInvoices
     ] = await Promise.all([
-      getOverviewData(),
+      getOverviewData(req.query),
       getSalesAnalyticsData(req.query),      
       getOutstandingBalancesData(req.query),  
       getProductAnalyticsData(req.query),    
@@ -317,7 +317,17 @@ const getActivityFeed = asyncHandler(async (req, res) => {
 });
 
 // Helper functions
-const getOverviewData = async () => {
+const getOverviewData = async (params = {}) => {
+  const { startDate, endDate } = params;
+  
+  // Use provided dates or default to all data
+  let startDateObj, endDateObj;
+  
+  if (startDate && endDate) {
+    startDateObj = new Date(startDate);
+    endDateObj = new Date(endDate);
+  }
+  
   const [
     paddyStats,
     productionStats,
@@ -326,7 +336,8 @@ const getOverviewData = async () => {
     totalBranches,
     totalUsers,
     totalPurchase,
-    totalIncome
+    totalIncome,
+    totalSales
   ] = await Promise.all([
     Paddy.aggregate([
       { $group: { _id: null, totalWeight: { $sum: '$paddy.weight' }, totalBags: { $sum: '$paddy.bags' } } }
@@ -342,12 +353,15 @@ const getOverviewData = async () => {
     ]),
     Branch.countDocuments({ isActive: true }),
     User.countDocuments({ isActive: true }),
-    // Get total purchase amount from FinancialTransaction
+    // Get total purchase amount from FinancialTransaction with date filter
     FinancialTransaction.aggregate([
       {
         $match: {
           transactionType: 'expense',
-          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance'] }
+          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance'] },
+          ...(startDateObj && endDateObj && {
+            transactionDate: { $gte: startDateObj, $lte: endDateObj }
+          })
         }
       },
       {
@@ -357,11 +371,32 @@ const getOverviewData = async () => {
         }
       }
     ]),
-    // Get total income amount from FinancialTransaction
+    // Get total income amount from FinancialTransaction with date filter
     FinancialTransaction.aggregate([
       {
         $match: {
-          transactionType: 'income'
+          transactionType: 'income',
+          ...(startDateObj && endDateObj && {
+            transactionDate: { $gte: startDateObj, $lte: endDateObj }
+          })
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' }
+        }
+      }
+    ]),
+    // Get total sales amount from FinancialTransaction with date filter
+    FinancialTransaction.aggregate([
+      {
+        $match: {
+          transactionType: 'income',
+          category: { $in: ['rice_sales', 'paddy_sales', 'other_sales', 'sales'] },
+          ...(startDateObj && endDateObj && {
+            transactionDate: { $gte: startDateObj, $lte: endDateObj }
+          })
         }
       },
       {
@@ -381,13 +416,13 @@ const getOverviewData = async () => {
   // Get actual financial data
   const actualPurchase = totalPurchase[0]?.totalAmount || 0;
   const actualIncome = totalIncome[0]?.totalAmount || 0;
+  const actualSales = totalSales[0]?.totalAmount || 0;
 
-  // Calculate revenue and expenses based on actual data
-  const estimatedPricePerKg = 25;
-  const totalRevenue = totalPaddy * estimatedPricePerKg;
-  const totalExpenses = Math.round(totalRevenue * 0.7);
+  // Use real data instead of estimated calculations
+  const totalRevenue = actualSales; // Real sales from invoices
+  const totalExpenses = actualPurchase; // Real expenses from transactions
   const profit = totalRevenue - totalExpenses;
-  const gstAmount = Math.round(totalRevenue * 0.18); // 18% GST
+  const gstAmount = Math.round(actualSales * 0.18); // 18% GST on real sales
 
   return {
     totalPaddy,
@@ -577,22 +612,33 @@ const getSalesAnalyticsData = async (params = {}) => {
 };
 
 const getOutstandingBalancesData = async (params = {}) => {
-  // Get actual outstanding balances from SalesInvoice model
+  const { startDate, endDate } = params;
+  
+  // Use provided dates or default to all data
+  let startDateObj, endDateObj;
+  
+  if (startDate && endDate) {
+    startDateObj = new Date(startDate);
+    endDateObj = new Date(endDate);
+  }
+  
   const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-  const fifteenDaysAgo = new Date(now.getTime() - (15 * 24 * 60 * 60 * 1000));
 
   try {
-    // Get sales invoices with outstanding amounts
-    const salesInvoices = await SalesInvoice.aggregate([
+    // Get sales outstanding from SalesInvoice (customer receivables)
+    const salesOutstandingData = await SalesInvoice.aggregate([
       {
         $match: {
-          status: { $in: ['pending', 'overdue'] }, // Use correct status values
+          status: { $in: ['pending', 'partial', 'overdue'] }, // Unpaid invoices
           dueDate: { $exists: true }
+          // Removed invoiceDate filter - show all outstanding regardless of creation date
         }
       },
       {
         $addFields: {
+          outstandingAmount: {
+            $subtract: ['$totals.grandTotal', { $ifNull: ['$paidAmount', 0] }]
+          },
           daysOverdue: {
             $floor: {
               $divide: [
@@ -600,9 +646,6 @@ const getOutstandingBalancesData = async (params = {}) => {
                 1000 * 60 * 60 * 24
               ]
             }
-          },
-          outstandingAmount: {
-            $subtract: ['$totals.totalAmount', { $ifNull: ['$paidAmount', 0] }]
           }
         }
       },
@@ -646,31 +689,36 @@ const getOutstandingBalancesData = async (params = {}) => {
             }
           }
         }
+      },
+      {
+        $project: {
+          _id: 0,
+          current: 1,
+          overdue_1_15: 1,
+          overdue_16_30: 1,
+          overdue_30_plus: 1
+        }
       }
     ]);
 
-    // Debug logging for outstanding balances
-    // console.log('📊 Outstanding balances query result:', salesInvoices);
-    
-    const salesOutstanding = salesInvoices[0] || {
+    const salesOutstanding = salesOutstandingData[0] || {
       current: 0,
       overdue_1_15: 0,
       overdue_16_30: 0,
       overdue_30_plus: 0
     };
 
-    // Calculate purchase outstanding from FinancialTransaction expenses
-    // This represents unpaid expenses that are overdue
-    const purchaseExpenses = await FinancialTransaction.aggregate([
+    // Get purchase outstanding from FinancialTransaction expense transactions
+    const purchaseOutstandingData = await FinancialTransaction.aggregate([
       {
         $match: {
           transactionType: 'expense',
-          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance', 'transport', 'rent', 'utilities', 'insurance', 'taxes'] },
-          status: 'pending' // Only pending expenses are outstanding
+          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance', 'transport', 'rent', 'utilities', 'insurance', 'taxes'] }
         }
       },
       {
         $addFields: {
+          // Calculate days overdue from transaction date
           daysOverdue: {
             $floor: {
               $divide: [
@@ -721,10 +769,19 @@ const getOutstandingBalancesData = async (params = {}) => {
             }
           }
         }
+      },
+      {
+        $project: {
+          _id: 0,
+          current: 1,
+          overdue_1_15: 1,
+          overdue_16_30: 1,
+          overdue_30_plus: 1
+        }
       }
     ]);
 
-    const purchaseOutstanding = purchaseExpenses[0] || {
+    const purchaseOutstanding = purchaseOutstandingData[0] || {
       current: 0,
       overdue_1_15: 0,
       overdue_16_30: 0,
@@ -757,10 +814,23 @@ const getOutstandingBalancesData = async (params = {}) => {
 
 const getProductAnalyticsData = async (params = {}) => {
   try {
+    const { startDate, endDate } = params;
+    
+    // Build date filter for Production
+    const productionDateFilter = {};
+    if (startDate && endDate) {
+      productionDateFilter.productionDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
     // Get actual product performance data from Production and Inventory models
     const [bestSelling, leastSelling, lowStock] = await Promise.all([
-      // Best selling products (based on production quantity)
+      // Best selling products (based on production quantity) - WITH DATE FILTER
       Production.aggregate([
+        // ✅ ADD DATE FILTER HERE
+        ...(Object.keys(productionDateFilter).length > 0 ? [{ $match: productionDateFilter }] : []),
         {
           $group: {
             _id: '$name', // Fixed: Production model uses 'name' field
@@ -771,8 +841,9 @@ const getProductAnalyticsData = async (params = {}) => {
         { $limit: 5 }
       ]),
       
-      // Least selling products (based on production quantity)
+      // Least selling products (based on production quantity) - WITH DATE FILTER
       Production.aggregate([
+        ...(Object.keys(productionDateFilter).length > 0 ? [{ $match: productionDateFilter }] : []),
         {
           $group: {
             _id: '$name', // Fixed: Production model uses 'name' field
@@ -783,7 +854,7 @@ const getProductAnalyticsData = async (params = {}) => {
         { $limit: 5 }
       ]),
       
-      // Low stock items (negative or low inventory)
+      // Low stock items (negative or low inventory) - NO DATE FILTER NEEDED (current inventory)
       Inventory.aggregate([
         {
           $match: {
@@ -843,10 +914,23 @@ const getProductAnalyticsData = async (params = {}) => {
 
 const getCustomerAnalyticsData = async (params = {}) => {
   try {
+    const { startDate, endDate } = params;
+    
+    // Build date filter for SalesInvoice
+    const salesDateFilter = {};
+    if (startDate && endDate) {
+      salesDateFilter.invoiceDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
     // Get actual customer data from SalesInvoice model
-    const [topCustomers, topVendors] = await Promise.all([
-      // Top customers by total purchase amount
+    const [topCustomers] = await Promise.all([
+      // Top customers by total purchase amount - WITH DATE FILTER
       SalesInvoice.aggregate([
+        // ✅ ADD DATE FILTER HERE
+        ...(Object.keys(salesDateFilter).length > 0 ? [{ $match: salesDateFilter }] : []),
         {
           $group: {
             _id: '$customer.name', // Fixed: Customer name is nested under customer.name
@@ -855,23 +939,18 @@ const getCustomerAnalyticsData = async (params = {}) => {
         },
         { $sort: { totalAmount: -1 } },
         { $limit: 5 }
-      ]),
-      
-      // Top vendors (for now, using mock data since vendor model might not exist)
-      []
+      ])
     ]);
+
+    // Get vendor data separately using the dedicated function
+    const vendorData = await getVendorAnalyticsData(params);
 
     const result = {
       topCustomers: topCustomers.map(customer => ({
         name: customer._id || 'Unknown Customer',
         amount: customer.totalAmount
       })),
-      topVendors: [
-        { name: 'ESWAR & CO', amount: 1750000 },
-        { name: 'Priyanka', amount: 410000 },
-        { name: 'Vikram Selvam', amount: 120000 },
-        { name: 'Venkatesan', amount: 100000 }
-      ]
+      topVendors: vendorData.topVendors
     };
 
     return result;
@@ -882,6 +961,57 @@ const getCustomerAnalyticsData = async (params = {}) => {
       topCustomers: [
         { name: 'No Data Available', amount: 0 }
       ],
+      topVendors: [
+        { name: 'No Data Available', amount: 0 }
+      ]
+    };
+  }
+};
+
+const getVendorAnalyticsData = async (params = {}) => {
+  try {
+    const { startDate, endDate } = params;
+    
+    // Build date filter for FinancialTransaction
+    const vendorDateFilter = {};
+    if (startDate && endDate) {
+      vendorDateFilter.transactionDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    // Get top vendors by total expense amount from FinancialTransaction
+    const topVendors = await FinancialTransaction.aggregate([
+      // ✅ ADD DATE FILTER HERE
+      ...(Object.keys(vendorDateFilter).length > 0 ? [{ $match: vendorDateFilter }] : []),
+      // Only expense transactions (payments to vendors)
+      { $match: { transactionType: 'expense' } },
+      // Group by vendor name
+      {
+        $group: {
+          _id: '$vendor',
+          totalAmount: { $sum: '$amount' }
+        }
+      },
+      // Sort by highest amount
+      { $sort: { totalAmount: -1 } },
+      // Limit to top 5
+      { $limit: 5 }
+    ]);
+
+    const result = {
+      topVendors: topVendors.map(vendor => ({
+        name: vendor._id || 'Unknown Vendor',
+        amount: vendor.totalAmount
+      }))
+    };
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching vendor analytics:', error);
+    // Return default data if there's an error
+    return {
       topVendors: [
         { name: 'No Data Available', amount: 0 }
       ]
@@ -957,8 +1087,20 @@ const getInvoiceAnalyticsData = async (params = {}) => {
 
 const getGeographicalSalesData = async (params = {}) => {
   try {
+    const { startDate, endDate } = params;
+    
+    // Build date filter
+    const dateFilter = {};
+    if (startDate && endDate) {
+      dateFilter.invoiceDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
     // Get actual geographical sales data from SalesInvoice model
     const geographicalData = await SalesInvoice.aggregate([
+      ...(Object.keys(dateFilter).length > 0 ? [{ $match: dateFilter }] : []),
       {
         $group: {
           _id: '$customer.placeOfSupply', // Use the correct field path
@@ -1098,8 +1240,6 @@ const getPurchaseInvoiceDueData = async (params = {}) => {
       { $sort: { transactionDate: 1 } },
       { $limit: 5 }
     ]);
-
-    console.log('📊 Purchase invoice due raw data:', pendingPurchases);
 
     return pendingPurchases.length > 0 ? pendingPurchases : [
       {
