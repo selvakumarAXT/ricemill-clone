@@ -1,7 +1,7 @@
 // Paddy varieties
 export const PADDY_VARIETIES = ["A", "C"];
 
-
+export const KG="kg"
 
 // Bag weight options
 export const BAG_WEIGHT_OPTIONS = [
@@ -39,7 +39,7 @@ export const QUALITY_OPTIONS = [
 
 // Unit options
 export const UNIT_OPTIONS = [
-  'kg',
+  KG,
   'tons',
   'bags',
   'pieces',

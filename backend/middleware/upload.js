@@ -53,7 +53,9 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // Extract module and branch information
     const module = req.body.module || req.params.module || req.query.module || 'documents';
-    const branchId = req.body.branchId || req.params.branchId || req.query.branchId || req.user?.branchId;
+    const branchId = req.body.branchId || req.params.branchId || req.query.branchId || req.user?.branch_id || req.user?.branchId;
+    
+    console.log('📁 Upload destination - Module:', module, 'Branch ID:', branchId);
     
     // Determine the upload directory based on module and branch
     let uploadDir = 'uploads/documents'; // default directory
@@ -95,9 +97,12 @@ const storage = multer.diskStorage({
       uploadDir = path.join('uploads', moduleDir);
     }
     
+    console.log('📁 Final upload directory:', uploadDir);
+    
     // Ensure directory exists
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
+      console.log('📁 Created directory:', uploadDir);
     }
     
     cb(null, uploadDir);

@@ -92,33 +92,33 @@ router.post('/upload/multiple', protect, uploadMultiple('files', 10), (req, res)
 // Upload files for specific module with branch context
 router.post('/upload/:module', protect, uploadMultiple('files', 10), (req, res) => {
   try {
-    console.log('Upload route hit for module:', req.params.module);
-    console.log('Request body:', req.body);
-    console.log('Request files:', req.files);
-    console.log('User:', req.user);
+    console.log('🚀 Upload route hit for module:', req.params.module);
+    console.log('📋 Request body:', req.body);
+    console.log('📁 Request files:', req.files);
+    console.log('👤 User:', req.user);
     
     const { module } = req.params;
     const branchId = req.body.branchId || req.user?.branch_id || req.user?.branchId;
     
-    console.log('Module:', module);
-    console.log('Branch ID:', branchId);
+    console.log('🏷️ Module:', module);
+    console.log('🏢 Branch ID:', branchId);
     
     if (!req.files || req.files.length === 0) {
-      console.log('No files received');
+      console.log('❌ No files received');
       return res.status(400).json({
         success: false,
         message: 'No files uploaded'
       });
     }
 
-    console.log('Processing files:', req.files.length);
+    console.log('✅ Processing files:', req.files.length);
     const files = req.files.map(file => {
       const fileInfo = getFileInfo(file, branchId);
-      console.log('File info:', fileInfo);
+      console.log('📄 File info:', fileInfo);
       return fileInfo;
     });
     
-    console.log('Upload successful, returning files:', files);
+    console.log('🎉 Upload successful, returning files:', files);
     res.status(200).json({
       success: true,
       message: `Files uploaded successfully for ${module}`,
@@ -127,7 +127,7 @@ router.post('/upload/:module', protect, uploadMultiple('files', 10), (req, res) 
       files: files
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('❌ Upload error:', error);
     res.status(500).json({
       success: false,
       message: 'Error uploading files'
