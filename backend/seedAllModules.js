@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const User = require('./models/User');
 const Branch = require('./models/Branch');
 const Paddy = require('./models/Paddy');
@@ -36,11 +35,10 @@ db.once('open', async () => {
     
     // Create Superadmin
     console.log('👑 Creating Superadmin...');
-    const hashedPassword = await bcrypt.hash('superadmin123', 10);
     const superadmin = await User.create({
       name: 'Super Admin',
       email: 'superadmin@ricemill.com',
-      password: hashedPassword,
+      password: 'superadmin123', // Plain text - model will hash it
       role: 'superadmin',
       isSuperAdmin: true,
       phone: '+1234567890',
@@ -49,10 +47,20 @@ db.once('open', async () => {
     });
     console.log('✅ Superadmin created:', superadmin.email);
     
-    // Create Branches
-    console.log('🏢 Creating Branches...');
-    const branches = await Branch.create([
+    // Create or Update Branches
+    console.log('🏢 Creating/Updating Branches...');
+    const branches = [];
+    
+    // Fixed ObjectIds for consistent branch references
+    const mainBranchId = new mongoose.Types.ObjectId('6899e6f1261ba5a6420501f7');
+    const northBranchId = new mongoose.Types.ObjectId('6899e6f1261ba5a6420501f8');
+    const southBranchId = new mongoose.Types.ObjectId('6899e6f1261ba5a6420501f9');
+    
+    // Main Rice Mill
+    const mainBranch = await Branch.findOneAndUpdate(
+      { millCode: 'MRM001' },
       {
+        _id: mainBranchId,
         name: 'Main Rice Mill',
         millCode: 'MRM001',
         gstn: '33AABCM1234A1Z5',
@@ -67,7 +75,15 @@ db.once('open', async () => {
         manager: superadmin._id,
         isActive: true
       },
+      { upsert: true, new: true }
+    );
+    branches.push(mainBranch);
+    
+    // North Branch
+    const northBranch = await Branch.findOneAndUpdate(
+      { millCode: 'NRB002' },
       {
+        _id: northBranchId,
         name: 'North Branch',
         millCode: 'NRB002',
         gstn: '33AABCN1234A1Z6',
@@ -82,7 +98,15 @@ db.once('open', async () => {
         manager: superadmin._id,
         isActive: true
       },
+      { upsert: true, new: true }
+    );
+    branches.push(northBranch);
+    
+    // South Branch
+    const southBranch = await Branch.findOneAndUpdate(
+      { millCode: 'SRB003' },
       {
+        _id: southBranchId,
         name: 'South Branch',
         millCode: 'SRB003',
         gstn: '33AABCS1234A1Z7',
@@ -96,9 +120,16 @@ db.once('open', async () => {
         },
         manager: superadmin._id,
         isActive: true
-      }
-    ]);
-    console.log('✅ Branches created:', branches.length);
+      },
+      { upsert: true, new: true }
+    );
+    branches.push(southBranch);
+    
+    console.log('✅ Branches created/updated:', branches.length);
+    console.log('📍 Branch IDs for reference:');
+    console.log(`   Main Branch: ${mainBranch._id}`);
+    console.log(`   North Branch: ${northBranch._id}`);
+    console.log(`   South Branch: ${southBranch._id}`);
     
     // Create Regular Users
     console.log('👥 Creating Regular Users...');
@@ -106,7 +137,7 @@ db.once('open', async () => {
       {
         name: 'Branch Manager 1',
         email: 'manager1@ricemill.com',
-        password: await bcrypt.hash('manager123', 10),
+        password: 'manager123',
         role: 'manager',
         branch_id: branches[0]._id,
         phone: '+91-9876543210',
@@ -115,7 +146,7 @@ db.once('open', async () => {
       {
         name: 'Branch Manager 2',
         email: 'manager2@ricemill.com',
-        password: await bcrypt.hash('manager123', 10),
+        password: 'manager123',
         role: 'manager',
         branch_id: branches[1]._id,
         phone: '+91-9876543211',
@@ -124,7 +155,7 @@ db.once('open', async () => {
       {
         name: 'Operator 1',
         email: 'operator1@ricemill.com',
-        password: await bcrypt.hash('operator123', 10),
+        password: 'operator123',
         role: 'manager',
         branch_id: branches[0]._id,
         phone: '+91-9876543212',
@@ -458,4 +489,4 @@ db.once('open', async () => {
     mongoose.connection.close();
     console.log('🔌 Database connection closed');
   }
-}); 
+});

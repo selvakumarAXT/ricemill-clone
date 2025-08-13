@@ -32,11 +32,11 @@ const Dashboard = () => {
       let response;
       
       if (user?.role === 'superadmin') {
-        // Fetch superadmin dashboard data
+        // Fetch superadmin dashboard data with optional branch filtering
         response = await dashboardService.getDashboardData({
           period: selectedPeriod,
           startDate: dateRange.startDate,
-          endDate: dateRange.endDate
+          endDate: dateRange.endDate,
         });
       } else {
         // Fetch branch-specific dashboard data
@@ -52,7 +52,6 @@ const Dashboard = () => {
       }
 
       if (response.success) {
-
         setDashboardData(response.data);
         setLastUpdated(new Date());
       } else {
@@ -191,7 +190,15 @@ const Dashboard = () => {
   };
 
   // Generate dynamic month labels for charts
-  const monthLabels = generateMonthLabels(salesData.length);
+  // Use real month data from backend if available, otherwise fallback to generated labels
+  const monthLabels = dashboardData.sales?.months || generateMonthLabels(salesData.length);
+  
+  // Debug: Log the month data being used
+  console.log('🔍 Month Data Debug:');
+  console.log('  Backend months:', dashboardData.sales?.months);
+  console.log('  Generated months:', generateMonthLabels(salesData.length));
+  console.log('  Final monthLabels:', monthLabels);
+  console.log('  salesData length:', salesData.length);
 
   const {
     salesOutstanding = {
@@ -409,6 +416,30 @@ const Dashboard = () => {
               </Button>
             </div>
           </div>
+
+          {/* Branch Filter Indicator */}
+          {user?.role === 'superadmin' && currentBranchId && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-blue-800">
+                    Branch Filter Active
+                  </span>
+                  <span className="text-sm text-blue-600">
+                    Showing data for selected branch only
+                  </span>
+                </div>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => window.location.reload()} 
+                  className="px-3 py-1.5 text-sm text-blue-700 border-blue-300 hover:bg-blue-100"
+                >
+                  Clear Filter
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

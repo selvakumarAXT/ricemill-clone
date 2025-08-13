@@ -89,6 +89,23 @@ db.once('open', async () => {
     
     console.log(`✅ Found ${branches.length} branches and ${users.length} users`);
     
+    // Log branch details for verification
+    branches.forEach(branch => {
+      console.log(`📍 Branch: ${branch.name} (${branch.millCode}) - ID: ${branch._id}`);
+    });
+    
+    // Get specific branch references for proper data distribution
+    const mainBranch = branches.find(b => b.millCode === 'MRM001');
+    const northBranch = branches.find(b => b.millCode === 'NRB002');
+    const southBranch = branches.find(b => b.millCode === 'SRB003');
+    
+    if (!mainBranch || !northBranch || !southBranch) {
+      console.log('❌ Required branches not found. Please check your branch setup.');
+      return;
+    }
+    
+    console.log('✅ All required branches found for data seeding');
+    
     // Create Bag Weight Options if they don't exist
     console.log('⚖️ Creating Bag Weight Options...');
     const existingBagWeights = await BagWeightOption.find({});
@@ -98,21 +115,21 @@ db.once('open', async () => {
           weight: 25,
           label: '25 kg',
           isActive: true,
-          branch_id: branches[0]._id,
+          branch_id: mainBranch._id,
           createdBy: superadmin._id
         },
         {
           weight: 50,
           label: '50 kg',
           isActive: true,
-          branch_id: branches[0]._id,
+          branch_id: mainBranch._id,
           createdBy: superadmin._id
         },
         {
           weight: 100,
           label: '100 kg',
           isActive: true,
-          branch_id: branches[0]._id,
+          branch_id: mainBranch._id,
           createdBy: superadmin._id
         }
       ]);
@@ -131,6 +148,24 @@ db.once('open', async () => {
       const monthDate = new Date(2025, i, 1); // 0=Jan, 1=Feb, ..., 6=Jul
       months.push(monthDate);
     }
+
+    // Better distribution strategy - ensure each branch gets balanced data
+    const branchArray = [mainBranch, northBranch, southBranch];
+    let branchIndex = 0;
+    
+    const getNextBranch = () => {
+      const currentBranch = branchArray[branchIndex];
+      branchIndex = (branchIndex + 1) % branchArray.length;
+      return currentBranch;
+    };
+    
+    // Helper function to generate random dates within a month
+    const getRandomDateInMonth = (monthDate) => {
+      const startOfMonth = new Date(monthDate);
+      const endOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+      const randomTime = startOfMonth.getTime() + Math.random() * (endOfMonth.getTime() - startOfMonth.getTime());
+      return new Date(randomTime);
+    };
     
     // South Indian states for geographical data
     const southIndianStates = [
@@ -182,8 +217,7 @@ db.once('open', async () => {
       const invoicesPerMonth = Math.floor(Math.random() * 11) + 15; // 15-25
       
       for (let i = 0; i < invoicesPerMonth; i++) {
-        const invoiceDate = new Date(monthDate);
-        invoiceDate.setDate(Math.floor(Math.random() * 28) + 1);
+        const invoiceDate = getRandomDateInMonth(monthDate);
         
         // Determine status first, then calculate due date accordingly
         const status = Math.random() > 0.3 ? 'paid' : (Math.random() > 0.5 ? 'pending' : 'overdue');
@@ -239,7 +273,8 @@ db.once('open', async () => {
           status: status,
           paidAmount: paidAmount,
           paidDate: status === 'paid' ? invoiceDate : null,
-          branch_id: branches[Math.floor(Math.random() * branches.length)]._id,
+          // Distribute invoices across branches for testing
+          branch_id: getNextBranch()._id,
           createdBy: users.length > 0 ? users[Math.floor(Math.random() * users.length)]._id : superadmin._id,
           createdBy_name: 'System Generated'
         });
@@ -251,8 +286,7 @@ db.once('open', async () => {
       const transactionsPerMonth = Math.floor(Math.random() * 16) + 20; // 20-35
       
       for (let i = 0; i < transactionsPerMonth; i++) {
-        const transactionDate = new Date(monthDate);
-        transactionDate.setDate(Math.floor(Math.random() * 28) + 1);
+        const transactionDate = getRandomDateInMonth(monthDate);
         
         const transactionType = Math.random() > 0.4 ? 'income' : 'expense';
         const categories = transactionType === 'income' 
@@ -284,7 +318,8 @@ db.once('open', async () => {
           customer: customer,
           reference: generateInvoiceNumber(transactionType, category, transactionDate, totalFinancialTransactions + 1),
           status: transactionStatus,
-          branch_id: branches[Math.floor(Math.random() * branches.length)]._id,
+          // Distribute transactions across branches for testing
+          branch_id: getNextBranch()._id,
           createdBy: users.length > 0 ? users[Math.floor(Math.random() * users.length)]._id : superadmin._id
         });
         
@@ -295,23 +330,21 @@ db.once('open', async () => {
       const productionPerMonth = Math.floor(Math.random() * 8) + 8; // 8-15
       
       for (let i = 0; i < productionPerMonth; i++) {
-        const productionDate = new Date(monthDate);
-        productionDate.setDate(Math.floor(Math.random() * 28) + 1);
+        const productionDate = getRandomDateInMonth(monthDate);
         
         const riceVariety = riceVarieties[Math.floor(Math.random() * riceVarieties.length)];
-        const quantity = Math.floor(Math.random() * 2000) + 500; // 500-2500 kg
-        
         await Production.create({
           name: riceVariety,
           description: `Production of ${riceVariety} rice`,
-          quantity: quantity,
+          quantity: Math.floor(Math.random() * 2000) + 1000, // 1000-3000 kg
           unit: 'kg',
           productionDate: productionDate,
-          quality: ['Excellent', 'Good', 'Average', 'Poor'][Math.floor(Math.random() * 3)],
-          status: 'Completed',
+          quality: ['Excellent', 'Good', 'Average'][Math.floor(Math.random() * 3)],
+          status: ['Completed', 'In Progress', 'Pending'][Math.floor(Math.random() * 3)],
           operator: `Operator ${Math.floor(Math.random() * 3) + 1}`,
           notes: `Quality ${riceVariety} rice production`,
-          branch_id: branches[Math.floor(Math.random() * branches.length)]._id,
+          // Distribute production across branches for testing
+          branch_id: getNextBranch()._id,
           createdBy: users.length > 0 ? users[Math.floor(Math.random() * users.length)]._id : superadmin._id
         });
         
@@ -322,58 +355,262 @@ db.once('open', async () => {
       const paddyPerMonth = Math.floor(Math.random() * 11) + 10; // 10-20
       
       for (let i = 0; i < paddyPerMonth; i++) {
-        const issueDate = new Date(monthDate);
-        issueDate.setDate(Math.floor(Math.random() * 28) + 1);
-        
-        const paddyFrom = vendorNames[Math.floor(Math.random() * vendorNames.length)];
-        const paddyVariety = ['A', 'C'][Math.floor(Math.random() * 2)]; // Only A and C as per schema
-        const bags = Math.floor(Math.random() * 200) + 50; // 50-250 bags
-        const weight = bags * 25; // 25kg per bag
+        const paddyDate = getRandomDateInMonth(monthDate);
         
         await Paddy.create({
-          issueDate: issueDate,
+          issueDate: paddyDate,
           issueMemo: `PM-${monthDate.getFullYear()}${String(monthDate.getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(3, '0')}`,
-          lorryNumber: `TN-${String(Math.floor(Math.random() * 99) + 1).padStart(2, '0')}-${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}`,
-          paddyFrom: paddyFrom,
-          paddyVariety: paddyVariety,
-          moisture: Math.random() * 5 + 10, // 10-15%
+          lorryNumber: `TN-${String(Math.floor(Math.random() * 99) + 1).padStart(2, '0')}-${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}-${String(Math.floor(Math.random() * 9999) + 1000)}`,
+          paddyFrom: vendorNames[Math.floor(Math.random() * vendorNames.length)],
+          paddyVariety: ['A', 'C'][Math.floor(Math.random() * 2)], // Only A and C as per schema
+          moisture: (Math.random() * 3) + 11, // 11-14%
           gunny: {
-            nb: Math.floor(bags * 0.9), // 90% new bags
-            onb: Math.floor(bags * 0.08), // 8% old new bags
-            ss: Math.floor(bags * 0.02), // 2% second sale
+            nb: Math.floor(Math.random() * 200) + 100, // 100-300 bags
+            onb: Math.floor(Math.random() * 20) + 5,   // 5-25 bags
+            ss: Math.floor(Math.random() * 10) + 1,    // 1-11 bags
             swp: 0
           },
           paddy: {
-            bags: bags,
-            weight: weight
+            bags: Math.floor(Math.random() * 300) + 100, // 100-400 bags
+            weight: Math.floor(Math.random() * 5000) + 2000 // 2000-7000 kg
           },
-          bagWeight: 25,
-          branch_id: branches[Math.floor(Math.random() * branches.length)]._id,
+          bagWeight: [25, 50, 100][Math.floor(Math.random() * 3)],
+          // Distribute paddy entries across branches for testing
+          branch_id: getNextBranch()._id,
           createdBy: users.length > 0 ? users[Math.floor(Math.random() * users.length)]._id : superadmin._id
         });
         
         totalPaddyEntries++;
+        
+        // Generate inventory updates for each paddy entry
+        const riceVariety = riceVarieties[Math.floor(Math.random() * riceVarieties.length)];
+        
+        await Inventory.create({
+          name: riceVariety,
+          quantity: Math.floor(Math.random() * 1000) + 500, // 500-1500 kg
+          description: `Stock of ${riceVariety} rice`,
+          // Distribute inventory across branches for testing
+          branch_id: getNextBranch()._id,
+          created_by: users.length > 0 ? users[Math.floor(Math.random() * users.length)]._id : superadmin._id
+        });
+        
+        totalInventoryEntries++;
       }
-      
-      // Generate inventory updates
-      const riceVariety = riceVarieties[Math.floor(Math.random() * riceVarieties.length)];
-      const quantity = Math.floor(Math.random() * 1000) + 200; // 200-1200 kg
-      
-      await Inventory.create({
-        name: riceVariety,
-        quantity: quantity,
-        description: `Stock of ${riceVariety} rice`,
-        branch_id: branches[Math.floor(Math.random() * branches.length)]._id,
-        created_by: users.length > 0 ? users[Math.floor(Math.random() * users.length)]._id : superadmin._id
-      });
-      
-      totalInventoryEntries++;
     }
     
     // Create some additional recent data for better dashboard visualization
     console.log('📈 Creating additional recent data for better charts...');
     
+    // Create additional branch-specific data to ensure balanced distribution
+    console.log('🏢 Creating additional branch-specific data...');
+    
+    // Add more data for North Branch
+    for (let i = 0; i < 15; i++) {
+      await Production.create({
+        name: riceVarieties[Math.floor(Math.random() * riceVarieties.length)],
+        description: `North Branch Production ${i + 1}`,
+        quantity: Math.floor(Math.random() * 1500) + 800,
+        unit: 'kg',
+        productionDate: getRandomDateInMonth(months[Math.floor(Math.random() * months.length)]),
+        quality: ['Excellent', 'Good', 'Average'][Math.floor(Math.random() * 3)],
+        status: ['Completed', 'In Progress', 'Pending'][Math.floor(Math.random() * 3)],
+        operator: `North Operator ${i + 1}`,
+        notes: `North Branch specific production`,
+        branch_id: northBranch._id,
+        createdBy: superadmin._id
+      });
+      
+      await Paddy.create({
+        issueDate: getRandomDateInMonth(months[Math.floor(Math.random() * months.length)]),
+        issueMemo: `NB-PM-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(3, '0')}`,
+        lorryNumber: `TN-NB-${String(Math.floor(Math.random() * 99) + 1).padStart(2, '0')}-${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}-${String(Math.floor(Math.random() * 9999) + 1000)}`,
+        paddyFrom: vendorNames[Math.floor(Math.random() * vendorNames.length)],
+        paddyVariety: ['A', 'C'][Math.floor(Math.random() * 2)],
+        moisture: (Math.random() * 3) + 11,
+        gunny: {
+          nb: Math.floor(Math.random() * 150) + 80,
+          onb: Math.floor(Math.random() * 15) + 3,
+          ss: Math.floor(Math.random() * 8) + 1,
+          swp: 0
+        },
+        paddy: {
+          bags: Math.floor(Math.random() * 250) + 80,
+          weight: Math.floor(Math.random() * 4000) + 1500
+        },
+        bagWeight: [25, 50, 100][Math.floor(Math.random() * 3)],
+        branch_id: northBranch._id,
+        createdBy: superadmin._id
+      });
+    }
+    
+    // Add more data for South Branch
+    for (let i = 0; i < 15; i++) {
+      await Production.create({
+        name: riceVarieties[Math.floor(Math.random() * riceVarieties.length)],
+        description: `South Branch Production ${i + 1}`,
+        quantity: Math.floor(Math.random() * 1500) + 800,
+        unit: 'kg',
+        productionDate: getRandomDateInMonth(months[Math.floor(Math.random() * months.length)]),
+        quality: ['Excellent', 'Good', 'Average'][Math.floor(Math.random() * 3)],
+        status: ['Completed', 'In Progress', 'Pending'][Math.floor(Math.random() * 3)],
+        operator: `South Operator ${i + 1}`,
+        notes: `South Branch specific production`,
+        branch_id: southBranch._id,
+        createdBy: superadmin._id
+      });
+      
+      await Paddy.create({
+        issueDate: getRandomDateInMonth(months[Math.floor(Math.random() * months.length)]),
+        issueMemo: `SB-PM-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(3, '0')}`,
+        lorryNumber: `TN-SB-${String(Math.floor(Math.random() * 99) + 1).padStart(2, '0')}-${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}-${String(Math.floor(Math.random() * 9999) + 1000)}`,
+        paddyFrom: vendorNames[Math.floor(Math.random() * vendorNames.length)],
+        paddyVariety: ['A', 'C'][Math.floor(Math.random() * 2)],
+        moisture: (Math.random() * 3) + 11,
+        gunny: {
+          nb: Math.floor(Math.random() * 150) + 80,
+          onb: Math.floor(Math.random() * 15) + 3,
+          ss: Math.floor(Math.random() * 8) + 1,
+          swp: 0
+        },
+        paddy: {
+          bags: Math.floor(Math.random() * 250) + 80,
+          weight: Math.floor(Math.random() * 4000) + 1500
+        },
+        bagWeight: [25, 50, 100][Math.floor(Math.random() * 3)],
+        branch_id: southBranch._id,
+        createdBy: superadmin._id
+      });
+    }
+    
     // Create some outstanding invoices for dashboard alerts
+    console.log('📋 Creating outstanding invoices for alerts...');
+    
+    // Add more financial transactions for North and South branches
+    console.log('💰 Adding additional financial data for North and South branches...');
+    
+    // North Branch additional transactions
+    for (let i = 0; i < 20; i++) {
+      await FinancialTransaction.create({
+        transactionDate: getRandomDateInMonth(months[Math.floor(Math.random() * months.length)]),
+        transactionType: Math.random() > 0.5 ? 'income' : 'expense',
+        category: Math.random() > 0.5 ? 'rice_sales' : 'paddy_purchase',
+        description: `North Branch Transaction ${i + 1}`,
+        amount: Math.floor(Math.random() * 30000) + 15000,
+        paymentMethod: ['cash', 'bank_transfer', 'cheque', 'upi', 'card'][Math.floor(Math.random() * 5)],
+        vendor: Math.random() > 0.5 ? vendorNames[Math.floor(Math.random() * vendorNames.length)] : null,
+        customer: Math.random() > 0.5 ? customerNames[Math.floor(Math.random() * customerNames.length)] : null,
+        reference: `NB-TXN-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(3, '0')}`,
+        status: 'completed',
+        branch_id: northBranch._id,
+        createdBy: superadmin._id
+      });
+    }
+    
+    // South Branch additional transactions
+    for (let i = 0; i < 20; i++) {
+      await FinancialTransaction.create({
+        transactionDate: getRandomDateInMonth(months[Math.floor(Math.random() * months.length)]),
+        transactionType: Math.random() > 0.5 ? 'income' : 'expense',
+        category: Math.random() > 0.5 ? 'rice_sales' : 'paddy_purchase',
+        description: `South Branch Transaction ${i + 1}`,
+        amount: Math.floor(Math.random() * 30000) + 15000,
+        paymentMethod: ['cash', 'bank_transfer', 'cheque', 'upi', 'card'][Math.floor(Math.random() * 5)],
+        vendor: Math.random() > 0.5 ? vendorNames[Math.floor(Math.random() * vendorNames.length)] : null,
+        customer: Math.random() > 0.5 ? customerNames[Math.floor(Math.random() * customerNames.length)] : null,
+        reference: `SB-TXN-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(3, '0')}`,
+        status: 'completed',
+        branch_id: southBranch._id,
+        createdBy: superadmin._id
+      });
+    }
+    
+    // Add more sales invoices for North and South branches
+    console.log('📄 Adding additional sales invoices for North and South branches...');
+    
+    // North Branch additional invoices
+    for (let i = 0; i < 15; i++) {
+      const invoiceDate = getRandomDateInMonth(months[Math.floor(Math.random() * months.length)]);
+      const totalAmount = Math.floor(Math.random() * 40000) + 20000;
+      const paidAmount = Math.random() > 0.3 ? totalAmount : Math.floor(totalAmount * 0.7);
+      const status = paidAmount === totalAmount ? 'paid' : 'pending';
+      
+      await SalesInvoice.create({
+        invoiceNumber: `NB-INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(3, '0')}`,
+        invoiceDate: invoiceDate,
+        dueDate: new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000),
+        customer: {
+          name: customerNames[Math.floor(Math.random() * customerNames.length)],
+          address: `${southIndianStates[Math.floor(Math.random() * southIndianStates.length)]}, India`,
+          placeOfSupply: southIndianStates[Math.floor(Math.random() * southIndianStates.length)],
+          gstinPan: `GSTINNB${String(i + 1).padStart(3, '0')}`
+        },
+        items: [{
+          productName: riceVarieties[Math.floor(Math.random() * riceVarieties.length)],
+          quantity: Math.floor(Math.random() * 500) + 200,
+          price: Math.floor(Math.random() * 20) + 35,
+          uom: 'kg',
+          hsnSacCode: '1006',
+          total: Math.floor(Math.random() * 15000) + 8000
+        }],
+        totals: {
+          totalQuantity: Math.floor(Math.random() * 500) + 200,
+          totalAmount: totalAmount,
+          grandTotal: totalAmount
+        },
+        payment: {
+          paymentType: Math.random() > 0.5 ? 'CREDIT' : 'CASH'
+        },
+        status: status,
+        paidAmount: paidAmount,
+        paidDate: status === 'paid' ? invoiceDate : null,
+        branch_id: northBranch._id,
+        createdBy: superadmin._id,
+        createdBy_name: 'System Generated'
+      });
+    }
+    
+    // South Branch additional invoices
+    for (let i = 0; i < 15; i++) {
+      const invoiceDate = getRandomDateInMonth(months[Math.floor(Math.random() * months.length)]);
+      const totalAmount = Math.floor(Math.random() * 40000) + 20000;
+      const paidAmount = Math.random() > 0.3 ? totalAmount : Math.floor(totalAmount * 0.7);
+      const status = paidAmount === totalAmount ? 'paid' : 'pending';
+      
+      await SalesInvoice.create({
+        invoiceNumber: `SB-INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(3, '0')}`,
+        invoiceDate: invoiceDate,
+        dueDate: new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000),
+        customer: {
+          name: customerNames[Math.floor(Math.random() * customerNames.length)],
+          address: `${southIndianStates[Math.floor(Math.random() * southIndianStates.length)]}, India`,
+          placeOfSupply: southIndianStates[Math.floor(Math.random() * southIndianStates.length)],
+          gstinPan: `GSTINSB${String(i + 1).padStart(3, '0')}`
+        },
+        items: [{
+          productName: riceVarieties[Math.floor(Math.random() * riceVarieties.length)],
+          quantity: Math.floor(Math.random() * 500) + 200,
+          price: Math.floor(Math.random() * 20) + 35,
+          uom: 'kg',
+          hsnSacCode: '1006',
+          total: Math.floor(Math.random() * 15000) + 8000
+        }],
+        totals: {
+          totalQuantity: Math.floor(Math.random() * 500) + 200,
+          totalAmount: totalAmount,
+          grandTotal: totalAmount
+        },
+        payment: {
+          paymentType: Math.random() > 0.5 ? 'CREDIT' : 'CASH'
+        },
+        status: status,
+        paidAmount: paidAmount,
+        paidDate: status === 'paid' ? invoiceDate : null,
+        branch_id: southBranch._id,
+        createdBy: superadmin._id,
+        createdBy_name: 'System Generated'
+      });
+    }
+    
     const outstandingInvoices = [
       {
         invoiceNumber: 'INV-2024-001-OVERDUE',
@@ -403,7 +640,7 @@ db.once('open', async () => {
         },
         status: 'overdue',
         paidAmount: 0,
-        branch_id: branches[0]._id,
+        branch_id: mainBranch._id,
         createdBy: users.length > 0 ? users[0]._id : superadmin._id,
         createdBy_name: 'System Generated'
       },
@@ -435,7 +672,7 @@ db.once('open', async () => {
         },
         status: 'pending',
         paidAmount: 6750, // 60% paid
-        branch_id: branches[1]._id,
+        branch_id: northBranch._id,
         createdBy: users.length > 0 ? users[1]._id : superadmin._id,
         createdBy_name: 'System Generated'
       }
@@ -453,20 +690,20 @@ db.once('open', async () => {
     console.log(`- Production Entries: ${totalProductionEntries}`);
     console.log(`- Paddy Entries: ${totalPaddyEntries}`);
     console.log(`- Inventory Items: ${totalInventoryEntries}`);
-    console.log(`- Data spans: 6 months (${months[0].toLocaleDateString()} to ${months[months.length - 1].toLocaleDateString()})`);
+    console.log(`- Data spans: 7 months (${months[0].toLocaleDateString()} to ${months[months.length - 1].toLocaleDateString()})`);
     
     console.log('\n📈 Dashboard Features Now Available:');
-    console.log('- 6 months of historical sales data');
+    console.log('- 7 months of historical sales data');
     console.log('- Geographical sales across South Indian states');
     console.log('- Financial transactions (income/expenses)');
     console.log('- Production and paddy entry trends');
     console.log('- Outstanding invoices and payment tracking');
-    console.log('- Branch-wise data distribution');
+    console.log('- Branch-wise data distribution for testing');
     
     console.log('\n💡 Next Steps:');
     console.log('1. Start your backend: npm run dev');
     console.log('2. Start your frontend: npm run dev');
-    console.log('3. Login and explore the dashboard!');
+    console.log('3. Login and explore the dashboard with branch filtering!');
     
   } catch (error) {
     console.error('❌ Error seeding dashboard data:', error);

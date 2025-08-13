@@ -22,7 +22,9 @@ const getSuperadminDashboard = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Get comprehensive dashboard data
+    // Extract branch_id from query parameters for optional branch filtering
+    const { branch_id } = req.query;
+    
     const [
       overview,
       sales,
@@ -35,16 +37,16 @@ const getSuperadminDashboard = asyncHandler(async (req, res) => {
       alerts,
       purchaseInvoices
     ] = await Promise.all([
-      getOverviewData(req.query),
-      getSalesAnalyticsData(req.query),      
-      getOutstandingBalancesData(req.query),  
-      getProductAnalyticsData(req.query),    
-      getCustomerAnalyticsData(req.query),  
-      getInvoiceAnalyticsData(req.query),  
-      getGeographicalSalesData(req.query),  
-      getRecentActivities(5),
+      getOverviewData(req.query, branch_id),
+      getSalesAnalyticsData(req.query, branch_id),      
+      getOutstandingBalancesData(req.query, branch_id),  
+      getProductAnalyticsData(req.query, branch_id),    
+      getCustomerAnalyticsData(req.query, branch_id),  
+      getInvoiceAnalyticsData(req.query, branch_id),  
+      getGeographicalSalesData(req.query, branch_id),  
+      getRecentActivities(5, branch_id),
       getSystemAlerts(),
-      getPurchaseInvoiceDueData(req.query)
+      getPurchaseInvoiceDueData(req.query, branch_id)
     ]);
 
     res.status(200).json({
@@ -59,7 +61,8 @@ const getSuperadminDashboard = asyncHandler(async (req, res) => {
         geographical,
         recentActivities,
         alerts,
-        purchaseInvoices
+        purchaseInvoices,
+        branchFilter: branch_id ? { branchId: branch_id, isFiltered: true } : { isFiltered: false }
       }
     });
   } catch (error) {
@@ -297,11 +300,11 @@ const getFinancialSummary = asyncHandler(async (req, res) => {
 // @route   GET /api/dashboard/activities
 // @access  Private
 const getActivityFeed = asyncHandler(async (req, res) => {
-  const { limit = 10, branchId } = req.query;
+  const { limit = 10, branch_id } = req.query;
   const { role, branchId: userBranchId } = req.user;
 
   try {
-    const activities = await getRecentActivities(parseInt(limit), branchId || userBranchId);
+    const activities = await getRecentActivities(parseInt(limit), branch_id || userBranchId);
     
     res.status(200).json({
       success: true,
@@ -317,7 +320,7 @@ const getActivityFeed = asyncHandler(async (req, res) => {
 });
 
 // Helper functions
-const getOverviewData = async (params = {}) => {
+const getOverviewData = async (params = {}, branch_id = null) => {
   const { startDate, endDate } = params;
   
   // Use provided dates or default to all data
@@ -327,6 +330,9 @@ const getOverviewData = async (params = {}) => {
     startDateObj = new Date(startDate);
     endDateObj = new Date(endDate);
   }
+  
+  // Build branch filter condition
+  const branchFilter = branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {};
   
   const [
     paddyStats,
@@ -340,29 +346,75 @@ const getOverviewData = async (params = {}) => {
     totalSales
   ] = await Promise.all([
     Paddy.aggregate([
+      { 
+        $match: (() => {
+          const matchObj = { ...branchFilter };
+          if (startDateObj && endDateObj) {
+            matchObj.issueDate = { $gte: startDateObj, $lte: endDateObj };
+          }
+          return matchObj;
+        })()
+      },
       { $group: { _id: null, totalWeight: { $sum: '$paddy.weight' }, totalBags: { $sum: '$paddy.bags' } } }
     ]),
     Production.aggregate([
+      { 
+        $match: (() => {
+          const matchObj = { ...branchFilter };
+          if (startDateObj && endDateObj) {
+            matchObj.productionDate = { $gte: startDateObj, $lte: endDateObj };
+          }
+          return matchObj;
+        })()
+      },
       { $group: { _id: null, totalQuantity: { $sum: '$quantity' }, totalItems: { $sum: 1 } } }
     ]),
     Gunny.aggregate([
+      { 
+        $match: (() => {
+          const matchObj = { ...branchFilter };
+          if (startDateObj && endDateObj) {
+            matchObj.createdAt = { $gte: startDateObj, $lte: endDateObj };
+          }
+          return matchObj;
+        })()
+      },
       { $group: { _id: null, totalBags: { $sum: { $add: ['$gunny.nb', '$gunny.onb', '$gunny.ss', '$gunny.swp'] } } } }
     ]),
     Inventory.aggregate([
+      { 
+        $match: (() => {
+          const matchObj = { ...branchFilter };
+          if (startDateObj && endDateObj) {
+            matchObj.createdAt = { $gte: startDateObj, $lte: endDateObj };
+          }
+          return matchObj;
+        })()
+      },
       { $group: { _id: null, totalQuantity: { $sum: '$quantity' }, totalItems: { $sum: 1 } } }
     ]),
+    // For branches and users, always get total count regardless of branch filter
     Branch.countDocuments({ isActive: true }),
     User.countDocuments({ isActive: true }),
-    // Get total purchase amount from FinancialTransaction with date filter
+    // Get total purchase amount from FinancialTransaction with date filter and optional branch filter
     FinancialTransaction.aggregate([
       {
-        $match: {
-          transactionType: 'expense',
-          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance'] },
-          ...(startDateObj && endDateObj && {
-            transactionDate: { $gte: startDateObj, $lte: endDateObj }
-          })
-        }
+        $match: (() => {
+          const matchObj = {
+            transactionType: 'expense',
+            category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance'] }
+          };
+          
+          if (startDateObj && endDateObj) {
+            matchObj.transactionDate = { $gte: startDateObj, $lte: endDateObj };
+          }
+          
+          if (branch_id) {
+            matchObj.branch_id = new mongoose.Types.ObjectId(branch_id);
+          }
+          
+          return matchObj;
+        })()
       },
       {
         $group: {
@@ -371,15 +423,24 @@ const getOverviewData = async (params = {}) => {
         }
       }
     ]),
-    // Get total income amount from FinancialTransaction with date filter
+    // Get total income amount from FinancialTransaction with date filter and optional branch filter
     FinancialTransaction.aggregate([
       {
-        $match: {
-          transactionType: 'income',
-          ...(startDateObj && endDateObj && {
-            transactionDate: { $gte: startDateObj, $lte: endDateObj }
-          })
-        }
+        $match: (() => {
+          const matchObj = {
+            transactionType: 'income'
+          };
+          
+          if (startDateObj && endDateObj) {
+            matchObj.transactionDate = { $gte: startDateObj, $lte: endDateObj };
+          }
+          
+          if (branch_id) {
+            matchObj.branch_id = new mongoose.Types.ObjectId(branch_id);
+          }
+          
+          return matchObj;
+        })()
       },
       {
         $group: {
@@ -388,16 +449,25 @@ const getOverviewData = async (params = {}) => {
         }
       }
     ]),
-    // Get total sales amount from FinancialTransaction with date filter
+    // Get total sales amount from FinancialTransaction with date filter and optional branch filter
     FinancialTransaction.aggregate([
       {
-        $match: {
-          transactionType: 'income',
-          category: { $in: ['rice_sales', 'paddy_sales', 'other_sales', 'sales'] },
-          ...(startDateObj && endDateObj && {
-            transactionDate: { $gte: startDateObj, $lte: endDateObj }
-          })
-        }
+        $match: (() => {
+          const matchObj = {
+            transactionType: 'income',
+            category: { $in: ['rice_sales', 'paddy_sales', 'other_sales', 'sales'] }
+          };
+          
+          if (startDateObj && endDateObj) {
+            matchObj.transactionDate = { $gte: startDateObj, $lte: endDateObj };
+          }
+          
+          if (branch_id) {
+            matchObj.branch_id = new mongoose.Types.ObjectId(branch_id);
+          }
+          
+          return matchObj;
+        })()
       },
       {
         $group: {
@@ -440,15 +510,16 @@ const getOverviewData = async (params = {}) => {
   };
 };
 
-const getSalesAnalyticsData = async (params = {}) => {
+const getSalesAnalyticsData = async (params = {}, branch_id = null) => {
   const { startDate, endDate } = params;
   
   // Use provided dates or default to last 6 months
   let startDateObj, endDateObj;
   
   if (startDate && endDate) {
-    startDateObj = new Date(startDate);
-    endDateObj = new Date(endDate);
+    // Parse dates more robustly to avoid timezone issues
+    startDateObj = new Date(startDate + 'T00:00:00.000Z');
+    endDateObj = new Date(endDate + 'T23:59:59.999Z');
   } else {
     // Default to last 6 months
     endDateObj = new Date();
@@ -465,11 +536,17 @@ const getSalesAnalyticsData = async (params = {}) => {
   const invoiceAmounts = { sales: [], purchases: [] };
 
   // Generate monthly data based on date range
-  const monthCount = Math.ceil((endDateObj - startDateObj) / (1000 * 60 * 60 * 24 * 30)); // Approximate months
+  // Calculate months more precisely
+  const startYear = startDateObj.getFullYear();
+  const startMonth = startDateObj.getMonth();
+  const endYear = endDateObj.getFullYear();
+  const endMonth = endDateObj.getMonth();
+  
+  // Calculate exact months between dates
+  const monthCount = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
   
   for (let i = 0; i < monthCount; i++) {
-    const monthDate = new Date(startDateObj);
-    monthDate.setMonth(monthDate.getMonth() + i);
+    const monthDate = new Date(startYear, startMonth + i, 1);
     const monthName = monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     months.push(monthName);
 
@@ -481,10 +558,11 @@ const getSalesAnalyticsData = async (params = {}) => {
       // Get actual sales data from SalesInvoice model
       SalesInvoice.aggregate([
         {
-                  $match: {
-          invoiceDate: { $gte: monthStart, $lte: monthEnd }, // Use invoiceDate for SalesInvoice
-          status: { $in: ['paid', 'partial'] }  // Only count paid invoices
-        }
+          $match: {
+            invoiceDate: { $gte: monthStart, $lte: monthEnd }, // Use invoiceDate for SalesInvoice
+            status: { $in: ['paid', 'partial'] },  // Only count paid invoices
+            ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
+          }
         },
         {
           $group: {
@@ -497,11 +575,12 @@ const getSalesAnalyticsData = async (params = {}) => {
       // Get actual purchase data from FinancialTransaction model
       FinancialTransaction.aggregate([
         {
-                  $match: {
-          transactionDate: { $gte: monthStart, $lte: monthEnd }, // Use transactionDate for FinancialTransaction
-          transactionType: 'expense',
-          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance'] }
-        }
+          $match: {
+            transactionDate: { $gte: monthStart, $lte: monthEnd }, // Use transactionDate for FinancialTransaction
+            transactionType: 'expense',
+            category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance'] },
+            ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
+          }
         },
         {
           $group: {
@@ -514,10 +593,11 @@ const getSalesAnalyticsData = async (params = {}) => {
       // Get income data from FinancialTransaction model
       FinancialTransaction.aggregate([
         {
-                  $match: {
-          transactionDate: { $gte: monthStart, $lte: monthEnd }, // Use transactionDate for FinancialTransaction
-          transactionType: 'income'
-        }
+          $match: {
+            transactionDate: { $gte: monthStart, $lte: monthEnd }, // Use transactionDate for FinancialTransaction
+            transactionType: 'income',
+            ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
+          }
         },
         {
           $group: {
@@ -541,7 +621,8 @@ const getSalesAnalyticsData = async (params = {}) => {
     const monthlyInvoices = await SalesInvoice.aggregate([
       {
         $match: {
-          invoiceDate: { $gte: monthStart, $lte: monthEnd } // Use invoiceDate instead of createdAt
+          invoiceDate: { $gte: monthStart, $lte: monthEnd }, // Use invoiceDate instead of createdAt
+          ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
         }
       },
       {
@@ -556,7 +637,8 @@ const getSalesAnalyticsData = async (params = {}) => {
                     { $eq: ['$customer.name', '$$customerName'] },
                     { $lt: ['$invoiceDate', monthStart] } // Use invoiceDate instead of createdAt
                   ]
-                }
+                },
+                ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
               }
             }
           ],
@@ -602,6 +684,7 @@ const getSalesAnalyticsData = async (params = {}) => {
   }
 
   return {
+    months,  // Add month labels for frontend charts
     salesData,
     purchaseData,
     newCustomerSales,
@@ -611,7 +694,7 @@ const getSalesAnalyticsData = async (params = {}) => {
   };
 };
 
-const getOutstandingBalancesData = async (params = {}) => {
+const getOutstandingBalancesData = async (params = {}, branch_id = null) => {
   const { startDate, endDate } = params;
   
   // Use provided dates or default to all data
@@ -630,8 +713,9 @@ const getOutstandingBalancesData = async (params = {}) => {
       {
         $match: {
           status: { $in: ['pending', 'partial', 'overdue'] }, // Unpaid invoices
-          dueDate: { $exists: true }
-          // Removed invoiceDate filter - show all outstanding regardless of creation date
+          dueDate: { $exists: true }, // Removed invoiceDate filter - show all outstanding regardless of creation date
+          ...(startDateObj && endDateObj ? { invoiceDate: { $gte: startDateObj, $lte: endDateObj } } : {}),
+          ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
         }
       },
       {
@@ -713,7 +797,9 @@ const getOutstandingBalancesData = async (params = {}) => {
       {
         $match: {
           transactionType: 'expense',
-          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance', 'transport', 'rent', 'utilities', 'insurance', 'taxes'] }
+          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance', 'transport', 'rent', 'utilities', 'insurance', 'taxes'] },
+          ...(startDateObj && endDateObj ? { transactionDate: { $gte: startDateObj, $lte: endDateObj } } : {}),
+          ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
         }
       },
       {
@@ -812,7 +898,7 @@ const getOutstandingBalancesData = async (params = {}) => {
   }
 };
 
-const getProductAnalyticsData = async (params = {}) => {
+const getProductAnalyticsData = async (params = {}, branch_id = null) => {
   try {
     const { startDate, endDate } = params;
     
@@ -829,8 +915,12 @@ const getProductAnalyticsData = async (params = {}) => {
     const [bestSelling, leastSelling, lowStock] = await Promise.all([
       // Best selling products (based on production quantity) - WITH DATE FILTER
       Production.aggregate([
-        // ✅ ADD DATE FILTER HERE
-        ...(Object.keys(productionDateFilter).length > 0 ? [{ $match: productionDateFilter }] : []),
+        {
+          $match: {
+            ...(Object.keys(productionDateFilter).length > 0 ? productionDateFilter : {}),
+            ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
+          }
+        },
         {
           $group: {
             _id: '$name', // Fixed: Production model uses 'name' field
@@ -843,7 +933,12 @@ const getProductAnalyticsData = async (params = {}) => {
       
       // Least selling products (based on production quantity) - WITH DATE FILTER
       Production.aggregate([
-        ...(Object.keys(productionDateFilter).length > 0 ? [{ $match: productionDateFilter }] : []),
+        {
+          $match: {
+            ...(Object.keys(productionDateFilter).length > 0 ? productionDateFilter : {}),
+            ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
+          }
+        },
         {
           $group: {
             _id: '$name', // Fixed: Production model uses 'name' field
@@ -861,7 +956,8 @@ const getProductAnalyticsData = async (params = {}) => {
             $or: [
               { quantity: { $lt: 1000 } }, // Adjusted: Show items with less than 1000 units
               { quantity: { $lt: 0 } }
-            ]
+            ],
+            ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
           }
         },
         {
@@ -912,7 +1008,7 @@ const getProductAnalyticsData = async (params = {}) => {
   }
 };
 
-const getCustomerAnalyticsData = async (params = {}) => {
+const getCustomerAnalyticsData = async (params = {}, branch_id = null) => {
   try {
     const { startDate, endDate } = params;
     
@@ -929,8 +1025,12 @@ const getCustomerAnalyticsData = async (params = {}) => {
     const [topCustomers] = await Promise.all([
       // Top customers by total purchase amount - WITH DATE FILTER
       SalesInvoice.aggregate([
-        // ✅ ADD DATE FILTER HERE
-        ...(Object.keys(salesDateFilter).length > 0 ? [{ $match: salesDateFilter }] : []),
+        {
+          $match: {
+            ...(Object.keys(salesDateFilter).length > 0 ? salesDateFilter : {}),
+            ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
+          }
+        },
         {
           $group: {
             _id: '$customer.name', // Fixed: Customer name is nested under customer.name
@@ -943,7 +1043,7 @@ const getCustomerAnalyticsData = async (params = {}) => {
     ]);
 
     // Get vendor data separately using the dedicated function
-    const vendorData = await getVendorAnalyticsData(params);
+    const vendorData = await getVendorAnalyticsData(params, branch_id);
 
     const result = {
       topCustomers: topCustomers.map(customer => ({
@@ -968,7 +1068,7 @@ const getCustomerAnalyticsData = async (params = {}) => {
   }
 };
 
-const getVendorAnalyticsData = async (params = {}) => {
+const getVendorAnalyticsData = async (params = {}, branch_id = null) => {
   try {
     const { startDate, endDate } = params;
     
@@ -981,12 +1081,18 @@ const getVendorAnalyticsData = async (params = {}) => {
       };
     }
 
+    // Build branch filter
+    const branchFilter = branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {};
+
     // Get top vendors by total expense amount from FinancialTransaction
     const topVendors = await FinancialTransaction.aggregate([
-      // ✅ ADD DATE FILTER HERE
-      ...(Object.keys(vendorDateFilter).length > 0 ? [{ $match: vendorDateFilter }] : []),
-      // Only expense transactions (payments to vendors)
-      { $match: { transactionType: 'expense' } },
+      {
+        $match: {
+          transactionType: 'expense',
+          ...(Object.keys(vendorDateFilter).length > 0 ? vendorDateFilter : {}),
+          ...branchFilter
+        }
+      },
       // Group by vendor name
       {
         $group: {
@@ -1019,14 +1125,27 @@ const getVendorAnalyticsData = async (params = {}) => {
   }
 };
 
-const getInvoiceAnalyticsData = async (params = {}) => {
+const getInvoiceAnalyticsData = async (params = {}, branch_id = null) => {
   try {
+    const { startDate, endDate } = params;
+    
+    // Build date filter for SalesInvoice
+    const salesDateFilter = {};
+    if (startDate && endDate) {
+      salesDateFilter.invoiceDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
     // Get actual due invoices from SalesInvoice model
     const dueInvoices = await SalesInvoice.aggregate([
       {
         $match: {
           status: { $in: ['pending', 'partial'] },
-          dueDate: { $exists: true }
+          dueDate: { $exists: true },
+          ...(salesDateFilter),
+          ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
         }
       },
       {
@@ -1085,7 +1204,7 @@ const getInvoiceAnalyticsData = async (params = {}) => {
   }
 };
 
-const getGeographicalSalesData = async (params = {}) => {
+const getGeographicalSalesData = async (params = {}, branch_id = null) => {
   try {
     const { startDate, endDate } = params;
     
@@ -1100,7 +1219,12 @@ const getGeographicalSalesData = async (params = {}) => {
 
     // Get actual geographical sales data from SalesInvoice model
     const geographicalData = await SalesInvoice.aggregate([
-      ...(Object.keys(dateFilter).length > 0 ? [{ $match: dateFilter }] : []),
+      {
+        $match: {
+          ...(Object.keys(dateFilter).length > 0 ? dateFilter : {}),
+          ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
+        }
+      },
       {
         $group: {
           _id: '$customer.placeOfSupply', // Use the correct field path
@@ -1202,15 +1326,28 @@ const getFinancialSummaryData = async (params = {}) => {
   }
 };
 
-const getPurchaseInvoiceDueData = async (params = {}) => {
+const getPurchaseInvoiceDueData = async (params = {}, branch_id = null) => {
   try {
+    const { startDate, endDate } = params;
+    
+    // Build date filter for FinancialTransaction
+    const purchaseDateFilter = {};
+    if (startDate && endDate) {
+      purchaseDateFilter.transactionDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
     // Get pending expense transactions (purchase invoices due)
     const pendingPurchases = await FinancialTransaction.aggregate([
       {
         $match: {
           transactionType: 'expense',
           status: 'pending',
-          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance', 'transport', 'rent', 'utilities', 'insurance', 'taxes', 'other'] }
+          category: { $in: ['paddy_purchase', 'labor', 'electricity', 'maintenance', 'transport', 'rent', 'utilities', 'insurance', 'taxes', 'other'] },
+          ...(purchaseDateFilter),
+          ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
         }
       },
       {
@@ -1306,30 +1443,30 @@ const getBranchOverviewData = async (branchId) => {
 
 const getBranchSalesAnalytics = async (branchId, params = {}) => {
   // Similar to getSalesAnalyticsData but filtered by branch
-  return getSalesAnalyticsData(params);
+  return getSalesAnalyticsData(params, branchId);
 };
 
 const getBranchOutstandingBalances = async (branchId, params = {}) => {
   // Similar to getOutstandingBalancesData but filtered by branch
-  return getOutstandingBalancesData(params);
+  return getOutstandingBalancesData(params, branchId);
 };
 
 const getBranchProductAnalytics = async (branchId, params = {}) => {
   // Similar to getProductAnalyticsData but filtered by branch
-  return getProductAnalyticsData(params);
+  return getProductAnalyticsData(params, branchId);
 };
 
 const getBranchCustomerAnalytics = async (branchId, params = {}) => {
   // Similar to getCustomerAnalyticsData but filtered by branch
-  return getCustomerAnalyticsData(params);
+  return getCustomerAnalyticsData(params, branchId);
 };
 
 const getBranchInvoiceAnalytics = async (branchId, params = {}) => {
   // Similar to getInvoiceAnalyticsData but filtered by branch
-  return getInvoiceAnalyticsData(params);
+  return getInvoiceAnalyticsData(params, branchId);
 };
 
-const getRecentActivities = async (days = 7, branchId = null) => {
+const getRecentActivities = async (days = 7, branch_id = null) => {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
@@ -1337,8 +1474,8 @@ const getRecentActivities = async (days = 7, branchId = null) => {
     createdAt: { $gte: startDate }
   };
 
-  if (branchId) {
-    matchStage.branch_id = new mongoose.Types.ObjectId(branchId);
+  if (branch_id) {
+    matchStage.branch_id = new mongoose.Types.ObjectId(branch_id);
   }
 
   const activities = [];
