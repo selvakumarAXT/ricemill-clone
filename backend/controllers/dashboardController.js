@@ -542,10 +542,40 @@ const getSalesAnalyticsData = async (params = {}, branch_id = null) => {
   const endYear = endDateObj.getFullYear();
   const endMonth = endDateObj.getMonth();
   
-  // Calculate exact months between dates
-  const monthCount = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
-  
-  for (let i = 0; i < monthCount; i++) {
+      // Calculate exact months between dates - PROPER FIX
+    const calculateMonthsBetween = (startDate, endDate) => {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      const startYear = start.getFullYear();
+      const startMonth = start.getMonth();
+      const endYear = end.getFullYear();
+      const endMonth = end.getMonth();
+      
+      // Calculate month difference
+      let monthDiff = (endYear - startYear) * 12 + (endMonth - startMonth);
+      
+      // If end date is in the same month but later day, count it
+      if (end.getDate() > start.getDate()) {
+        monthDiff += 1;
+      }
+      
+      // Ensure minimum 1 month
+      return Math.max(1, monthDiff);
+    };
+
+    const monthCount = calculateMonthsBetween(startDateObj, endDateObj);
+
+    // Add validation to prevent extra months
+    if (monthCount > 12) {
+      monthCount = 12;
+    }
+
+    // Debug logging to see what's happening
+    console.log(`Date Range: ${startDate} to ${endDate}`);
+    console.log(`Calculating ${monthCount} months`);
+
+    for (let i = 0; i < monthCount; i++) {
     const monthDate = new Date(startYear, startMonth + i, 1);
     const monthName = monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     months.push(monthName);
