@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import TableFilters from '../components/common/TableFilters';
 import BranchFilter from '../components/common/BranchFilter';
@@ -14,6 +14,7 @@ import DateRangeFilter from '../components/common/DateRangeFilter';
 import InvoiceTemplate from '../components/common/InvoiceTemplate';
 import PreviewInvoice from '../components/common/PreviewInvoice';
 import { formatDate, formatCurrency } from '../utils/calculations';
+import { salesInvoiceService } from '../services/salesInvoiceService';
 
 const SalesDispatch = () => {
   const [sales, setSales] = useState([]);
@@ -40,7 +41,6 @@ const SalesDispatch = () => {
   const { user } = useSelector((state) => state.auth);
 
   const initialSalesForm = {
-    orderNumber: '',
     customerName: '',
     customerPhone: '',
     customerEmail: '',
@@ -137,125 +137,90 @@ const SalesDispatch = () => {
     setLoading(true);
     setError('');
     try {
-      // Simulate API call - replace with actual service
-      const mockSales = [
-        {
-          _id: '1',
-          orderNumber: 'ORD-001',
-          customerName: 'ABC Traders',
-          customerPhone: '+91 9876543210',
-          customerEmail: 'abc@example.com',
-          customerAddress: '123 Main St, City',
-          customerGstin: '22AAAAA0000A1Z5',
-          customerPan: 'ABCD1234EFGH',
-          placeOfSupply: 'Maharashtra',
-          riceVariety: 'Basmati',
-          quantity: 500,
-          unitPrice: 120,
-          totalAmount: 60000,
-          orderDate: '2024-01-15',
-          deliveryDate: '2024-01-20',
-          paymentStatus: 'completed',
-          deliveryStatus: 'delivered',
-          paymentMethod: 'bank_transfer',
-          notes: 'Premium quality rice',
-          invoiceNumber: 'INV-20240115-001',
-          invoiceGenerated: true,
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-20T15:30:00Z'
-        },
-        {
-          _id: '2',
-          orderNumber: 'ORD-002',
-          customerName: 'XYZ Foods',
-          customerPhone: '+91 8765432109',
-          customerEmail: 'xyz@example.com',
-          customerAddress: '456 Market Rd, Town',
-          customerGstin: '33BBBBB0000B2Z6',
-          customerPan: 'EFGH5678IJKL',
-          placeOfSupply: 'Karnataka',
-          riceVariety: 'Sona Masoori',
-          quantity: 300,
-          unitPrice: 85,
-          totalAmount: 25500,
-          orderDate: '2024-01-16',
-          deliveryDate: '2024-01-22',
-          paymentStatus: 'pending',
-          deliveryStatus: 'in_transit',
-          paymentMethod: 'cash',
-          notes: 'Regular order',
-          invoiceNumber: null,
-          invoiceGenerated: false,
-          createdAt: '2024-01-16T11:00:00Z',
-          updatedAt: '2024-01-18T09:15:00Z'
-        }
-      ];
-      setSales(mockSales);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch sales data');
+      // Fetch rice sales from SalesInvoice API
+      const response = await salesInvoiceService.getSalesInvoices({
+        productType: 'rice',
+        limit: 100
+      });
+      
+      // Transform data to match existing frontend structure
+      const riceSales = response.data.map(invoice => ({
+        _id: invoice._id,
+        orderNumber: invoice.invoiceNumber, // Use invoiceNumber as orderNumber
+        customerName: invoice.customer.name,
+        customerPhone: invoice.customer.phoneNo,
+        customerEmail: invoice.customer.email || '',
+        customerAddress: invoice.customer.address,
+        customerGstin: invoice.customer.gstinPan,
+        customerPan: invoice.customer.gstinPan,
+        riceVariety: invoice.items[0]?.productName || '',
+        quantity: invoice.items[0]?.quantity || 0,
+        unitPrice: invoice.items[0]?.price || 0,
+        totalAmount: invoice.totals?.grandTotal || 0,
+        orderDate: invoice.orderDate,
+        deliveryDate: invoice.deliveryDate,
+        paymentStatus: invoice.paymentStatus,
+        deliveryStatus: invoice.deliveryStatus,
+        paymentMethod: invoice.payment?.paymentType?.toLowerCase() || 'cash',
+        notes: invoice.items[0]?.itemNote || '',
+        placeOfSupply: invoice.customer.placeOfSupply,
+        invoiceNumber: invoice.invoiceNumber,
+        createdAt: invoice.createdAt,
+        updatedAt: invoice.updatedAt
+      }));
+      
+      setSales(riceSales);
+    } catch (error) {
+      setError('Error fetching sales data: ' + error.message);
+      console.error('Error fetching sales:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchByproductsData = async () => {
+    setLoading(true);
+    setError('');
     try {
-      // Simulate API call - replace with actual service
-      const mockByproducts = [
-        {
-          _id: '1',
-          date: '2024-01-15',
-          vehicleNumber: 'TN-20-BU-4006',
-          material: 'Husk',
-          weight: 5000,
-          unit: 'kg',
-          rate: 2.5,
-          totalAmount: 12500,
-          vendorName: 'ABC Traders',
-          vendorPhone: '+91 9876543210',
-          vendorEmail: 'abc@example.com',
-          vendorAddress: '123 Main St, Chennai',
-          vendorGstin: '33AAAAA0000A1Z5',
-          vendorPan: 'ABCD1234EFGH',
-          paymentMethod: 'Cash',
-          paymentStatus: 'Completed',
-          notes: 'Monthly husk supply',
-          invoiceNumber: 'INV-BP-20240115-001',
-          invoiceGenerated: true,
-          branch_id: 'branch1',
-          createdBy: 'user1',
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z'
-        },
-        {
-          _id: '2',
-          date: '2024-01-16',
-          vehicleNumber: 'TN-21-CD-5678',
-          material: 'Broken Rice',
-          weight: 2000,
-          unit: 'kg',
-          rate: 35,
-          totalAmount: 70000,
-          vendorName: 'XYZ Foods',
-          vendorPhone: '+91 8765432109',
-          vendorEmail: 'xyz@example.com',
-          vendorAddress: '456 Market Rd, Madurai',
-          vendorGstin: '33BBBBB0000B2Z6',
-          vendorPan: 'EFGH5678IJKL',
-          paymentMethod: 'Bank Transfer',
-          paymentStatus: 'Pending',
-          notes: 'Premium broken rice for animal feed',
-          invoiceNumber: null,
-          invoiceGenerated: false,
-          branch_id: 'branch1',
-          createdBy: 'user1',
-          createdAt: '2024-01-16T11:00Z',
-          updatedAt: '2024-01-16T11:00Z'
-        }
-      ];
-      setByproducts(mockByproducts);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch byproducts data');
+      // Fetch byproduct sales from SalesInvoice API
+      const response = await salesInvoiceService.getSalesInvoices({
+        productType: 'byproduct',
+        limit: 100
+      });
+      
+      // Transform data to match existing frontend structure
+      const byproductSales = response.data.map(invoice => ({
+        _id: invoice._id,
+        date: invoice.orderDate,
+        vehicleNumber: invoice.vehicleNumber || '',
+        material: invoice.items[0]?.productName || '',
+        weight: invoice.items[0]?.quantity || 0,
+        unit: invoice.items[0]?.uom || 'kg',
+        rate: invoice.items[0]?.price || 0,
+        totalAmount: invoice.totals?.grandTotal || 0,
+        vendorName: invoice.customer.name,
+        vendorPhone: invoice.customer.phoneNo,
+        vendorEmail: invoice.customer.email || '',
+        vendorAddress: invoice.customer.address,
+        vendorGstin: invoice.customer.gstinPan,
+        vendorPan: invoice.customer.gstinPan,
+        paymentMethod: invoice.payment?.paymentType || 'Cash',
+        paymentStatus: invoice.paymentStatus,
+        notes: invoice.items[0]?.itemNote || '',
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceGenerated: !!invoice.invoiceNumber,
+        branch_id: invoice.branch_id,
+        createdBy: invoice.createdBy,
+        createdAt: invoice.createdAt,
+        updatedAt: invoice.updatedAt
+      }));
+      
+      setByproducts(byproductSales);
+    } catch (error) {
+      setError('Error fetching byproducts data: ' + error.message);
+      console.error('Error fetching byproducts:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -404,23 +369,62 @@ const SalesDispatch = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      // Simulate API call - replace with actual service
+      
       if (editingSale) {
         // Update existing sale
         setSales(prev => prev.map(sale => 
           sale._id === editingSale._id ? { ...salesForm, _id: sale._id } : sale
         ));
+        closeSalesModal();
       } else {
-        // Create new sale
+        // Create new sale with SalesInvoice integration
+        const salesInvoiceData = {
+          productType: 'rice',
+          orderDate: salesForm.orderDate,
+          deliveryDate: salesForm.deliveryDate,
+          deliveryStatus: salesForm.deliveryStatus,
+          vehicleNumber: salesForm.vehicleNumber || '',
+          paymentStatus: salesForm.paymentStatus,
+          customer: {
+            name: salesForm.customerName,
+            phoneNo: salesForm.customerPhone,
+            address: salesForm.customerAddress,
+            gstinPan: salesForm.customerGstin,
+            placeOfSupply: salesForm.placeOfSupply
+          },
+          items: [{
+            productName: salesForm.riceVariety || 'Unknown Rice',  // ← Add fallback
+            quantity: salesForm.quantity,
+            uom: 'kg',
+            price: salesForm.unitPrice,
+            hsnSacCode: '10063090'
+          }],
+          payment: {
+            paymentType: salesForm.paymentMethod?.toUpperCase() || 'CASH',
+            tcsType: 'Rs',
+            tcsValue: 0,
+            discountType: 'Rs',
+            discountValue: 0,
+            roundOff: 'Yes',
+            smartSuggestion: ''
+          }
+        };
+
+        // Call actual SalesInvoice API
+        const response = await salesInvoiceService.createSalesInvoice(salesInvoiceData);
+        
+        // Add to local state for immediate display
         const newSale = {
           ...salesForm,
-          _id: Date.now().toString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          _id: response.data._id,
+          invoiceNumber: response.data.invoiceNumber,
+          createdAt: response.data.createdAt,
+          updatedAt: response.data.updatedAt
         };
+        
         setSales(prev => [newSale, ...prev]);
+        closeSalesModal();
       }
-      closeSalesModal();
     } catch (error) {
       setError('Error saving sales record: ' + error.message);
     } finally {
@@ -432,23 +436,53 @@ const SalesDispatch = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      // Simulate API call - replace with actual service
+      
       if (editingByproduct) {
         // Update existing byproduct
         setByproducts(prev => prev.map(byproduct => 
           byproduct._id === editingByproduct._id ? { ...byproductForm, _id: byproduct._id } : byproduct
         ));
+        closeByproductsModal();
       } else {
-        // Create new byproduct
+        // Create new byproduct with SalesInvoice integration
+        const salesInvoiceData = {
+          productType: 'byproduct',
+          orderDate: byproductForm.date,
+          deliveryDate: byproductForm.date,
+          deliveryStatus: 'pending',
+          vehicleNumber: byproductForm.vehicleNumber,
+          paymentStatus: byproductForm.paymentStatus,
+          customer: {
+            name: byproductForm.vendorName,
+            phoneNo: byproductForm.vendorPhone,
+            address: byproductForm.vendorAddress,
+            gstinPan: byproductForm.vendorGstin,
+            placeOfSupply: 'Tamil Nadu (33)'
+          },
+          items: [{
+            productName: byproductForm.material,
+            quantity: byproductForm.weight,
+            uom: byproductForm.unit,
+            price: byproductForm.rate,
+            hsnSacCode: '23020000'
+          }]
+        };
+
+        // Call actual SalesInvoice API
+        const response = await salesInvoiceService.createSalesInvoice(salesInvoiceData);
+        
+        // Add to local state for immediate display
         const newByproduct = {
           ...byproductForm,
-          _id: Date.now().toString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          _id: response.data._id,
+          invoiceNumber: response.data.invoiceNumber,
+          createdAt: response.data.createdAt,
+          updatedAt: response.data.updatedAt
         };
+        
         setByproducts(prev => [newByproduct, ...prev]);
+        closeByproductsModal();
       }
-      closeByproductsModal();
     } catch (error) {
       setError('Error saving byproduct record: ' + error.message);
     } finally {
@@ -572,26 +606,64 @@ const SalesDispatch = () => {
     try {
       setLoading(true);
       
-      // Check the type from the invoice data
-      if (invoiceData.type === 'byproduct') {
+      // Handle invoice generation
+      if (selectedSaleForInvoice) {
+        if (selectedSaleForInvoice.material) {
+          // It's a byproduct
+          setByproducts(prev => prev.map(byproduct => 
+            byproduct._id === selectedSaleForInvoice._id 
+              ? { ...byproduct, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+              : byproduct
+          ));
+        } else {
+          // It's a rice sale
+          setSales(prev => prev.map(sale => 
+            sale._id === selectedSaleForInvoice._id 
+              ? { ...sale, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+              : sale
+          ));
+        }
+      }
+      
+      closeInvoiceGenerator();
+      
+    } catch (error) {
+      setError('Error generating invoice: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateInvoiceFromSale = async (sale) => {
+    try {
+      setLoading(true);
+      
+      // Get next invoice number for the branch
+      const invoiceNumberResponse = await salesInvoiceService.generateInvoiceNumber({
+        branch_id: currentBranchId,
+        productType: sale.material ? 'byproduct' : 'rice'
+      });
+      
+      const invoiceNumber = invoiceNumberResponse.data.invoiceNumber;
+      
+      // Update the sale with invoice number
+      if (sale.material) {
         // It's a byproduct
         setByproducts(prev => prev.map(byproduct => 
-          byproduct._id === selectedSaleForInvoice._id 
-            ? { ...byproduct, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+          byproduct._id === sale._id 
+            ? { ...byproduct, invoiceNumber, invoiceGenerated: true }
             : byproduct
         ));
-        alert('Byproduct invoice generated successfully!');
       } else {
         // It's a rice sale
-      setSales(prev => prev.map(sale => 
-        sale._id === selectedSaleForInvoice._id 
-          ? { ...sale, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
-          : sale
-      ));
-        alert('Rice sale invoice generated successfully!');
+        setSales(prev => prev.map(saleItem => 
+          saleItem._id === sale._id 
+            ? { ...saleItem, invoiceNumber, invoiceGenerated: true }
+            : saleItem
+        ));
       }
-
-      closeInvoiceGenerator();
+      
+      alert('Invoice generated successfully! Invoice Number: ' + invoiceNumber);
       
     } catch (error) {
       setError('Error generating invoice: ' + error.message);
@@ -1135,11 +1207,6 @@ const SalesDispatch = () => {
 
   // Define columns for the table
   const columns = [
-    { 
-      key: "orderNumber", 
-      label: "Order #",
-      renderCell: (value) => <span className="font-semibold text-blue-600">{value}</span>
-    },
     { key: "customerName", label: "Customer" },
     { 
       key: "riceVariety", 
@@ -1494,7 +1561,7 @@ const SalesDispatch = () => {
               ) : (
                 <Button
                   key="generate-invoice"
-                  onClick={() => openInvoiceModal(sale)}
+                  onClick={() => generateInvoiceFromSale(sale)}
                   variant="primary"
                   icon="document-text"
                   className="text-xs px-2 py-1"
@@ -1780,7 +1847,7 @@ const SalesDispatch = () => {
                   ) : (
                     <Button
                       key="generate-invoice"
-                      onClick={() => openByproductInvoiceModal(byproduct)}
+                      onClick={() => generateInvoiceFromSale(byproduct)}
                       variant="primary"
                       icon="document-text"
                       className="text-xs px-2 py-1"
@@ -2021,15 +2088,6 @@ const SalesDispatch = () => {
          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput
-              label="Order Number"
-              name="orderNumber"
-              value={salesForm.orderNumber || ''}
-              onChange={handleSalesFormChange}
-              required
-              icon="hash"
-            />
-           
-            <FormInput
               label="Customer Name"
               name="customerName"
               value={salesForm.customerName || ''}
@@ -2037,7 +2095,7 @@ const SalesDispatch = () => {
               required
               icon="user"
             />
-         
+           
             <FormInput
               label="Customer Phone"
               name="customerPhone"
@@ -2067,11 +2125,15 @@ const SalesDispatch = () => {
               onChange={handleSalesFormChange}
               icon="id-card"
             />
-            <FormInput
-              label="Rice Variety"
+            <FormSelect
+              label="Rice Variety*"
               name="riceVariety"
               value={salesForm.riceVariety}
               onChange={handleSalesFormChange}
+              options={[
+                { value: 'A', label: 'A' },
+                { value: 'C', label: 'C' }
+              ]}
               required
               icon="grain"
             />

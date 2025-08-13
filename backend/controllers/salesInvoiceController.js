@@ -17,6 +17,7 @@ exports.getSalesInvoices = asyncHandler(async (req, res) => {
     minAmount,
     maxAmount,
     paymentType,
+    productType,  // ← Add productType filter
     sortBy = 'createdAt',
     sortOrder = 'desc'
   } = req.query;
@@ -31,13 +32,30 @@ exports.getSalesInvoices = asyncHandler(async (req, res) => {
     query.branch_id = req.query.branch_id;
   }
 
+  // Product type filter (NEW)
+  if (productType) {
+    query.productType = productType;
+  }
+
+  // Delivery status filter (NEW)
+  if (req.query.deliveryStatus) {
+    query.deliveryStatus = req.query.deliveryStatus;
+  }
+
+  // Payment status filter (NEW)
+  if (req.query.paymentStatus) {
+    query.paymentStatus = req.query.paymentStatus;
+  }
+
   // Search filter
   if (search) {
     query.$or = [
       { invoiceNumber: { $regex: search, $options: 'i' } },
       { 'customer.name': { $regex: search, $options: 'i' } },
       { 'customer.contactPerson': { $regex: search, $options: 'i' } },
-      { 'customer.phoneNo': { $regex: search, $options: 'i' } }
+      { 'customer.phoneNo': { $regex: search, $options: 'i' } },
+      { vehicleNumber: { $regex: search, $options: 'i' } }, 
+      { productType: { $regex: search, $options: 'i' } }    
     ];
   }
 
@@ -155,6 +173,16 @@ exports.createSalesInvoice = asyncHandler(async (req, res) => {
     req.body.invoiceNumber = nextNumber.toString().padStart(3, '0');
   }
 
+
+  // Auto-set invoice prefix and postfix based on product type and year
+  if (!req.body.invoicePrefix) {
+    req.body.invoicePrefix = req.body.productType === 'rice' ? 'RICE' : 'BYPROD';
+  }
+  
+  if (!req.body.invoicePostfix) {
+    req.body.invoicePostfix = new Date().getFullYear().toString();
+  }
+
   // Set creator information
   req.body.createdBy = req.user._id;
   req.body.createdBy_name = req.user.name;
@@ -262,11 +290,12 @@ exports.deleteSalesInvoice = asyncHandler(async (req, res) => {
 // @route   GET /api/sales-invoices/generate-number
 // @access  Private
 exports.generateInvoiceNumber = asyncHandler(async (req, res) => {
-  const { branch_id } = req.query;
+  const { branch_id, productType } = req.query;
   const targetBranchId = branch_id || req.user.branch_id;
 
   const lastInvoice = await SalesInvoice.findOne({
-    branch_id: targetBranchId
+    branch_id: targetBranchId,
+    ...(productType && { productType })
   }).sort({ invoiceNumber: -1 });
 
   let nextNumber = 1;
@@ -276,10 +305,22 @@ exports.generateInvoiceNumber = asyncHandler(async (req, res) => {
   }
 
   const invoiceNumber = nextNumber.toString().padStart(3, '0');
+  
+  // Generate prefix and postfix
+  const prefix = productType === 'rice' ? 'RICE' : 'BYPROD';
+  const postfix = new Date().getFullYear().toString();
+  const formattedInvoiceNumber = `${prefix}${invoiceNumber}${postfix}`;
 
   res.status(200).json({
     success: true,
-    data: { invoiceNumber }
+    data: { 
+      invoiceNumber,
+      prefix,
+      postfix,
+      formattedInvoiceNumber,
+      branch_id: targetBranchId,
+      productType: productType || 'any'
+    }
   });
 });
 
