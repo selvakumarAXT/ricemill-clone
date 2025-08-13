@@ -571,9 +571,6 @@ const getSalesAnalyticsData = async (params = {}, branch_id = null) => {
       monthCount = 12;
     }
 
-    // Debug logging to see what's happening
-    console.log(`Date Range: ${startDate} to ${endDate}`);
-    console.log(`Calculating ${monthCount} months`);
 
     for (let i = 0; i < monthCount; i++) {
     const monthDate = new Date(startYear, startMonth + i, 1);
