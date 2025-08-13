@@ -4,7 +4,6 @@ const User = require('../models/User');
 // Protect routes - check if user is authenticated
 exports.protect = async (req, res, next) => {
   let token;
-
   // Check for token in Authorization header
   if (
     req.headers.authorization &&

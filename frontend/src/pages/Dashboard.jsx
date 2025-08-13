@@ -4,7 +4,9 @@ import ReactApexChart from 'react-apexcharts';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import BranchFilter from '../components/common/BranchFilter';
-import IndiaMap from '../components/charts/IndiaMap';
+import OutstandingProgressBar from '../components/common/OutstandingProgressBar';
+import SouthIndiaSalesChart from '../components/charts/SouthIndiaSalesChart';
+
 import { dashboardService } from '../services/dashboardService';
 
 const Dashboard = () => {
@@ -30,11 +32,11 @@ const Dashboard = () => {
       let response;
       
       if (user?.role === 'superadmin') {
-        // Fetch superadmin dashboard data
+        // Fetch superadmin dashboard data with optional branch filtering
         response = await dashboardService.getDashboardData({
           period: selectedPeriod,
           startDate: dateRange.startDate,
-          endDate: dateRange.endDate
+          endDate: dateRange.endDate,
         });
       } else {
         // Fetch branch-specific dashboard data
@@ -137,6 +139,101 @@ const Dashboard = () => {
     colors: ['#3B82F6']
   };
 
+  if (loading) return <LoadingSpinner fullPage />;
+
+  // Extract data from API response with defaults
+  const {
+    overview = {},
+    sales = {},
+    outstanding = {},
+    products = {},
+    customers = {},
+    invoices = {},
+    geographical = {},
+    purchaseInvoices = []
+  } = dashboardData;
+
+
+  
+  const {
+    totalRevenue = 0,
+    totalExpenses = 0,
+    gstAmount = 0,
+    totalPurchase = 0,
+    totalIncome = 0
+  } = overview;
+
+  const {
+    salesData = [0, 0, 0, 0, 0, 0],
+    purchaseData = [0, 0, 0, 0, 0, 0],
+    newCustomerSales = [0, 0,0, 0, 0, 0],
+    existingCustomerSales = [0, 0, 0, 0, 0, 0],
+    invoiceCounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] },
+    invoiceAmounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] }
+  } = sales;
+
+  // Generate dynamic month labels based on actual data length
+  const generateMonthLabels = (dataLength) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentDate = new Date();
+    const labels = [];
+    
+    for (let i = dataLength - 1; i >= 0; i--) {
+      const monthDate = new Date(currentDate);
+      monthDate.setMonth(currentDate.getMonth() - i);
+      const monthName = months[monthDate.getMonth()];
+      const year = monthDate.getFullYear();
+      labels.push(`${monthName} ${year}`);
+    }
+    
+    return labels;
+  };
+
+  // Generate dynamic month labels for charts
+  // Use real month data from backend if available, otherwise fallback to generated labels
+  const monthLabels = dashboardData.sales?.months || generateMonthLabels(salesData.length);
+  
+  // Debug: Log the month data being used
+  console.log('🔍 Month Data Debug:');
+  console.log('  Backend months:', dashboardData.sales?.months);
+  console.log('  Generated months:', generateMonthLabels(salesData.length));
+  console.log('  Final monthLabels:', monthLabels);
+  console.log('  salesData length:', salesData.length);
+
+  const {
+    salesOutstanding = {
+      current: 0,
+      overdue_1_15: 0,
+      overdue_16_30: 0,
+      overdue_30_plus: 0
+    },
+      purchaseOutstanding = {
+      current: 0,
+      overdue_1_15: 0,
+      overdue_16_30: 0,
+      overdue_30_plus: 0
+    }
+  } = outstanding;
+
+  const {
+    bestSelling = [],
+    leastSelling = [],
+    lowStock = []
+  } = products;
+
+  const {
+    topCustomers = [],
+    topVendors = []
+  } = customers;
+
+  const {
+    dueInvoices = []
+  } = invoices;
+
+  const totalSalesOutstanding = salesOutstanding.current + salesOutstanding.overdue_1_15 + salesOutstanding.overdue_16_30 + salesOutstanding.overdue_30_plus;
+  const totalPurchaseOutstanding = purchaseOutstanding.current + purchaseOutstanding.overdue_1_15 + purchaseOutstanding.overdue_16_30 + purchaseOutstanding.overdue_30_plus;
+
+  // Chart configurations
   const newVsExistingChartOptions = {
     chart: {
       type: 'bar',
@@ -158,7 +255,7 @@ const Dashboard = () => {
       strokeDashArray: 4
     },
     xaxis: {
-      categories: ['Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025'],
+      categories: monthLabels,
       labels: { style: { colors: '#6B7280', fontSize: '12px' } }
     },
     yaxis: {
@@ -200,7 +297,7 @@ const Dashboard = () => {
       strokeDashArray: 4
     },
     xaxis: {
-      categories: ['Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025'],
+      categories: monthLabels,
       labels: { style: { colors: '#6B7280', fontSize: '12px' } }
     },
     yaxis: {
@@ -231,13 +328,13 @@ const Dashboard = () => {
       strokeDashArray: 4
     },
     xaxis: {
-      categories: ['Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025'],
+      categories: monthLabels,
       labels: { style: { colors: '#6B7280', fontSize: '12px' } }
     },
     yaxis: {
       labels: { 
         style: { colors: '#6B7280', fontSize: '12px' },
-        formatter: (value) => `${(value / 1000).toFixed(0)}K`
+        formatter: (value) => `${value}K`
       }
     },
     legend: {
@@ -247,71 +344,10 @@ const Dashboard = () => {
     },
     tooltip: {
       y: {
-        formatter: (value) => `₹${(value / 1000).toFixed(0)}K`
+        formatter: (value) => `₹${value}K`
       }
     }
   };
-
-  if (loading) return <LoadingSpinner fullPage />;
-
-  // Extract data from API response with defaults
-  const {
-    overview = {},
-    sales = {},
-    outstanding = {},
-    products = {},
-    customers = {},
-    invoices = {},
-    geographical = {}
-  } = dashboardData;
-
-  const {
-    totalRevenue = 0,
-    totalExpenses = 0,
-    gstAmount = 0
-  } = overview;
-
-  const {
-    salesData = [0, 0, 0, 0, 0, 0],
-    purchaseData = [0, 0, 0, 0, 0, 0],
-    newCustomerSales = [0, 0, 0, 0, 0, 0],
-    existingCustomerSales = [0, 0, 0, 0, 0, 0],
-    invoiceCounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] },
-    invoiceAmounts = { sales: [0, 0, 0, 0, 0, 0], purchases: [0, 0, 0, 0, 0, 0] }
-  } = sales;
-
-  const {
-    salesOutstanding = {
-      current: 0,
-      overdue_1_15: 0,
-      overdue_16_30: 0,
-      overdue_30_plus: 0
-    },
-    purchaseOutstanding = {
-      current: 0,
-      overdue_1_15: 0,
-      overdue_16_30: 0,
-      overdue_30_plus: 0
-    }
-  } = outstanding;
-
-  const {
-    bestSelling = [],
-    leastSelling = [],
-    lowStock = []
-  } = products;
-
-  const {
-    topCustomers = [],
-    topVendors = []
-  } = customers;
-
-  const {
-    dueInvoices = []
-  } = invoices;
-
-  const totalSalesOutstanding = salesOutstanding.current + salesOutstanding.overdue_1_15 + salesOutstanding.overdue_16_30 + salesOutstanding.overdue_30_plus;
-  const totalPurchaseOutstanding = purchaseOutstanding.current + purchaseOutstanding.overdue_1_15 + purchaseOutstanding.overdue_16_30 + purchaseOutstanding.overdue_30_plus;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -321,8 +357,8 @@ const Dashboard = () => {
       <div className="px-6 pb-6">
         {/* Tabs and Controls */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center justify-end mb-6">
+            {/* <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setActiveTab('analytics')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -343,7 +379,7 @@ const Dashboard = () => {
               >
                 Quick Links
               </button>
-            </div>
+            </div> */}
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
                 Last Updated: {lastUpdated.toLocaleTimeString()}
@@ -366,7 +402,7 @@ const Dashboard = () => {
               <Button 
                 variant="secondary" 
                 onClick={handleManualRefresh} 
-                className="px-4 py-2"
+                className="px-3 py-1.5 text-md"
                 disabled={loading}
               >
                 {loading ? '🔄 Loading...' : '🔄 Refresh'}
@@ -374,42 +410,50 @@ const Dashboard = () => {
               <Button 
                 variant={autoRefresh ? "primary" : "secondary"}
                 onClick={toggleAutoRefresh} 
-                className="px-4 py-2"
+                className="px-3 py-1.5 text-md"
               >
                 {autoRefresh ? '⏸️ Stop Auto-refresh' : '▶️ Auto-refresh'}
               </Button>
             </div>
           </div>
 
+          {/* Branch Filter Indicator */}
+          {user?.role === 'superadmin' && currentBranchId && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-blue-800">
+                    Branch Filter Active
+                  </span>
+                  <span className="text-sm text-blue-600">
+                    Showing data for selected branch only
+                  </span>
+                </div>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => window.location.reload()} 
+                  className="px-3 py-1.5 text-sm text-blue-700 border-blue-300 hover:bg-blue-100"
+                >
+                  Clear Filter
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Sales */}
             <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Sale - Aug 2025</h3>
-              <div className="h-16 mb-3">
-                <ReactApexChart
-                  options={salesChartOptions}
-                  series={[{ data: salesData }]}
-                  type="bar"
-                  height={64}
-                />
-              </div>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">Sale</h3>
               <div className="text-lg font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
               <div className="text-sm text-gray-600">+GST {formatCurrency(gstAmount)}</div>
             </div>
 
             {/* Purchase */}
             <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Purchase - Aug 2025</h3>
-              <div className="h-16 mb-3">
-                <ReactApexChart
-                  options={purchaseChartOptions}
-                  series={[{ data: purchaseData }]}
-                  type="bar"
-                  height={64}
-                />
-              </div>
-              <div className="text-lg font-bold text-gray-900">{formatCurrency(0)}</div>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">Purchase</h3>
+              <div className="text-lg font-bold text-gray-900">{formatCurrency(totalPurchase)}</div>
             </div>
 
             {/* Expense */}
@@ -421,15 +465,32 @@ const Dashboard = () => {
             {/* Income */}
             <div className="bg-white border border-gray-200 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-600 mb-2">Income</h3>
-              <div className="text-lg font-bold text-gray-900">{formatCurrency(0)}</div>
+              <div className="text-lg font-bold text-gray-900">{formatCurrency(totalIncome)}</div>
             </div>
           </div>
+        </div>
+
+        {/* Outstanding Balances Progress Bars */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Sales Outstanding */}
+          <OutstandingProgressBar
+            title="Sales Outstanding"
+            data={salesOutstanding}
+            total={totalSalesOutstanding}
+          />
+
+          {/* Purchase Outstanding */}
+          <OutstandingProgressBar
+            title="Purchase Outstanding"
+            data={purchaseOutstanding}
+            total={totalPurchaseOutstanding}
+          />
         </div>
 
         {/* Outstanding Balances and Sales Overview */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           {/* Sales Outstanding */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          {/* <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Sales Outstanding</h3>
             <div className="text-2xl font-bold text-gray-900 mb-4">
               Total Receivables {formatCurrency(totalSalesOutstanding)}
@@ -464,10 +525,10 @@ const Dashboard = () => {
                 <span className="text-sm font-medium">{formatCurrency(salesOutstanding.overdue_30_plus)}</span>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Purchase Outstanding */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          {/* <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase Outstanding</h3>
             <div className="text-2xl font-bold text-gray-900 mb-4">
               Total Payables {formatCurrency(totalPurchaseOutstanding)}
@@ -502,13 +563,16 @@ const Dashboard = () => {
                 <span className="text-sm font-medium">{formatCurrency(purchaseOutstanding.overdue_30_plus)}</span>
               </div>
             </div>
-          </div>
-
-          {/* Total Sale Map */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 lg:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Sale (Map)</h3>
-            <IndiaMap data={geographical} />
-          </div>
+          </div> */}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  {/* South India Sales Chart */}
+  <div className="mb-6">
+          <SouthIndiaSalesChart 
+            data={geographical}
+            title="South India Sales Overview"
+            height={300}
+          />
         </div>
 
         {/* New VS Existing Customer Sale */}
@@ -524,6 +588,8 @@ const Dashboard = () => {
             height={300}
           />
         </div>
+          </div>
+      
 
         {/* Invoice Summaries */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -665,24 +731,24 @@ const Dashboard = () => {
               <table className="min-w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Invoice No.</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Company Name</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Name</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Due Date</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Due From</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Remaining Payment</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Invoice No.</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Company Name</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Name</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due Date</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due From</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Remaining Payment</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {dueInvoices.length > 0 ? (
                     dueInvoices.map((invoice, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td className="py-2 text-sm text-gray-900">{invoice.invoiceNo}</td>
-                        <td className="py-2 text-sm text-gray-600">{invoice.companyName}</td>
-                        <td className="py-2 text-sm text-gray-600">{invoice.name}</td>
-                        <td className="py-2 text-sm text-gray-600">{invoice.dueDate}</td>
-                        <td className="py-2 text-sm text-gray-600">{invoice.dueFrom}</td>
-                        <td className="py-2 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900">{invoice.invoiceNo}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.companyName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.name}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueDate}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueFrom}</td>
+                        <td className="py-3 px-4 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
                       </tr>
                     ))
                   ) : (
@@ -705,8 +771,44 @@ const Dashboard = () => {
           {/* Purchase Invoice Due */}
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase Invoice Due</h3>
-            <div className="text-center text-gray-500 py-8">
-              No records found.
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Invoice No.</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Company Name</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Name</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due Date</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due From</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Remaining Payment</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {purchaseInvoices.length > 0 ? (
+                    purchaseInvoices.map((invoice, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="py-3 px-4 text-sm text-gray-900">{invoice.invoiceNo}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.companyName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.name}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueDate}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueFrom}</td>
+                        <td className="py-3 px-4 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="text-center text-gray-500 py-4">
+                        No outstanding purchase invoices
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-lg font-bold text-gray-900">
+                Total Outstanding: {formatCurrency(totalPurchaseOutstanding)}
+              </div>
             </div>
           </div>
         </div>
