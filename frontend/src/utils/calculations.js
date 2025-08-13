@@ -70,4 +70,31 @@ export const validatePaddyData = (paddyData) => {
   }
   
   return errors;
+};
+
+// Date formatting utilities
+export const formatDate = (date) => {
+  if (!date) return '';
+  return new Date(date).toLocaleDateString('en-IN');
+};
+
+export const formatDateTime = (date) => {
+  if (!date) return '';
+  return new Date(date).toLocaleString('en-IN');
+};
+
+// Currency formatting utilities
+export const formatCurrency = (amount) => {
+  if (!amount && amount !== 0) return '₹0';
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
+};
+
+export const formatNumber = (number) => {
+  if (!number && number !== 0) return '0';
+  return new Intl.NumberFormat('en-IN').format(number);
 }; 

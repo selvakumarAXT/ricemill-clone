@@ -22,6 +22,7 @@ const getAllInventory = asyncHandler(async (req, res) => {
     .populate('branch_id', 'name')
     .populate('created_by', 'name')
     .populate('updated_by', 'name')
+    .select('name quantity description branch_id created_by updated_by files createdAt updatedAt')
     .sort({ createdAt: -1 });
 
   res.status(200).json({
@@ -38,7 +39,8 @@ const getInventoryById = asyncHandler(async (req, res) => {
   const inventory = await Inventory.findById(req.params.id)
     .populate('branch_id', 'name')
     .populate('created_by', 'name')
-    .populate('updated_by', 'name');
+    .populate('updated_by', 'name')
+    .select('name quantity description branch_id created_by updated_by files createdAt updatedAt');
 
   if (!inventory) {
     return res.status(404).json({
@@ -66,7 +68,7 @@ const getInventoryById = asyncHandler(async (req, res) => {
 // @route   POST /api/inventory
 // @access  Private
 const createInventory = asyncHandler(async (req, res) => {
-  const { name, quantity, description, branch_id } = req.body;
+  const { name, quantity, description, branch_id, files } = req.body;
   const { role, branch_id: userBranchId, isSuperAdmin } = req.user;
 
   // Validate branch access
@@ -82,7 +84,8 @@ const createInventory = asyncHandler(async (req, res) => {
     quantity,
     description,
     branch_id: isSuperAdmin ? branch_id : userBranchId,
-    created_by: req.user.id
+    created_by: req.user.id,
+    files: files || []
   });
 
   const populatedInventory = await Inventory.findById(inventory._id)

@@ -166,6 +166,33 @@ const FileUpload = ({
   };
 
   const getFileIcon = (file) => {
+    // Handle cases where file.type might be undefined (uploaded files from backend)
+    if (!file.type) {
+      // Try to determine type from filename or mimetype
+      const filename = file.name || file.originalname || '';
+      const mimetype = file.mimetype || '';
+      
+      if (filename.toLowerCase().endsWith('.jpg') || filename.toLowerCase().endsWith('.jpeg') || 
+          filename.toLowerCase().endsWith('.png') || filename.toLowerCase().endsWith('.gif') ||
+          mimetype.startsWith('image/')) {
+        return '🖼️';
+      } else if (filename.toLowerCase().endsWith('.pdf') || mimetype.includes('pdf')) {
+        return '📄';
+      } else if (filename.toLowerCase().endsWith('.doc') || filename.toLowerCase().endsWith('.docx') || 
+                 mimetype.includes('word') || mimetype.includes('document')) {
+        return '📝';
+      } else if (filename.toLowerCase().endsWith('.xls') || filename.toLowerCase().endsWith('.xlsx') || 
+                 mimetype.includes('excel') || mimetype.includes('spreadsheet')) {
+        return '📊';
+      } else if (filename.toLowerCase().endsWith('.txt') || filename.toLowerCase().endsWith('.csv') || 
+                 mimetype.includes('text')) {
+        return '📄';
+      } else {
+        return '📎';
+      }
+    }
+    
+    // Handle files with type property (newly selected files)
     if (file.type.startsWith('image/')) {
       return '🖼️';
     } else if (file.type.includes('pdf')) {
@@ -254,10 +281,10 @@ const FileUpload = ({
                   <span className="text-lg">{getFileIcon(file)}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
-                      {file.name}
+                      {file.name || file.originalname || 'Unknown File'}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {formatFileSize(file.size)}
+                      {formatFileSize(file.size || 0)}
                     </p>
                   </div>
                 </div>
@@ -282,30 +309,40 @@ const FileUpload = ({
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-gray-700">Preview</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {files.map((file, index) => (
-              <div key={index} className="relative">
-                {file.type.startsWith('image/') ? (
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="w-full h-20 object-cover rounded border"
-                  />
-                ) : (
-                  <div className="w-full h-20 bg-gray-100 rounded border flex items-center justify-center">
+            {files.map((file, index) => {
+              const isImage = (file.type && file.type.startsWith('image/')) || 
+                             (file.mimetype && file.mimetype.startsWith('image/'));
+              
+              return (
+                <div key={index} className="relative">
+                  {isImage ? (
+                    <img
+                      src={file.url || URL.createObjectURL(file)}
+                      alt={file.name || file.originalname || 'File'}
+                      className="w-full h-20 object-cover rounded border"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-full h-20 bg-gray-100 rounded border flex items-center justify-center ${
+                    isImage ? 'hidden' : ''
+                  }`}>
                     <span className="text-2xl">{getFileIcon(file)}</span>
                   </div>
-                )}
-                <div className="absolute top-1 right-1">
-                  <Button
-                    onClick={() => handleFileRemove(index)}
-                    variant="danger"
-                    icon="delete"
-                    className="text-xs p-1"
-                    disabled={disabled}
-                  />
+                  <div className="absolute top-1 right-1">
+                    <Button
+                      onClick={() => handleFileRemove(index)}
+                      variant="danger"
+                      icon="delete"
+                      className="text-xs p-1"
+                      disabled={disabled}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

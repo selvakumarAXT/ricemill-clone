@@ -14,6 +14,8 @@ import DateRangeFilter from "../components/common/DateRangeFilter";
 import riceDepositService from "../services/riceDepositService";
 import { getAllPaddy } from "../services/paddyService";
 import { formatWeight } from "../utils/calculations";
+import InvoiceTemplate from "../components/common/InvoiceTemplate";
+import PreviewInvoice from "../components/common/PreviewInvoice";
 
 const RiceManagement = () => {
   const { user } = useSelector((state) => state.auth);
@@ -85,11 +87,17 @@ const RiceManagement = () => {
     },
     gunnyBags: 0,
     gunnyWeight: 0,
+    invoiceNumber: '',
+    invoiceGenerated: false,
   };
 
   const [riceForm, setRiceForm] = useState(initialRiceForm);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [selectedRiceForInvoice, setSelectedRiceForInvoice] = useState(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewInvoiceData, setPreviewInvoiceData] = useState(null);
 
   // Fetch rice deposit data
   useEffect(() => {
@@ -258,6 +266,59 @@ const RiceManagement = () => {
 
   const handleFilesChange = (files) => {
     setSelectedFiles(files);
+  };
+
+  const openInvoiceModal = (rice) => {
+    setSelectedRiceForInvoice(rice);
+    setShowInvoiceModal(true);
+  };
+
+  const closeInvoiceModal = () => {
+    setShowInvoiceModal(false);
+    setSelectedRiceForInvoice(null);
+  };
+
+  const handleGenerateInvoice = (invoiceData) => {
+    try {
+      setLoading(true);
+      
+      // Update rice deposit with invoice information
+      setRiceDeposits(prev => prev.map(rice => 
+        rice._id === selectedRiceForInvoice._id 
+          ? { ...rice, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+          : rice
+      ));
+      
+      alert('Rice deposit invoice generated successfully!');
+      closeInvoiceModal();
+      
+    } catch (error) {
+      setErrorMessage('Error generating invoice: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openPreviewModal = (rice) => {
+    setPreviewInvoiceData(rice);
+    setShowPreviewModal(true);
+  };
+
+  const closePreviewModal = () => {
+    setShowPreviewModal(false);
+    setPreviewInvoiceData(null);
+  };
+
+  const downloadInvoice = async (rice) => {
+    try {
+      setLoading(true);
+      // TODO: Implement actual PDF download
+      alert('Invoice download functionality coming soon!');
+    } catch (error) {
+      setErrorMessage('Error downloading invoice: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const saveRice = async (e) => {
@@ -515,6 +576,20 @@ const RiceManagement = () => {
           key: "gunnyWeight",
           label: "WEIGHT",
           render: (value) => value || 0,
+        }
+      ]
+    },
+    {
+      label: "INVOICE",
+      columns: [
+        {
+          key: "invoiceNumber",
+          label: "INVOICE #",
+          render: (value) => (
+            <span className={`font-medium ${value ? 'text-green-600' : 'text-gray-400'}`}>
+              {value || 'Not Generated'}
+            </span>
+          ),
         }
       ]
     }
@@ -906,6 +981,36 @@ const RiceManagement = () => {
               >
                 Edit
               </Button>,
+              rice.invoiceNumber ? (
+                <>
+                  <Button
+                    key="preview-invoice"
+                    onClick={() => openPreviewModal(rice)}
+                    variant="info"
+                    icon="eye"
+                    className="mr-1"
+                  >
+                    Preview
+                  </Button>
+                  <Button
+                    key="download-invoice"
+                    onClick={() => downloadInvoice(rice)}
+                    variant="success"
+                    icon="download"
+                  >
+                    Download
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  key="generate-invoice"
+                  onClick={() => openInvoiceModal(rice)}
+                  variant="primary"
+                  icon="document-text"
+                >
+                  Generate Invoice
+                </Button>
+              ),
               <Button
                 key="delete"
                 onClick={() => deleteRice(rice._id)}
@@ -1031,6 +1136,12 @@ const RiceManagement = () => {
                           <div>
                             <span className="font-medium text-gray-600">SS:</span>
                             <span className="ml-2 text-gray-900">{rice.gunny?.ss || 0}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Invoice:</span>
+                            <span className={`ml-2 font-medium ${rice.invoiceNumber ? 'text-green-600' : 'text-gray-400'}`}>
+                              {rice.invoiceNumber || 'Not Generated'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1469,6 +1580,26 @@ const RiceManagement = () => {
 
         </form>
       </DialogBox>
+
+      {/* Invoice Template Modal */}
+      <InvoiceTemplate
+        record={selectedRiceForInvoice}
+        show={showInvoiceModal}
+        onClose={closeInvoiceModal}
+        onGenerate={handleGenerateInvoice}
+        type="rice"
+        title="Generate Rice Deposit Invoice"
+      />
+
+      {/* Preview Invoice Modal */}
+      <PreviewInvoice
+        invoiceData={previewInvoiceData}
+        show={showPreviewModal}
+        onClose={closePreviewModal}
+        onDownload={downloadInvoice}
+        type="rice"
+        title="Rice Deposit Invoice Preview"
+      />
     </div>
   );
 };

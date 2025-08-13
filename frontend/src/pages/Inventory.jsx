@@ -10,6 +10,7 @@ import ResponsiveFilters from '../components/common/ResponsiveFilters';
 import DialogBox from '../components/common/DialogBox';
 import FormInput from '../components/common/FormInput';
 import FileUpload from '../components/common/FileUpload';
+import FileDisplay from '../components/common/FileDisplay';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 
 const Inventory = () => {
@@ -28,7 +29,8 @@ const Inventory = () => {
   const [inventoryForm, setInventoryForm] = useState({
     name: '',
     quantity: '',
-    description: ''
+    description: '',
+    branch_id: ''
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -45,8 +47,18 @@ const Inventory = () => {
     setError('');
     try {
       const res = await inventoryService.getAllInventory(currentBranchId);
+      console.log('=== FETCH INVENTORY DEBUG ===');
+      console.log('API Response:', res);
+      console.log('Inventory items:', res.items);
+      if (res.items && res.items.length > 0) {
+        res.items.forEach((item, index) => {
+          console.log(`Item ${index}:`, item);
+          console.log(`Item ${index} files:`, item.files);
+        });
+      }
       setInventory(res.items || []);
     } catch (err) {
+      console.error('Error fetching inventory:', err);
       setError(err.message || 'Failed to fetch inventory');
     } finally {
       setLoading(false);
@@ -58,8 +70,8 @@ const Inventory = () => {
     setEditingInventory(item);
     setInventoryForm(
       item
-        ? { name: item.name, quantity: item.quantity, description: item.description }
-        : { name: '', quantity: '', description: '' }
+        ? { name: item.name, quantity: item.quantity, description: item.description, branch_id: item.branch_id }
+        : { name: '', quantity: '', description: '', branch_id: currentBranchId }
     );
     setShowInventoryModal(true);
   };
@@ -67,7 +79,7 @@ const Inventory = () => {
   const closeInventoryModal = () => {
     setShowInventoryModal(false);
     setEditingInventory(null);
-    setInventoryForm({ name: '', quantity: '', description: '' });
+    setInventoryForm({ name: '', quantity: '', description: '', branch_id: '' });
   };
 
   const handleInventoryFormChange = (e) => {
@@ -78,18 +90,55 @@ const Inventory = () => {
     setSelectedFiles(files);
   };
 
+  const handleFileUploadSuccess = (uploadedFiles) => {
+    console.log('Files uploaded successfully:', uploadedFiles);
+    setUploadedFiles(uploadedFiles);
+    setSelectedFiles([]); // Clear selected files after upload
+  };
+
   const saveInventory = async (e) => {
     e.preventDefault();
+    console.log('=== SAVE INVENTORY DEBUG ===');
+    console.log('Form data:', inventoryForm);
+    console.log('Current branch ID:', currentBranchId);
+    console.log('Editing inventory:', editingInventory);
+    console.log('Selected files:', selectedFiles);
+    console.log('Uploaded files:', uploadedFiles);
+    
     setLoading(true);
     try {
-      if (editingInventory) {
-        await inventoryService.updateInventory(editingInventory._id, inventoryForm);
-      } else {
-        await inventoryService.createInventory(inventoryForm);
+      // If there are selected files but no uploaded files, upload them first
+      if (selectedFiles.length > 0 && uploadedFiles.length === 0) {
+        console.log('Files need to be uploaded first. Please upload files before saving.');
+        setError('Please upload files before saving inventory. Click the "Upload Files" button first.');
+        setLoading(false);
+        return;
       }
+      
+      // Ensure branch_id is set for new inventory
+      const formData = {
+        ...inventoryForm,
+        branch_id: editingInventory ? inventoryForm.branch_id : currentBranchId,
+        files: uploadedFiles // Include uploaded file references
+      };
+      
+      console.log('Final form data to send:', formData);
+      
+      if (editingInventory) {
+        console.log('Updating inventory with ID:', editingInventory._id);
+        const result = await inventoryService.updateInventory(editingInventory._id, formData);
+        console.log('Update result:', result);
+      } else {
+        console.log('Creating new inventory');
+        const result = await inventoryService.createInventory(formData);
+        console.log('Create result:', result);
+      }
+      
+      console.log('Operation successful, refreshing inventory...');
       fetchInventory();
       closeInventoryModal();
     } catch (err) {
+      console.error('Error saving inventory:', err);
       setError(err.message || 'Failed to save inventory');
     } finally {
       setLoading(false);
@@ -118,7 +167,14 @@ const Inventory = () => {
     )},
     { key: "description", label: "Description" },
     { key: "branch_id", label: "Branch", render: (branch) => branch?.name || "N/A" },
-   
+    { key: "files", label: "Files", render: (files) => (
+      <FileDisplay 
+        files={files} 
+        title="" 
+        showTitle={false}
+        className="text-xs"
+      />
+    )}
   ];
 
   const filteredInventory = inventory.filter(item => {
@@ -334,6 +390,15 @@ const Inventory = () => {
                           <h5 className="text-sm font-semibold text-gray-800 mb-2">Description</h5>
                           <p className="text-gray-700 text-sm">{item.description}</p>
                         </div>
+                        
+                        {/* Files */}
+                        <div className="p-3 bg-white rounded-lg border border-gray-200 w-full mt-3">
+                          <FileDisplay 
+                            files={item.files} 
+                            title="Attached Files"
+                            showTitle={true}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -382,16 +447,59 @@ const Inventory = () => {
             />
             
             {/* File Upload Section */}
-            <FileUpload
-              label="Upload Inventory Documents & Images"
-              module="inventory"
-              onFilesChange={handleFilesChange}
-              files={selectedFiles}
-              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-              maxFiles={10}
-              maxSize={10}
-              showPreview={true}
-            />
+            <div className="space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <h4 className="text-sm font-medium text-blue-800 mb-2">📁 File Upload Instructions</h4>
+                <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                  <li>Select files using the upload area below</li>
+                  <li>Click the "Upload Files" button to upload them to the server</li>
+                  <li>Wait for upload confirmation before saving inventory</li>
+                  <li>Files will be attached to your inventory record</li>
+                </ol>
+              </div>
+              
+              <FileUpload
+                label="Upload Inventory Documents & Images"
+                module="inventory"
+                onFilesChange={handleFilesChange}
+                onUploadSuccess={handleFileUploadSuccess}
+                files={selectedFiles} // Only show selected files for now
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                maxFiles={10}
+                maxSize={10}
+                showPreview={true}
+                disableAutoUpload={false}
+              />
+            </div>
+            
+
+            
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={closeInventoryModal}
+                className="px-6 py-2"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                className="px-6 py-2"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="flex items-center">
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Saving...
+                  </span>
+                ) : (
+                  editingInventory ? "Update Inventory" : "Add Inventory"
+                )}
+              </Button>
+            </div>
           </form>
         </DialogBox>
       )}

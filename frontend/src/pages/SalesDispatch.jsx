@@ -11,23 +11,31 @@ import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
 import FileUpload from '../components/common/FileUpload';
 import DateRangeFilter from '../components/common/DateRangeFilter';
-import InvoiceGenerator from '../components/InvoiceGenerator';
+import InvoiceTemplate from '../components/common/InvoiceTemplate';
+import PreviewInvoice from '../components/common/PreviewInvoice';
+import { formatDate, formatCurrency } from '../utils/calculations';
 
 const SalesDispatch = () => {
   const [sales, setSales] = useState([]);
+  const [byproducts, setByproducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [salesFilter, setSalesFilter] = useState('');
+  const [byproductsFilter, setByproductsFilter] = useState('');
   const [dateRange, setDateRange] = useState({
     startDate: '',
     endDate: ''
   });
+  const [activeTab, setActiveTab] = useState('rice'); // 'rice' or 'byproducts'
   const [showSalesModal, setShowSalesModal] = useState(false);
+  const [showByproductsModal, setShowByproductsModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showInvoiceGenerator, setShowInvoiceGenerator] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
+  const [editingByproduct, setEditingByproduct] = useState(null);
   const [selectedSaleForInvoice, setSelectedSaleForInvoice] = useState(null);
   const [expandedSale, setExpandedSale] = useState(null);
+  const [expandedByproduct, setExpandedByproduct] = useState(null);
   const { currentBranchId } = useSelector((state) => state.branch);
   const { user } = useSelector((state) => state.auth);
 
@@ -50,6 +58,31 @@ const SalesDispatch = () => {
     paymentMethod: 'cash',
     notes: '',
     placeOfSupply: ''
+  };
+
+  const initialByproductForm = {
+    date: new Date().toISOString().split('T')[0],
+    vehicleNumber: '',
+    material: '',
+    weight: '',
+    unit: 'kg',
+    rate: '',
+    totalAmount: 0,
+    vendorName: '',
+    vendorPhone: '',
+    vendorEmail: '',
+    vendorAddress: '',
+    vendorGstin: '',
+    vendorPan: '',
+    paymentMethod: 'Cash',
+    paymentStatus: 'Pending',
+    notes: '',
+    invoiceNumber: '',
+    invoiceGenerated: false,
+    branch_id: currentBranchId,
+    createdBy: user?.id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
 
   const initialInvoiceForm = {
@@ -80,6 +113,7 @@ const SalesDispatch = () => {
   };
 
   const [salesForm, setSalesForm] = useState(initialSalesForm);
+  const [byproductForm, setByproductForm] = useState(initialByproductForm);
   const [invoiceForm, setInvoiceForm] = useState(initialInvoiceForm);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -88,8 +122,15 @@ const SalesDispatch = () => {
   const [showInvoicePreviewModal, setShowInvoicePreviewModal] = useState(false);
   const [previewInvoiceData, setPreviewInvoiceData] = useState(null);
 
+  // Byproducts constants
+  const BYPRODUCT_TYPES = ['Husk', 'Broken Rice', 'Brown Rice', 'Bran', 'Rice Flour', 'Rice Starch', 'Rice Bran Oil', 'Other'];
+  const UNITS = ['kg', 'tons', 'bags', 'quintals'];
+  const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'UPI', 'Credit'];
+  const PAYMENT_STATUS = ['Pending', 'Partial', 'Completed', 'Overdue'];
+
   useEffect(() => {
     fetchSalesData();
+    fetchByproductsData();
   }, [currentBranchId]);
 
   const fetchSalesData = async () => {
@@ -157,6 +198,67 @@ const SalesDispatch = () => {
     }
   };
 
+  const fetchByproductsData = async () => {
+    try {
+      // Simulate API call - replace with actual service
+      const mockByproducts = [
+        {
+          _id: '1',
+          date: '2024-01-15',
+          vehicleNumber: 'TN-20-BU-4006',
+          material: 'Husk',
+          weight: 5000,
+          unit: 'kg',
+          rate: 2.5,
+          totalAmount: 12500,
+          vendorName: 'ABC Traders',
+          vendorPhone: '+91 9876543210',
+          vendorEmail: 'abc@example.com',
+          vendorAddress: '123 Main St, Chennai',
+          vendorGstin: '33AAAAA0000A1Z5',
+          vendorPan: 'ABCD1234EFGH',
+          paymentMethod: 'Cash',
+          paymentStatus: 'Completed',
+          notes: 'Monthly husk supply',
+          invoiceNumber: 'INV-BP-20240115-001',
+          invoiceGenerated: true,
+          branch_id: 'branch1',
+          createdBy: 'user1',
+          createdAt: '2024-01-15T10:00:00Z',
+          updatedAt: '2024-01-15T10:00:00Z'
+        },
+        {
+          _id: '2',
+          date: '2024-01-16',
+          vehicleNumber: 'TN-21-CD-5678',
+          material: 'Broken Rice',
+          weight: 2000,
+          unit: 'kg',
+          rate: 35,
+          totalAmount: 70000,
+          vendorName: 'XYZ Foods',
+          vendorPhone: '+91 8765432109',
+          vendorEmail: 'xyz@example.com',
+          vendorAddress: '456 Market Rd, Madurai',
+          vendorGstin: '33BBBBB0000B2Z6',
+          vendorPan: 'EFGH5678IJKL',
+          paymentMethod: 'Bank Transfer',
+          paymentStatus: 'Pending',
+          notes: 'Premium broken rice for animal feed',
+          invoiceNumber: null,
+          invoiceGenerated: false,
+          branch_id: 'branch1',
+          createdBy: 'user1',
+          createdAt: '2024-01-16T11:00Z',
+          updatedAt: '2024-01-16T11:00Z'
+        }
+      ];
+      setByproducts(mockByproducts);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch byproducts data');
+    }
+  };
+
   const openSalesModal = (sale = null) => {
   
     setEditingSale(sale);
@@ -177,10 +279,30 @@ const SalesDispatch = () => {
     setShowSalesModal(true);
   };
 
+  const openByproductsModal = (byproduct = null) => {
+    setEditingByproduct(byproduct);
+    if (byproduct) {
+      const formData = {
+        ...initialByproductForm,
+        ...byproduct
+      };
+      setByproductForm(formData);
+    } else {
+      setByproductForm(initialByproductForm);
+    }
+    setShowByproductsModal(true);
+  };
+
   const closeSalesModal = () => {
     setShowSalesModal(false);
     setEditingSale(null);
     setSalesForm(initialSalesForm);
+  };
+
+  const closeByproductsModal = () => {
+    setShowByproductsModal(false);
+    setEditingByproduct(null);
+    setByproductForm(initialByproductForm);
   };
 
   const handleSalesFormChange = (e) => {
@@ -190,6 +312,18 @@ const SalesDispatch = () => {
       // Auto-calculate total amount
       if (name === 'quantity' || name === 'unitPrice') {
         updated.totalAmount = updated.quantity * updated.unitPrice;
+      }
+      return updated;
+    });
+  };
+
+  const handleByproductFormChange = (e) => {
+    const { name, value } = e.target;
+    setByproductForm(prev => {
+      const updated = { ...prev, [name]: value };
+      // Auto-calculate total amount
+      if (name === 'weight' || name === 'rate') {
+        updated.totalAmount = updated.weight * updated.rate;
       }
       return updated;
     });
@@ -211,6 +345,21 @@ const SalesDispatch = () => {
   const closePreview = () => {
     setPreviewFile(null);
     setShowPreviewModal(false);
+  };
+
+  const numberToWords = (num) => {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    
+    if (num === 0) return 'Zero';
+    if (num < 10) return ones[num];
+    if (num < 20) return teens[num - 10];
+    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
+    if (num < 1000) return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' and ' + numberToWords(num % 100) : '');
+    if (num < 100000) return numberToWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 ? ' ' + numberToWords(num % 1000) : '');
+    if (num < 10000000) return numberToWords(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 ? ' ' + numberToWords(num % 100000) : '');
+    return numberToWords(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 ? ' ' + numberToWords(num % 10000000) : '');
   };
 
   const previewInvoice = (sale) => {
@@ -279,6 +428,34 @@ const SalesDispatch = () => {
     }
   };
 
+  const saveByproduct = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      // Simulate API call - replace with actual service
+      if (editingByproduct) {
+        // Update existing byproduct
+        setByproducts(prev => prev.map(byproduct => 
+          byproduct._id === editingByproduct._id ? { ...byproductForm, _id: byproduct._id } : byproduct
+        ));
+      } else {
+        // Create new byproduct
+        const newByproduct = {
+          ...byproductForm,
+          _id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        setByproducts(prev => [newByproduct, ...prev]);
+      }
+      closeByproductsModal();
+    } catch (error) {
+      setError('Error saving byproduct record: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deleteSales = async (saleId) => {
     if (window.confirm('Are you sure you want to delete this sales record?')) {
       try {
@@ -287,6 +464,20 @@ const SalesDispatch = () => {
         setSales(prev => prev.filter(sale => sale._id !== saleId));
       } catch (error) {
         setError('Error deleting sales record: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const deleteByproduct = async (byproductId) => {
+    if (window.confirm('Are you sure you want to delete this byproduct record?')) {
+      try {
+        setLoading(true);
+        // Simulate API call - replace with actual service
+        setByproducts(prev => prev.filter(byproduct => byproduct._id !== byproductId));
+      } catch (error) {
+        setError('Error deleting byproduct record: ' + error.message);
       } finally {
         setLoading(false);
       }
@@ -320,20 +511,6 @@ const SalesDispatch = () => {
   };
 
   // Invoice Generation Functions
-  const numberToWords = (num) => {
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    
-    if (num === 0) return 'Zero';
-    if (num < 10) return ones[num];
-    if (num < 20) return teens[num - 10];
-    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
-    if (num < 1000) return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' and ' + numberToWords(num % 100) : '');
-    if (num < 100000) return numberToWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 ? ' ' + numberToWords(num % 1000) : '');
-    if (num < 10000000) return numberToWords(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 ? ' ' + numberToWords(num % 100000) : '');
-    return numberToWords(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 ? ' ' + numberToWords(num % 10000000) : '');
-  };
 
   const calculateInvoiceTotals = (sale, invoiceData) => {
     const taxableAmount = sale.totalAmount;
@@ -361,8 +538,22 @@ const SalesDispatch = () => {
     return `INV-${year}${month}${day}-${random}`;
   };
 
+  const generateByproductInvoiceNumber = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `INV-BP-${year}${month}${day}-${random}`;
+  };
+
   const openInvoiceModal = (sale) => {
     setSelectedSaleForInvoice(sale);
+    setShowInvoiceGenerator(true);
+  };
+
+  const openByproductInvoiceModal = (byproduct) => {
+    setSelectedSaleForInvoice(byproduct);
     setShowInvoiceGenerator(true);
   };
 
@@ -377,21 +568,30 @@ const SalesDispatch = () => {
     setSelectedSaleForInvoice(null);
   };
 
-  const handleGenerateInvoice = (invoiceData) => {
+    const handleGenerateInvoice = (invoiceData) => {
     try {
       setLoading(true);
       
-      // Update sale with invoice information
-      setSales(prev => prev.map(sale => 
-        sale._id === selectedSaleForInvoice._id 
-          ? { ...sale, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
-          : sale
-      ));
+      // Check the type from the invoice data
+      if (invoiceData.type === 'byproduct') {
+        // It's a byproduct
+        setByproducts(prev => prev.map(byproduct => 
+          byproduct._id === selectedSaleForInvoice._id 
+            ? { ...byproduct, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+            : byproduct
+        ));
+        alert('Byproduct invoice generated successfully!');
+      } else {
+        // It's a rice sale
+        setSales(prev => prev.map(sale => 
+          sale._id === selectedSaleForInvoice._id 
+            ? { ...sale, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+            : sale
+        ));
+        alert('Rice sale invoice generated successfully!');
+      }
 
       closeInvoiceGenerator();
-      
-      // Show success message
-      alert('Invoice generated successfully!');
       
     } catch (error) {
       setError('Error generating invoice: ' + error.message);
@@ -435,20 +635,70 @@ const SalesDispatch = () => {
       // Simulate API call - replace with actual service
       console.log('Generating invoice:', invoiceData);
       
-      // Update sale with invoice information
-      setSales(prev => prev.map(sale => 
-        sale._id === selectedSaleForInvoice._id 
-          ? { ...sale, invoiceNumber: invoiceForm.invoiceNumber, invoiceGenerated: true }
-          : sale
+      // Check if it's a byproduct or rice sale based on the presence of material field
+      if (selectedSaleForInvoice.material) {
+        // It's a byproduct
+        setByproducts(prev => prev.map(byproduct => 
+          byproduct._id === selectedSaleForInvoice._id 
+            ? { ...byproduct, invoiceNumber: invoiceForm.invoiceNumber, invoiceGenerated: true }
+            : byproduct
+        ));
+        alert('Byproduct invoice generated successfully!');
+      } else {
+        // It's a rice sale
+        setSales(prev => prev.map(sale => 
+          sale._id === selectedSaleForInvoice._id 
+            ? { ...sale, invoiceNumber: invoiceForm.invoiceNumber, invoiceGenerated: true }
+            : sale
+        ));
+        alert('Rice sale invoice generated successfully!');
+      }
+
+      closeInvoiceModal();
+      
+    } catch (error) {
+      setError('Error generating invoice: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateByproductInvoice = async () => {
+    try {
+      setLoading(true);
+      
+      // Create invoice data for byproduct
+      const invoiceData = {
+        ...invoiceForm,
+        byproductId: selectedSaleForInvoice._id,
+        vendorName: selectedSaleForInvoice.vendorName,
+        vendorAddress: selectedSaleForInvoice.vendorAddress,
+        vendorPhone: selectedSaleForInvoice.vendorPhone,
+        material: selectedSaleForInvoice.material,
+        weight: selectedSaleForInvoice.weight,
+        unit: selectedSaleForInvoice.unit,
+        rate: selectedSaleForInvoice.rate,
+        totalAmount: selectedSaleForInvoice.totalAmount,
+        generatedAt: new Date().toISOString()
+      };
+
+      // Simulate API call - replace with actual service
+      console.log('Generating byproduct invoice:', invoiceData);
+      
+      // Update byproduct with invoice information
+      setByproducts(prev => prev.map(byproduct => 
+        byproduct._id === selectedSaleForInvoice._id 
+          ? { ...byproduct, invoiceNumber: invoiceForm.invoiceNumber, invoiceGenerated: true }
+          : byproduct
       ));
 
       closeInvoiceModal();
       
       // Show success message
-      alert('Invoice generated successfully!');
+      alert('Byproduct invoice generated successfully!');
       
     } catch (error) {
-      setError('Error generating invoice: ' + error.message);
+      setError('Error generating byproduct invoice: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -782,6 +1032,107 @@ const SalesDispatch = () => {
     }
   };
 
+  const downloadByproductInvoice = async (byproduct) => {
+    try {
+      setLoading(true);
+      
+      // Generate invoice number if not exists
+      const invoiceNumber = byproduct.invoiceNumber || generateByproductInvoiceNumber();
+      
+      // Calculate tax amounts (assuming 18% IGST for inter-state)
+      const taxableAmount = byproduct.totalAmount;
+      const igstAmount = (taxableAmount * 18) / 100;
+      const grandTotal = taxableAmount + igstAmount;
+      
+      // Get current date for invoice
+      const currentDate = new Date().toLocaleDateString();
+      
+      // Create HTML invoice for download
+      const invoiceHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Byproduct Invoice - ${invoiceNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+            .invoice-info { margin: 20px 0; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+            th { background-color: #f4f4f4; }
+            .totals { margin: 20px 0; }
+            .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>SREE ESWAR HI-TECH MODERN RICE MILL</h1>
+            <p>99, REDHILLS MAIN ROAD, KILANUR VILLAGE, THIRUVALLUR, THIRUVALLUR, Tamil Nadu (33) - 602021</p>
+            <p>GSTIN: 33AVLPV6754C3Z8</p>
+          </div>
+          
+          <div class="invoice-info">
+            <h3>Invoice Details:</h3>
+            <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
+            <p><strong>Date:</strong> ${currentDate}</p>
+            <p><strong>Vendor:</strong> ${byproduct.vendorName}</p>
+            <p><strong>Phone:</strong> ${byproduct.vendorPhone}</p>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${byproduct.material}</td>
+                <td>${byproduct.weight} ${byproduct.unit}</td>
+                <td>₹${byproduct.rate}</td>
+                <td>₹${byproduct.totalAmount.toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div class="totals">
+            <p><strong>Subtotal:</strong> ₹${byproduct.totalAmount.toLocaleString()}</p>
+            <p><strong>IGST (18%):</strong> ₹${igstAmount.toLocaleString()}</p>
+            <p><strong>Total:</strong> ₹${grandTotal.toLocaleString()}</p>
+            <p><strong>Amount in Words:</strong> ${numberToWords(Math.round(grandTotal))} Rupees Only</p>
+          </div>
+          
+          <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Create blob and download HTML
+      const blob = new Blob([invoiceHTML], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Byproduct-Invoice-${invoiceNumber}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      alert('Byproduct invoice downloaded successfully!');
+      
+    } catch (error) {
+      setError('Error downloading byproduct invoice: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Define columns for the table
   const columns = [
     { 
@@ -834,6 +1185,68 @@ const SalesDispatch = () => {
     }
   ];
 
+  // Define columns for byproducts table
+  const byproductColumns = [
+    { 
+      key: "date", 
+      label: "Date",
+      renderCell: (value) => <span className="font-medium">{formatDate(value)}</span>
+    },
+    { 
+      key: "vehicleNumber", 
+      label: "Vehicle No.",
+      renderCell: (value) => <span className="font-semibold text-blue-600">{value}</span>
+    },
+    { 
+      key: "material", 
+      label: "Material",
+      renderCell: (value) => <span className="text-green-600 font-medium">{value}</span>
+    },
+    { 
+      key: "weight", 
+      label: "Weight",
+      renderCell: (value, record) => <span className="font-semibold text-indigo-600">{value} {record.unit}</span>
+    },
+    { 
+      key: "rate", 
+      label: "Rate",
+      renderCell: (value) => <span className="font-medium">₹{value}</span>
+    },
+    { 
+      key: "totalAmount", 
+      label: "Total Amount",
+      renderCell: (value) => <span className="font-semibold text-green-600">{formatCurrency(value)}</span>
+    },
+    { 
+      key: "invoiceNumber", 
+      label: "Invoice #",
+      renderCell: (value, byproduct) => (
+        <span className={`font-medium ${value ? 'text-green-600' : 'text-gray-400'}`}>
+          {value || 'Not Generated'}
+        </span>
+      )
+    },
+    { 
+      key: "vendorName", 
+      label: "Vendor",
+      renderCell: (value) => <span className="font-medium">{value}</span>
+    },
+    { 
+      key: "paymentStatus", 
+      label: "Payment Status",
+      renderCell: (value) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          value === 'Completed' ? 'bg-green-100 text-green-800' :
+          value === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+          value === 'Partial' ? 'bg-blue-100 text-blue-800' :
+          'bg-red-100 text-red-800'
+        }`}>
+          {value}
+        </span>
+      )
+    }
+  ];
+
   const filteredSales = sales.filter(sale => {
     const q = salesFilter.toLowerCase();
     return (
@@ -842,6 +1255,16 @@ const SalesDispatch = () => {
       sale.riceVariety?.toLowerCase().includes(q) ||
       sale.paymentStatus?.toLowerCase().includes(q) ||
       sale.deliveryStatus?.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredByproducts = byproducts.filter(byproduct => {
+    const q = byproductsFilter.toLowerCase();
+    return (
+      byproduct.vehicleNumber?.toLowerCase().includes(q) ||
+      byproduct.material?.toLowerCase().includes(q) ||
+      byproduct.vendorName?.toLowerCase().includes(q) ||
+      byproduct.paymentStatus?.toLowerCase().includes(q)
     );
   });
 
@@ -863,11 +1286,11 @@ const SalesDispatch = () => {
             {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
               (!user?.isSuperAdmin && user?.branch?.id)) && (
               <Button
-                onClick={() => openSalesModal()}
+                onClick={() => activeTab === 'rice' ? openSalesModal() : openByproductsModal()}
                 variant="success"
                 className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                🛒 Add New Sale
+                {activeTab === 'rice' ? '🛒 Add New Sale' : '📦 Add New Byproduct Sale'}
               </Button>
             )}
           </div>
@@ -896,8 +1319,12 @@ const SalesDispatch = () => {
                 <span className="text-blue-600 text-lg">📊</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Orders</p>
-                <p className="text-xl font-bold text-gray-900">{sales.length}</p>
+                <p className="text-sm text-gray-600">
+                  {activeTab === 'rice' ? 'Total Orders' : 'Total Sales'}
+                </p>
+                <p className="text-xl font-bold text-gray-900">
+                  {activeTab === 'rice' ? sales.length : byproducts.length}
+                </p>
               </div>
             </div>
           </div>
@@ -908,7 +1335,12 @@ const SalesDispatch = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-xl font-bold text-gray-900">₹{sales.reduce((sum, sale) => sum + sale.totalAmount, 0).toLocaleString()}</p>
+                <p className="text-xl font-bold text-gray-900">
+                  ₹{activeTab === 'rice' 
+                    ? sales.reduce((sum, sale) => sum + sale.totalAmount, 0).toLocaleString()
+                    : byproducts.reduce((sum, byproduct) => sum + byproduct.totalAmount, 0).toLocaleString()
+                  }
+                </p>
               </div>
             </div>
           </div>
@@ -918,8 +1350,15 @@ const SalesDispatch = () => {
                 <span className="text-yellow-600 text-lg">📦</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Pending Delivery</p>
-                <p className="text-xl font-bold text-gray-900">{sales.filter(sale => sale.deliveryStatus === 'pending').length}</p>
+                <p className="text-sm text-gray-600">
+                  {activeTab === 'rice' ? 'Pending Delivery' : 'Pending Payment'}
+                </p>
+                <p className="text-xl font-bold text-gray-900">
+                  {activeTab === 'rice' 
+                    ? sales.filter(sale => sale.deliveryStatus === 'pending').length
+                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'Pending').length
+                  }
+                </p>
               </div>
             </div>
           </div>
@@ -929,19 +1368,58 @@ const SalesDispatch = () => {
                 <span className="text-purple-600 text-lg">✅</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Completed</p>
-                <p className="text-xl font-bold text-gray-900">{sales.filter(sale => sale.deliveryStatus === 'delivered').length}</p>
+                <p className="text-sm text-gray-600">
+                  {activeTab === 'rice' ? 'Completed' : 'Completed'}
+                </p>
+                <p className="text-xl font-bold text-gray-900">
+                  {activeTab === 'rice' 
+                    ? sales.filter(sale => sale.deliveryStatus === 'delivered').length
+                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'Completed').length
+                  }
+                </p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Tab Switch */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('rice')}
+              className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 ${
+                activeTab === 'rice'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              🍚 Rice Sales
+            </button>
+            <button
+              onClick={() => setActiveTab('byproducts')}
+              className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 ${
+                activeTab === 'byproducts'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              📦 Byproducts Sales
+            </button>
           </div>
         </div>
 
         <ResponsiveFilters title="Filters & Search" className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <TableFilters
-              searchValue={salesFilter}
-              searchPlaceholder="Search by order number, customer, variety..."
-              onSearchChange={(e) => setSalesFilter(e.target.value)}
+              searchValue={activeTab === 'rice' ? salesFilter : byproductsFilter}
+              searchPlaceholder={activeTab === 'rice' 
+                ? "Search by order number, customer, variety..." 
+                : "Search by vehicle number, material, vendor..."
+              }
+              onSearchChange={(e) => activeTab === 'rice' 
+                ? setSalesFilter(e.target.value) 
+                : setByproductsFilter(e.target.value)
+              }
               showSelect={false}
             />
             <BranchFilter
@@ -957,18 +1435,19 @@ const SalesDispatch = () => {
               endDate={dateRange.endDate}
               onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
               onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-              startDateLabel="Order Date From"
-              endDateLabel="Order Date To"
+              startDateLabel={activeTab === 'rice' ? "Order Date From" : "Sale Date From"}
+              endDateLabel={activeTab === 'rice' ? "Order Date To" : "Sale Date To"}
             />
           </div>
         </ResponsiveFilters>
 
         {/* Desktop Table View */}
-        <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Sales Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredSales.length} records</p>
-          </div>
+        {activeTab === 'rice' && (
+          <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+              <h3 className="text-lg font-semibold text-gray-800">Rice Sales Records</h3>
+              <p className="text-sm text-gray-600 mt-1">Total: {filteredSales.length} records</p>
+            </div>
           <TableList
             data={filteredSales}
             columns={columns}
@@ -1097,6 +1576,7 @@ const SalesDispatch = () => {
             )}
           />
         </div>
+        )}
 
         {/* Mobile Table View */}
         <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
@@ -1253,6 +1733,281 @@ const SalesDispatch = () => {
             )}
           </div>
         </div>
+
+        {/* Byproducts Table View */}
+        {activeTab === 'byproducts' && (
+          <>
+            {/* Desktop Byproducts Table */}
+            <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
+                <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
+              </div>
+              <TableList
+                data={filteredByproducts}
+                columns={byproductColumns}
+                actions={(byproduct) => [
+                  <Button
+                    key="edit"
+                    onClick={() => openByproductsModal(byproduct)}
+                    variant="info"
+                    icon="edit"
+                    className="text-xs px-2 py-1"
+                  >
+                    Edit
+                  </Button>,
+                  <Button
+                    key="delete"
+                    onClick={() => deleteByproduct(byproduct._id)}
+                    variant="danger"
+                    icon="delete"
+                    className="text-xs px-2 py-1"
+                  >
+                    Delete
+                  </Button>,
+                  byproduct.invoiceNumber ? (
+                    <>
+                      <Button
+                        key="download-invoice"
+                        onClick={() => downloadByproductInvoice(byproduct)}
+                        variant="success"
+                        icon="download"
+                        className="text-xs px-2 py-1"
+                      >
+                        Download
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      key="generate-invoice"
+                      onClick={() => openByproductInvoiceModal(byproduct)}
+                      variant="primary"
+                      icon="document-text"
+                      className="text-xs px-2 py-1"
+                    >
+                      Generate Invoice
+                    </Button>
+                  )
+                ]}
+                renderDetail={(byproduct) => (
+                  <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border-l-4 border-purple-500">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Date:</span>
+                          <span className="text-gray-900 font-medium">{formatDate(byproduct.date)}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Vehicle:</span>
+                          <span className="text-gray-900 font-medium">{byproduct.vehicleNumber}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Material:</span>
+                          <span className="text-green-600 font-medium">{byproduct.material}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Weight:</span>
+                          <span className="text-gray-900 font-medium">{byproduct.weight} {byproduct.unit}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Rate:</span>
+                          <span className="text-gray-900 font-medium">₹{byproduct.rate}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Vendor:</span>
+                          <span className="text-gray-900 font-medium">{byproduct.vendorName}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Phone:</span>
+                          <span className="text-gray-900 font-medium">{byproduct.vendorPhone}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Email:</span>
+                          <span className="text-gray-900 font-medium">{byproduct.vendorEmail}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Payment:</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            byproduct.paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+                            byproduct.paymentStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                            byproduct.paymentStatus === 'Partial' ? 'bg-blue-100 text-blue-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {byproduct.paymentStatus}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-sm font-medium text-gray-600">Total:</span>
+                          <span className="text-green-600 font-medium">{formatCurrency(byproduct.totalAmount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              />
+            </div>
+
+            {/* Mobile Byproducts Table */}
+            <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6">
+              <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
+                <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
+              </div>
+              
+              <div className="p-4">
+                {filteredByproducts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No byproduct sales records</h3>
+                    <p className="mt-1 text-sm text-gray-500">Get started by creating a new byproduct sale record.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredByproducts.map((byproduct) => (
+                      <div key={byproduct._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div 
+                          className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => setExpandedByproduct(expandedByproduct === byproduct._id ? null : byproduct._id)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex-1">
+                              <div className="font-medium text-blue-600">{byproduct.vehicleNumber}</div>
+                              <div className="text-sm text-gray-600">{byproduct.vendorName}</div>
+                              <div className="text-xs text-gray-500">
+                                {byproduct.material} • {byproduct.weight} {byproduct.unit} • {formatCurrency(byproduct.totalAmount)}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openByproductsModal(byproduct);
+                                }}
+                                variant="info"
+                                icon="edit"
+                                className="text-xs px-2 py-1"
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteByproduct(byproduct._id);
+                                }}
+                                variant="danger"
+                                icon="delete"
+                                className="text-xs px-2 py-1"
+                              >
+                                Delete
+                              </Button>
+                              {byproduct.invoiceNumber ? (
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    downloadByproductInvoice(byproduct);
+                                  }}
+                                  variant="success"
+                                  icon="download"
+                                  className="text-xs px-2 py-1"
+                                >
+                                  Download
+                                </Button>
+                              ) : (
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openByproductInvoiceModal(byproduct);
+                                  }}
+                                  variant="primary"
+                                  icon="document-text"
+                                  className="text-xs px-2 py-1"
+                                >
+                                  Generate
+                                </Button>
+                              )}
+                              <svg 
+                                className={`w-4 h-4 text-gray-400 transition-transform ${
+                                  expandedByproduct === byproduct._id ? 'rotate-180' : ''
+                                }`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        {expandedByproduct === byproduct._id && (
+                          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 border-t border-gray-200">
+                            <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                              <div>
+                                <span className="text-gray-600">Date:</span>
+                                <span className="ml-1 font-medium text-gray-900">{formatDate(byproduct.date)}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Material:</span>
+                                <span className="ml-1 font-medium text-green-600">{byproduct.material}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Weight:</span>
+                                <span className="ml-1 font-medium text-gray-900">{byproduct.weight} {byproduct.unit}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Rate:</span>
+                                <span className="ml-1 font-medium text-gray-900">₹{byproduct.rate}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Vendor:</span>
+                                <span className="ml-1 font-medium text-gray-900">{byproduct.vendorName}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Phone:</span>
+                                <span className="ml-1 font-medium text-gray-900">{byproduct.vendorPhone}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Payment:</span>
+                                <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                  byproduct.paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+                                  byproduct.paymentStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  byproduct.paymentStatus === 'Partial' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {byproduct.paymentStatus}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Total:</span>
+                                <span className="ml-1 font-medium text-green-600">{formatCurrency(byproduct.totalAmount)}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Invoice:</span>
+                                <span className={`ml-1 font-medium ${byproduct.invoiceNumber ? 'text-green-600' : 'text-gray-400'}`}>
+                                  {byproduct.invoiceNumber || 'Not Generated'}
+                                </span>
+                              </div>
+                            </div>
+                            {byproduct.notes && (
+                              <div className="p-3 bg-white rounded-lg border border-gray-200">
+                                <h5 className="text-sm font-semibold text-gray-800 mb-1">Notes</h5>
+                                <p className="text-gray-700 text-sm">{byproduct.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Sales Modal */}
@@ -1748,189 +2503,260 @@ const SalesDispatch = () => {
       </DialogBox>
 
       {/* Invoice Preview Modal */}
+
+        <PreviewInvoice
+          invoiceData={previewInvoiceData}
+          show={showInvoicePreviewModal}
+          onClose={closeInvoicePreview}
+          onDownload={downloadInvoice}
+          type={previewInvoiceData?.material ? 'byproduct' : 'sale'}
+          title="Invoice Preview"
+        />
+
+      {/* Byproducts Modal */}
       <DialogBox
-        show={showInvoicePreviewModal}
-        onClose={closeInvoicePreview}
-        title="Invoice Preview"
-        size="4xl"
+        show={showByproductsModal}
+        onClose={closeByproductsModal}
+        title={editingByproduct ? 'Edit Byproduct Sale' : 'Add New Byproduct Sale'}
+        size="2xl"
       >
-        {previewInvoiceData && (
-          <div className="space-y-4">
-            <div className="bg-white border-2 border-gray-300 p-6 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
-              {/* Header */}
-              <div className="text-center border-b-2 border-gray-300 pb-4 mb-6">
-                <h1 className="text-2xl font-bold text-gray-800 mb-2">SREE ESWAR HI-TECH MODERN RICE MILL</h1>
-                <p className="text-sm text-gray-600 mb-1">99, REDHILLS MAIN ROAD, KILANUR VILLAGE, THIRUVALLUR, THIRUVALLUR, Tamil Nadu (33) - 602021</p>
-                <p className="text-sm text-gray-600">GSTIN: 33AVLPV6754C3Z8</p>
-              </div>
-              
-              {/* Invoice Type and Details */}
-              <div className="flex justify-between mb-4">
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-gray-800">PURCHASE INVOICE</h2>
-                </div>
-                <div className="flex-1 text-right">
-                  <p className="text-xs"><strong>Invoice No.:</strong> {previewInvoiceData.invoiceNumber}</p>
-                  <p className="text-xs"><strong>Invoice Date:</strong> {new Date(previewInvoiceData.orderDate).toLocaleDateString()}</p>
-                  <p className="text-xs"><strong>Reverse Charge:</strong> {previewInvoiceData.reverseCharge || 'No'}</p>
-                  <p className="text-xs"><strong>Original For:</strong> RECIPIENT</p>
-                </div>
-              </div>
-              
-              {/* Vendor Details */}
-              <div className="mb-4">
-                <h3 className="text-sm font-bold text-gray-800 mb-2 border-b border-gray-300 pb-1">Vendor Detail:</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs"><strong>M/S:</strong> {previewInvoiceData.customerName}</p>
-                    <p className="text-xs text-gray-600">{previewInvoiceData.customerAddress}</p>
-                    <p className="text-xs"><strong>Phone:</strong> {previewInvoiceData.customerPhone}</p>
-                    {previewInvoiceData.customerEmail && (
-                      <p className="text-xs"><strong>Email:</strong> {previewInvoiceData.customerEmail}</p>
-                    )}
-                    {previewInvoiceData.customerGstin && (
-                      <p className="text-xs"><strong>GSTIN:</strong> {previewInvoiceData.customerGstin}</p>
-                    )}
-                    {previewInvoiceData.customerPan && (
-                      <p className="text-xs"><strong>PAN:</strong> {previewInvoiceData.customerPan}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs"><strong>Place of Supply:</strong> {previewInvoiceData.placeOfSupply || 'Tamil Nadu (33)'}</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Items Table */}
-              <table className="w-full border border-gray-300 mb-4">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 p-2 text-center text-xs font-bold">Sr. No.</th>
-                    <th className="border border-gray-300 p-2 text-left text-xs font-bold">Name of Product/Service</th>
-                    <th className="border border-gray-300 p-2 text-center text-xs font-bold">HSN/SAC</th>
-                    <th className="border border-gray-300 p-2 text-center text-xs font-bold">Qty</th>
-                    <th className="border border-gray-300 p-2 text-right text-xs font-bold">Rate</th>
-                    <th className="border border-gray-300 p-2 text-right text-xs font-bold">Taxable Value</th>
-                    <th className="border border-gray-300 p-2 text-center text-xs font-bold">CGST</th>
-                    <th className="border border-gray-300 p-2 text-center text-xs font-bold">SGST</th>
-                    <th className="border border-gray-300 p-2 text-right text-xs font-bold">Total</th>
-                  </tr>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 p-1 text-center text-xs font-bold"></th>
-                    <th className="border border-gray-300 p-1 text-center text-xs font-bold"></th>
-                    <th className="border border-gray-300 p-1 text-center text-xs font-bold"></th>
-                    <th className="border border-gray-300 p-1 text-center text-xs font-bold"></th>
-                    <th className="border border-gray-300 p-1 text-center text-xs font-bold"></th>
-                    <th className="border border-gray-300 p-1 text-center text-xs font-bold"></th>
-                    <th className="border border-gray-300 p-1 text-center text-xs font-bold">%</th>
-                    <th className="border border-gray-300 p-1 text-center text-xs font-bold">%</th>
-                    <th className="border border-gray-300 p-1 text-center text-xs font-bold"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="border border-gray-300 p-2 text-center text-xs">1</td>
-                    <td className="border border-gray-300 p-2 text-xs">{previewInvoiceData.riceVariety.toUpperCase()}</td>
-                    <td className="border border-gray-300 p-2 text-center text-xs">10064000</td>
-                    <td className="border border-gray-300 p-2 text-center text-xs">{previewInvoiceData.quantity.toFixed(2)}</td>
-                    <td className="border border-gray-300 p-2 text-right text-xs">{previewInvoiceData.unitPrice.toLocaleString()}.00</td>
-                    <td className="border border-gray-300 p-2 text-right text-xs">{previewInvoiceData.totalAmount.toLocaleString()}.00</td>
-                    <td className="border border-gray-300 p-2 text-center text-xs">0</td>
-                    <td className="border border-gray-300 p-2 text-center text-xs">0</td>
-                    <td className="border border-gray-300 p-2 text-right text-xs">{previewInvoiceData.totalAmount.toLocaleString()}.00</td>
-                  </tr>
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-100">
-                    <td className="border border-gray-300 p-2 text-center text-xs font-bold" colSpan="3">Total</td>
-                    <td className="border border-gray-300 p-2 text-center text-xs font-bold">{previewInvoiceData.quantity.toFixed(2)}</td>
-                    <td className="border border-gray-300 p-2 text-center text-xs font-bold"></td>
-                    <td className="border border-gray-300 p-2 text-right text-xs font-bold">{previewInvoiceData.totalAmount.toLocaleString()}.00</td>
-                    <td className="border border-gray-300 p-2 text-center text-xs font-bold">0.00</td>
-                    <td className="border border-gray-300 p-2 text-center text-xs font-bold">0.00</td>
-                    <td className="border border-gray-300 p-2 text-right text-xs font-bold">{previewInvoiceData.totalAmount.toLocaleString()}.00</td>
-                  </tr>
-                </tfoot>
-              </table>
-              
-              {/* Financial Summary */}
-              <div className="flex justify-between mb-4">
-                <div className="flex-1">
-                  <p className="text-xs"><strong>Total in words:</strong> {previewInvoiceData.amountInWords}</p>
-                </div>
-                <div className="flex-1 text-right">
-                  <table className="w-full">
-                    <tr>
-                      <td className="p-1 text-right text-xs border-b border-gray-300"><strong>Taxable Amount:</strong></td>
-                      <td className="p-1 text-right text-xs border-b border-gray-300">{previewInvoiceData.taxableAmount.toLocaleString()}.00</td>
-                    </tr>
-                    <tr>
-                      <td className="p-1 text-right text-xs border-b border-gray-300"><strong>Add: CGST:</strong></td>
-                      <td className="p-1 text-right text-xs border-b border-gray-300">0</td>
-                    </tr>
-                    <tr>
-                      <td className="p-1 text-right text-xs border-b border-gray-300"><strong>Add: SGST:</strong></td>
-                      <td className="p-1 text-right text-xs border-b border-gray-300">0</td>
-                    </tr>
-                    <tr>
-                      <td className="p-1 text-right text-xs border-b border-gray-300"><strong>Total Tax:</strong></td>
-                      <td className="p-1 text-right text-xs border-b border-gray-300">0.00</td>
-                    </tr>
-                    <tr>
-                      <td className="p-1 text-right text-xs border-b border-gray-300"><strong>Discount:</strong></td>
-                      <td className="p-1 text-right text-xs border-b border-gray-300">-{previewInvoiceData.discount || 0}.00</td>
-                    </tr>
-                    <tr className="bg-gray-100">
-                      <td className="p-2 text-right text-sm font-bold"><strong>Total Amount After Tax:</strong></td>
-                      <td className="p-2 text-right text-sm font-bold">₹{previewInvoiceData.grandTotal.toLocaleString()}.00</td>
-                    </tr>
-                  </table>
-                  <p className="text-xs text-center mt-1">(E & O.E.)</p>
-                </div>
-              </div>
-              
-              {/* Certification */}
-              <div className="pt-4 border-t border-gray-300">
-                <p className="text-xs"><strong>Certification:</strong> Certified that the particulars given above are true and correct.</p>
-                <div className="flex justify-between mt-4">
-                  <div className="flex-1">
-                    <p className="text-xs"><strong>For:</strong> SREE ESWAR HI-TECH MODERN RICE MILL</p>
-                  </div>
-                  <div className="flex-1 text-right">
-                    <p className="text-xs"><strong>Authorised Signatory</strong></p>
-                    <div className="w-32 h-12 border border-gray-300 ml-auto mt-2"></div>
-                  </div>
-                </div>
+        <form onSubmit={saveByproduct} className="space-y-6">
+          {/* Basic Information */}
+          <fieldset className="border border-gray-200 rounded p-4">
+            <legend className="text-sm font-semibold text-gray-700 px-2">
+              Sale Information
+            </legend>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormInput
+                label="Date"
+                name="date"
+                type="date"
+                value={byproductForm.date}
+                onChange={handleByproductFormChange}
+                required
+                icon="calendar"
+              />
+              <FormInput
+                label="Vehicle Number"
+                name="vehicleNumber"
+                value={byproductForm.vehicleNumber}
+                onChange={handleByproductFormChange}
+                required
+                placeholder="e.g., TN-20-BU-4006"
+                icon="truck"
+              />
+              <FormSelect
+                label="Material"
+                name="material"
+                value={byproductForm.material}
+                onChange={handleByproductFormChange}
+                required
+                icon="package"
+              >
+                <option value="">Select Material</option>
+                {BYPRODUCT_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </FormSelect>
+            </div>
+          </fieldset>
+
+          {/* Quantity and Pricing */}
+          <fieldset className="border border-gray-200 rounded p-4">
+            <legend className="text-sm font-semibold text-gray-700 px-2">
+              Quantity & Pricing
+            </legend>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <FormInput
+                label="Weight"
+                name="weight"
+                type="number"
+                value={byproductForm.weight}
+                onChange={handleByproductFormChange}
+                required
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                icon="scale"
+              />
+              <FormSelect
+                label="Unit"
+                name="unit"
+                value={byproductForm.unit}
+                onChange={handleByproductFormChange}
+                required
+                icon="ruler"
+              >
+                <option value="">Select Unit</option>
+                {UNITS.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </FormSelect>
+              <FormInput
+                label="Rate per Unit"
+                name="rate"
+                type="number"
+                value={byproductForm.rate}
+                onChange={handleByproductFormChange}
+                required
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                icon="currency"
+              />
+              <FormInput
+                label="Total Amount"
+                name="totalAmount"
+                type="number"
+                value={byproductForm.totalAmount}
+                readOnly
+                icon="calculator"
+              />
+            </div>
+          </fieldset>
+
+          {/* Vendor Details */}
+          <fieldset className="border border-gray-200 rounded p-4">
+            <legend className="text-sm font-semibold text-gray-700 px-2">
+              Vendor Details
+            </legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormInput
+                label="Vendor Name"
+                name="vendorName"
+                value={byproductForm.vendorName}
+                onChange={handleByproductFormChange}
+                required
+                placeholder="Enter vendor name"
+                icon="user"
+              />
+              <FormInput
+                label="Vendor Phone"
+                name="vendorPhone"
+                value={byproductForm.vendorPhone}
+                onChange={handleByproductFormChange}
+                required
+                placeholder="+91 9876543210"
+                icon="phone"
+              />
+              <FormInput
+                label="Vendor Email"
+                name="vendorEmail"
+                type="email"
+                value={byproductForm.vendorEmail}
+                onChange={handleByproductFormChange}
+                placeholder="vendor@example.com"
+                icon="envelope"
+              />
+              <FormInput
+                label="Vendor GSTIN"
+                name="vendorGstin"
+                value={byproductForm.vendorGstin}
+                onChange={handleByproductFormChange}
+                placeholder="22AAAAA0000A1Z5"
+                icon="id-card"
+              />
+              <FormInput
+                label="Vendor PAN"
+                name="vendorPan"
+                value={byproductForm.vendorPan}
+                onChange={handleByproductFormChange}
+                placeholder="ABCD1234EFGH"
+                icon="id-card"
+              />
+              <div className="md:col-span-2">
+                <FormInput
+                  label="Vendor Address"
+                  name="vendorAddress"
+                  value={byproductForm.vendorAddress}
+                  onChange={handleByproductFormChange}
+                  required
+                  placeholder="Enter complete vendor address"
+                  icon="location"
+                />
               </div>
             </div>
-            
-            <div className="flex justify-end space-x-3">
-              <Button 
-                onClick={closeInvoicePreview}
-                variant="secondary"
+          </fieldset>
+
+          {/* Payment Details */}
+          <fieldset className="border border-gray-200 rounded p-4">
+            <legend className="text-sm font-semibold text-gray-700 px-2">
+              Payment Details
+            </legend>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormSelect
+                label="Payment Method"
+                name="paymentMethod"
+                value={byproductForm.paymentMethod}
+                onChange={handleByproductFormChange}
+                required
+                icon="credit-card"
               >
-                Close
-              </Button>
-              <Button 
-                onClick={() => {
-                  downloadInvoice(previewInvoiceData);
-                  closeInvoicePreview();
-                }}
-                variant="success"
+                <option value="">Select Payment Method</option>
+                {PAYMENT_METHODS.map((method) => (
+                  <option key={method} value={method}>
+                    {method}
+                  </option>
+                ))}
+              </FormSelect>
+              <FormSelect
+                label="Payment Status"
+                name="paymentStatus"
+                value={byproductForm.paymentStatus}
+                onChange={handleByproductFormChange}
+                required
+                icon="check-circle"
               >
-                Download PDF
-              </Button>
+                <option value="">Select Payment Status</option>
+                {PAYMENT_STATUS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </FormSelect>
+              <FormInput
+                label="Notes"
+                name="notes"
+                value={byproductForm.notes}
+                onChange={handleByproductFormChange}
+                placeholder="Additional notes or comments"
+                icon="note"
+              />
             </div>
+          </fieldset>
+
+          {/* Submit Buttons */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button
+              type="button"
+              onClick={closeByproductsModal}
+              variant="secondary"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="success"
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : (editingByproduct ? 'Update' : 'Create')}
+            </Button>
           </div>
-        )}
+        </form>
       </DialogBox>
 
       {/* Invoice Generator Modal */}
-      <InvoiceGenerator
-        sale={selectedSaleForInvoice}
+      <InvoiceTemplate
+        record={selectedSaleForInvoice}
         show={showInvoiceGenerator}
         onClose={closeInvoiceGenerator}
         onGenerate={handleGenerateInvoice}
+        type={selectedSaleForInvoice?.material ? 'byproduct' : 'sale'}
+        title={selectedSaleForInvoice?.material ? 'Generate Byproduct Invoice' : 'Generate Sales Invoice'}
       />
     </div>
   );

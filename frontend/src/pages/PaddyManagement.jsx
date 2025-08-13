@@ -258,41 +258,7 @@ const PaddyManagement = () => {
     setSelectedFiles(files);
   };
 
-  const testAPI = async () => {
-    try {
-      console.log('Testing paddy API...');
-      const result = await testPaddyAPI();
-      console.log('API test result:', result);
-      alert('API test successful! Check console for details.');
-    } catch (error) {
-      console.error('API test failed:', error);
-      alert('API test failed! Check console for details.');
-    }
-  };
 
-  const testSimpleAPI = async () => {
-    try {
-      console.log('Testing simple paddy API...');
-      const result = await testSimplePaddyAPI();
-      console.log('Simple API test result:', result);
-      alert('Simple API test successful! Check console for details.');
-    } catch (error) {
-      console.error('Simple API test failed:', error);
-      alert('Simple API test failed! Check console for details.');
-    }
-  };
-
-  const testCreatePaddy = async () => {
-    try {
-      console.log('Testing paddy creation...');
-      const result = await testPaddyCreate();
-      console.log('Paddy creation test result:', result);
-      alert('Paddy creation test successful! Check console for details.');
-    } catch (error) {
-      console.error('Paddy creation test failed:', error);
-      alert('Paddy creation test failed! Check console for details.');
-    }
-  };
 
   const savePaddy = async (e) => {
     e.preventDefault();
@@ -587,30 +553,7 @@ const groupedHeaders = [
               >
                 Add New Paddy
               </Button>
-              <Button
-                onClick={testAPI}
-                variant="secondary"
-                icon="test"
-                className="px-4 py-3 ml-2"
-              >
-                Test API
-              </Button>
-              <Button
-                onClick={testSimpleAPI}
-                variant="secondary"
-                icon="test"
-                className="px-4 py-3 ml-2"
-              >
-                Simple Test
-              </Button>
-              <Button
-                onClick={testCreatePaddy}
-                variant="secondary"
-                icon="test"
-                className="px-4 py-3 ml-2"
-              >
-                Test Create
-              </Button>
+            
             </div>
           )}
         </div>

@@ -30,7 +30,15 @@ const inventorySchema = new mongoose.Schema({
   updated_by: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }
+  },
+  files: [{
+    filename: String,
+    originalname: String,
+    mimetype: String,
+    size: Number,
+    path: String,
+    url: String
+  }]
 }, {
   timestamps: true
 });

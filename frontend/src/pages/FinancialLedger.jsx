@@ -699,9 +699,7 @@ const FinancialLedger = () => {
               required
               icon="dollar-sign"
             />
-            <div className="text-xs text-gray-500">
-              Debug: Amount = {transactionForm.amount}
-            </div>
+           
             <FormInput
               label="Description"
               name="description"
@@ -710,10 +708,7 @@ const FinancialLedger = () => {
               required
               icon="file-text"
             />
-            {console.log('📄 Description field value:', transactionForm.description)}
-            <div className="text-xs text-gray-500">
-              Debug: Description = "{transactionForm.description}"
-            </div>
+           
             <FormInput
               label="Reference"
               name="reference"

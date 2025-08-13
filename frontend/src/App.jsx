@@ -27,6 +27,7 @@ import VendorManagement from "./pages/VendorManagement";
 import FinancialLedger from "./pages/FinancialLedger";
 import EBMeterCalculation from "./pages/EBMeterCalculation";
 import DocumentUploads from "./pages/DocumentUploads";
+import ByproductsSales from "./pages/ByproductsSales";
 
 
 // ✅ Protected Route Component
@@ -153,6 +154,17 @@ function AppContent() {
             <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
               <LayoutWrapper>
                 <SalesDispatch />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/byproducts-sales"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
+              <LayoutWrapper>
+                <ByproductsSales />
               </LayoutWrapper>
             </ProtectedRoute>
           }

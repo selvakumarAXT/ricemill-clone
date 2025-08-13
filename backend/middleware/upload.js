@@ -279,7 +279,7 @@ const getFileInfo = (file, branchId = null) => {
   }
   
   return {
-    originalName: file.originalname,
+    originalname: file.originalname, // Changed from originalName to originalname to match frontend
     filename: file.filename,
     path: file.path,
     size: file.size,
