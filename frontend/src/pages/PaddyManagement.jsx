@@ -221,6 +221,14 @@ const PaddyManagement = () => {
     }
     
     setPaddyForm(formData);
+    
+    // Set existing files if editing
+    if (paddy && paddy.documents) {
+      setUploadedFiles(paddy.documents);
+    } else {
+      setUploadedFiles([]);
+    }
+    
     setShowPaddyModal(true);
   };
 
@@ -228,6 +236,8 @@ const PaddyManagement = () => {
     setShowPaddyModal(false);
     setEditingPaddy(null);
     setPaddyForm(initialPaddyForm);
+    setSelectedFiles([]);
+    setUploadedFiles([]);
   };
 
   const handlePaddyFormChange = (e) => {
@@ -258,6 +268,12 @@ const PaddyManagement = () => {
     setSelectedFiles(files);
   };
 
+  const handleFileUploadSuccess = (uploadedFiles) => {
+    console.log('Files uploaded successfully:', uploadedFiles);
+    setUploadedFiles(uploadedFiles);
+    setSelectedFiles([]); // Clear selected files after upload
+  };
+
 
 
   const savePaddy = async (e) => {
@@ -270,16 +286,20 @@ const PaddyManagement = () => {
       // Add the current bag weight to the data
       formattedPaddy.bagWeight = currentBagWeight;
       
-      console.log('Saving paddy with files:', selectedFiles);
+      console.log('Saving paddy with uploaded files:', uploadedFiles);
       console.log('Formatted paddy data:', formattedPaddy);
+      console.log('Editing Paddy object:', editingPaddy);
+      console.log('Editing Paddy ID:', editingPaddy?.id);
       
       if (editingPaddy) {
-        const response = await updatePaddy(editingPaddy.id, formattedPaddy, selectedFiles);
+        console.log('Attempting to update Paddy with ID:', editingPaddy.id);
+        const response = await updatePaddy(editingPaddy.id, formattedPaddy, uploadedFiles);
         setSuccessMessage("Paddy record updated successfully!");
         // Refresh current page data
         fetchPaddies(paginationData.page, paginationData.limit, paddyFilter, sortData.col, sortData.dir);
       } else {
-        const response = await createPaddy(formattedPaddy, selectedFiles);
+        console.log('Creating new Paddy record');
+        const response = await createPaddy(formattedPaddy, uploadedFiles);
         setSuccessMessage("Paddy record created successfully!");
         // Refresh current page data
         fetchPaddies(paginationData.page, paginationData.limit, paddyFilter, sortData.col, sortData.dir);
@@ -1112,12 +1132,13 @@ const groupedHeaders = [
             label="Upload Paddy Documents & Images"
             module="paddy"
             onFilesChange={handleFilesChange}
+            onUploadSuccess={handleFileUploadSuccess}
             files={selectedFiles}
             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
             maxFiles={10}
             maxSize={10}
             showPreview={true}
-            disableAutoUpload={true}
+            disableAutoUpload={false}
           />
 
 

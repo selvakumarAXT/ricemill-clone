@@ -382,7 +382,13 @@ const createPaddy = asyncHandler(async (req, res) => {
 // @access  Private
 const updatePaddy = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { branch_id } = req.user;
+  const { branch_id, isSuperAdmin } = req.user;
+
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400);
+    throw new Error('Invalid Paddy ID format');
+  }
 
   console.log('Raw request body for update:', req.body);
   console.log('Files received for update:', req.files);
@@ -415,11 +421,25 @@ const updatePaddy = asyncHandler(async (req, res) => {
 
   console.log('Processed update data:', updateData);
 
-  // Check if paddy exists and belongs to user's branch
-  const existingPaddy = await Paddy.findOne({ _id: id, branch_id });
+  // Check if paddy exists and handle branch access
+  let query = { _id: id };
+  
+  if (!isSuperAdmin) {
+    // Regular users can only update records from their assigned branch
+    query.branch_id = branch_id;
+  }
+  // Superadmin can update records from any branch - no branch restriction needed
+  
+  console.log('Looking for Paddy with query:', JSON.stringify(query, null, 2));
+  console.log('User branch_id:', branch_id);
+  console.log('User isSuperAdmin:', isSuperAdmin);
+  
+  const existingPaddy = await Paddy.findOne(query);
+  console.log('Existing Paddy found:', existingPaddy ? 'Yes' : 'No');
+  
   if (!existingPaddy) {
     res.status(404);
-    throw new Error('Paddy record not found');
+    throw new Error(`Paddy record not found. Query: ${JSON.stringify(query)}`);
   }
 
   // Auto-calculate bags from gunny total
@@ -448,7 +468,7 @@ const updatePaddy = asyncHandler(async (req, res) => {
       originalName: file.originalname,
       filename: file.filename,
       path: file.path,
-      url: `${req.protocol}://${req.get('host')}/uploads/paddy/${branch_id}/${file.filename}`,
+      url: `${req.protocol}://${req.get('host')}/uploads/paddy/${existingPaddy.branch_id}/${file.filename}`,
       size: file.size,
       mimetype: file.mimetype,
       uploadedAt: new Date()

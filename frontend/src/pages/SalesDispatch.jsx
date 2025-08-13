@@ -568,7 +568,7 @@ const SalesDispatch = () => {
     setSelectedSaleForInvoice(null);
   };
 
-    const handleGenerateInvoice = (invoiceData) => {
+  const handleGenerateInvoice = (invoiceData) => {
     try {
       setLoading(true);
       
@@ -583,11 +583,11 @@ const SalesDispatch = () => {
         alert('Byproduct invoice generated successfully!');
       } else {
         // It's a rice sale
-        setSales(prev => prev.map(sale => 
-          sale._id === selectedSaleForInvoice._id 
-            ? { ...sale, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
-            : sale
-        ));
+      setSales(prev => prev.map(sale => 
+        sale._id === selectedSaleForInvoice._id 
+          ? { ...sale, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+          : sale
+      ));
         alert('Rice sale invoice generated successfully!');
       }
 
@@ -646,10 +646,10 @@ const SalesDispatch = () => {
         alert('Byproduct invoice generated successfully!');
       } else {
         // It's a rice sale
-        setSales(prev => prev.map(sale => 
-          sale._id === selectedSaleForInvoice._id 
-            ? { ...sale, invoiceNumber: invoiceForm.invoiceNumber, invoiceGenerated: true }
-            : sale
+      setSales(prev => prev.map(sale => 
+        sale._id === selectedSaleForInvoice._id 
+          ? { ...sale, invoiceNumber: invoiceForm.invoiceNumber, invoiceGenerated: true }
+          : sale
         ));
         alert('Rice sale invoice generated successfully!');
       }
@@ -1443,11 +1443,11 @@ const SalesDispatch = () => {
 
         {/* Desktop Table View */}
         {activeTab === 'rice' && (
-          <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+        <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
               <h3 className="text-lg font-semibold text-gray-800">Rice Sales Records</h3>
-              <p className="text-sm text-gray-600 mt-1">Total: {filteredSales.length} records</p>
-            </div>
+            <p className="text-sm text-gray-600 mt-1">Total: {filteredSales.length} records</p>
+          </div>
           <TableList
             data={filteredSales}
             columns={columns}
@@ -2506,11 +2506,11 @@ const SalesDispatch = () => {
 
         <PreviewInvoice
           invoiceData={previewInvoiceData}
-          show={showInvoicePreviewModal}
-          onClose={closeInvoicePreview}
+        show={showInvoicePreviewModal}
+        onClose={closeInvoicePreview}
           onDownload={downloadInvoice}
           type={previewInvoiceData?.material ? 'byproduct' : 'sale'}
-          title="Invoice Preview"
+        title="Invoice Preview"
         />
 
       {/* Byproducts Modal */}
@@ -2560,7 +2560,7 @@ const SalesDispatch = () => {
                   </option>
                 ))}
               </FormSelect>
-            </div>
+              </div>
           </fieldset>
 
           {/* Quantity and Pricing */}
@@ -2616,10 +2616,10 @@ const SalesDispatch = () => {
                 readOnly
                 icon="calculator"
               />
-            </div>
+                </div>
           </fieldset>
-
-          {/* Vendor Details */}
+              
+              {/* Vendor Details */}
           <fieldset className="border border-gray-200 rounded p-4">
             <legend className="text-sm font-semibold text-gray-700 px-2">
               Vendor Details
@@ -2678,8 +2678,8 @@ const SalesDispatch = () => {
                   placeholder="Enter complete vendor address"
                   icon="location"
                 />
-              </div>
-            </div>
+                  </div>
+                  </div>
           </fieldset>
 
           {/* Payment Details */}
@@ -2726,26 +2726,26 @@ const SalesDispatch = () => {
                 placeholder="Additional notes or comments"
                 icon="note"
               />
-            </div>
+                </div>
           </fieldset>
 
           {/* Submit Buttons */}
           <div className="flex justify-end space-x-3 pt-4">
-            <Button
+              <Button 
               type="button"
               onClick={closeByproductsModal}
-              variant="secondary"
-            >
+                variant="secondary"
+              >
               Cancel
-            </Button>
-            <Button
+              </Button>
+              <Button 
               type="submit"
-              variant="success"
+                variant="success"
               disabled={loading}
-            >
+              >
               {loading ? 'Saving...' : (editingByproduct ? 'Update' : 'Create')}
-            </Button>
-          </div>
+              </Button>
+            </div>
         </form>
       </DialogBox>
 

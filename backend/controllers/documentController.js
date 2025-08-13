@@ -85,7 +85,7 @@ exports.getDocuments = asyncHandler(async (req, res) => {
   // Execute query with pagination
   const skip = (parseInt(page) - 1) * parseInt(limit);
   
-  const documents = await Document.find(query)
+  let documents = await Document.find(query)
     .populate('branch_id', 'name millCode')
     .populate('uploadedBy', 'name email')
     .sort(sort)
@@ -94,7 +94,76 @@ exports.getDocuments = asyncHandler(async (req, res) => {
     .lean();
 
   // Get total count for pagination
-  const total = await Document.countDocuments(query);
+  let total = await Document.countDocuments(query);
+
+  // If searching for specific module or no module filter, also include files from other collections
+  if (!module || module === 'all') {
+    try {
+      // Import models dynamically to avoid circular dependencies
+      const Paddy = require('../models/Paddy');
+      const Inventory = require('../models/Inventory');
+      const Production = require('../models/Production');
+      const Rice = require('../models/Rice');
+      const Gunny = require('../models/Gunny');
+      
+      // Get files from Paddy records
+      const paddyQuery = { branch_id: query.branch_id || req.user.branch_id };
+      if (search) {
+        paddyQuery.$or = [
+          { issueMemo: { $regex: search, $options: 'i' } },
+          { paddyFrom: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      const paddyFiles = await Paddy.find(paddyQuery)
+        .populate('branch_id', 'name millCode')
+        .populate('createdBy', 'name email')
+        .lean();
+      
+      // Transform Paddy files to document format
+      const paddyDocuments = paddyFiles.flatMap(paddy => 
+        (paddy.documents || []).map(doc => ({
+          _id: `paddy_${paddy._id}_${doc.filename}`,
+          title: doc.originalName || 'Paddy Document',
+          description: `Document from Paddy entry: ${paddy.issueMemo}`,
+          module: 'paddy',
+          category: 'paddy',
+          originalName: doc.originalName,
+          filename: doc.filename,
+          path: doc.path,
+          url: doc.url,
+          size: doc.size,
+          mimetype: doc.mimetype,
+          branch_id: paddy.branch_id,
+          uploadedBy: paddy.createdBy,
+          uploadedBy_name: paddy.createdBy?.name || 'Unknown',
+          createdAt: doc.uploadedAt || paddy.createdAt,
+          updatedAt: paddy.updatedAt,
+          status: 'active',
+          source: 'paddy',
+          sourceId: paddy._id
+        }))
+      );
+      
+      // Add Paddy files to results
+      documents = [...documents, ...paddyDocuments];
+      total += paddyDocuments.length;
+      
+      // Sort combined results
+      documents.sort((a, b) => {
+        const aDate = new Date(a.createdAt);
+        const bDate = new Date(b.createdAt);
+        return sortOrder === 'desc' ? bDate - aDate : aDate - bDate;
+      });
+      
+      // Apply pagination to combined results
+      documents = documents.slice(skip, skip + parseInt(limit));
+      
+    } catch (error) {
+      console.error('Error fetching files from other modules:', error);
+      // Continue with only Document collection results
+    }
+  }
 
   // Calculate pagination info
   const totalPages = Math.ceil(total / parseInt(limit));
@@ -369,6 +438,187 @@ exports.downloadDocument = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get documents by module (including files from other collections)
+// @route   GET /api/documents/module/:module
+// @access  Private
+exports.getDocumentsByModule = asyncHandler(async (req, res) => {
+  const { module } = req.params;
+  const {
+    page = 1,
+    limit = 10,
+    search,
+    category,
+    fileType,
+    status,
+    uploadedBy,
+    startDate,
+    endDate,
+    sortBy = 'createdAt',
+    sortOrder = 'desc'
+  } = req.query;
+
+  // Build query
+  const query = {};
+
+  // Branch filter
+  if (!req.user.isSuperAdmin) {
+    query.branch_id = req.user.branch_id;
+  } else if (req.query.branch_id) {
+    query.branch_id = req.query.branch_id;
+  }
+
+  // Search filter
+  if (search) {
+    query.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+      { remarks: { $regex: search, $options: 'i' } },
+      { originalName: { $regex: search, $options: 'i' } },
+      { uploadedBy_name: { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  // Category filter
+  if (category) {
+    query.category = category;
+  }
+
+  // File type filter
+  if (fileType) {
+    query.fileType = fileType;
+  }
+
+  // Status filter
+  if (status) {
+    query.status = status;
+  }
+
+  // Uploaded by filter
+  if (uploadedBy) {
+    query.uploadedBy = uploadedBy;
+  }
+
+  // Date range filter
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      query.createdAt.$gte = new Date(endDate + 'T23:59:59.999Z');
+    }
+  }
+
+  // Build sort object
+  const sort = {};
+  sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+  // Execute query with pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  
+  let documents = [];
+  let total = 0;
+
+  // Get documents from Document collection
+  if (module === 'all' || !module) {
+    const docQuery = { ...query };
+    documents = await Document.find(docQuery)
+      .populate('branch_id', 'name millCode')
+      .populate('uploadedBy', 'name email')
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+    
+    total = await Document.countDocuments(docQuery);
+  } else if (module === 'paddy') {
+    // Get files from Paddy records
+    try {
+      const Paddy = require('../models/Paddy');
+      
+      const paddyQuery = { branch_id: query.branch_id || req.user.branch_id };
+      if (search) {
+        paddyQuery.$or = [
+          { issueMemo: { $regex: search, $options: 'i' } },
+          { paddyFrom: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      const paddyFiles = await Paddy.find(paddyQuery)
+        .populate('branch_id', 'name millCode')
+        .populate('createdBy', 'name email')
+        .lean();
+      
+      // Transform Paddy files to document format
+      documents = paddyFiles.flatMap(paddy => 
+        (paddy.documents || []).map(doc => ({
+          _id: `paddy_${paddy._id}_${doc.filename}`,
+          title: doc.originalName || 'Paddy Document',
+          description: `Document from Paddy entry: ${paddy.issueMemo}`,
+          module: 'paddy',
+          category: 'paddy',
+          originalName: doc.originalName,
+          filename: doc.filename,
+          path: doc.path,
+          url: doc.url,
+          size: doc.size,
+          mimetype: doc.mimetype,
+          branch_id: paddy.branch_id,
+          uploadedBy: paddy.createdBy,
+          uploadedBy_name: paddy.createdBy?.name || 'Unknown',
+          createdAt: doc.uploadedAt || paddy.createdAt,
+          updatedAt: paddy.updatedAt,
+          status: 'active',
+          source: 'paddy',
+          sourceId: paddy._id
+        }))
+      );
+      
+      total = documents.length;
+      
+      // Sort and paginate
+      documents.sort((a, b) => {
+        const aDate = new Date(a.createdAt);
+        const bDate = new Date(b.createdAt);
+        return sortOrder === 'desc' ? bDate - aDate : aDate - bDate;
+      });
+      
+      documents = documents.slice(skip, skip + parseInt(limit));
+      
+    } catch (error) {
+      console.error('Error fetching Paddy files:', error);
+      documents = [];
+      total = 0;
+    }
+  } else {
+    // Get documents from Document collection for specific module
+    query.module = module;
+    documents = await Document.find(query)
+      .populate('branch_id', 'name millCode')
+      .populate('uploadedBy', 'name email')
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+    
+    total = await Document.countDocuments(query);
+  }
+
+  // Calculate pagination info
+  const totalPages = Math.ceil(total / parseInt(limit));
+
+  res.status(200).json({
+    success: true,
+    data: documents,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      totalPages
+    }
+  });
+});
+
 // @desc    Get document statistics
 // @route   GET /api/documents/stats/overview
 // @access  Private
@@ -457,54 +707,7 @@ exports.getDocumentStats = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get documents by module
-// @route   GET /api/documents/module/:module
-// @access  Private
-exports.getDocumentsByModule = asyncHandler(async (req, res) => {
-  const { module } = req.params;
-  const { page = 1, limit = 10, search } = req.query;
 
-  const query = { module };
-
-  // Branch filter
-  if (!req.user.isSuperAdmin) {
-    query.branch_id = req.user.branch_id;
-  } else if (req.query.branch_id) {
-    query.branch_id = req.query.branch_id;
-  }
-
-  // Search filter
-  if (search) {
-    query.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } },
-      { remarks: { $regex: search, $options: 'i' } }
-    ];
-  }
-
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-
-  const documents = await Document.find(query)
-    .populate('branch_id', 'name millCode')
-    .populate('uploadedBy', 'name email')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(parseInt(limit))
-    .lean();
-
-  const total = await Document.countDocuments(query);
-
-  res.status(200).json({
-    success: true,
-    data: documents,
-    pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      total,
-      totalPages: Math.ceil(total / parseInt(limit))
-    }
-  });
-});
 
 // Helper function to format file size
 function formatFileSize(bytes) {
