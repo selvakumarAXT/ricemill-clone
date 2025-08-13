@@ -28,6 +28,13 @@ const SalesDispatch = () => {
     endDate: ''
   });
   const [activeTab, setActiveTab] = useState('rice'); // 'rice' or 'byproducts'
+  
+  // NEW: Enhanced filter states
+  const [productTypeFilter, setProductTypeFilter] = useState('');
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
+
+  
   const [showSalesModal, setShowSalesModal] = useState(false);
   const [showByproductsModal, setShowByproductsModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -126,22 +133,84 @@ const SalesDispatch = () => {
   const BYPRODUCT_TYPES = ['Husk', 'Broken Rice', 'Brown Rice', 'Bran', 'Rice Flour', 'Rice Starch', 'Rice Bran Oil', 'Other'];
   const UNITS = ['kg', 'tons', 'bags', 'quintals'];
   const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'UPI', 'Credit'];
-  const PAYMENT_STATUS = ['Pending', 'Partial', 'Completed', 'Overdue'];
+  const PAYMENT_STATUS = ['pending', 'completed', 'cancelled'];
+
+  // Helper function to map backend payment types to frontend format
+  const mapPaymentType = (backendPaymentType) => {
+    if (!backendPaymentType) return 'Cash';
+    
+    const paymentMap = {
+      'CASH': 'Cash',
+      'CHEQUE': 'Cheque', 
+      'UPI': 'UPI',
+      'BANK_TRANSFER': 'Bank Transfer',
+      'ONLINE': 'Bank Transfer',
+      'CREDIT': 'Credit'
+    };
+    
+    return paymentMap[backendPaymentType] || backendPaymentType;
+  };
 
   useEffect(() => {
     fetchSalesData();
     fetchByproductsData();
   }, [currentBranchId]);
 
+  // NEW: Refetch data when filters change
+  useEffect(() => {
+    if (activeTab === 'rice') {
+      fetchSalesData();
+    } else {
+      fetchByproductsData();
+    }
+  }, [deliveryStatusFilter, paymentStatusFilter, dateRange.startDate, dateRange.endDate]);
+
+  // NEW: Handle filter changes
+  const handleFilterChange = (filterType, value) => {
+    switch (filterType) {
+      case 'deliveryStatus':
+        setDeliveryStatusFilter(value);
+        break;
+      case 'paymentStatus':
+        setPaymentStatusFilter(value);
+        break;
+      case 'dateRange':
+        setDateRange(value);
+        break;
+
+      default:
+        break;
+    }
+  };
+
+  // NEW: Clear all filters
+  const clearFilters = () => {
+    setDeliveryStatusFilter('');
+    setPaymentStatusFilter('');
+    setDateRange({ startDate: '', endDate: '' });
+
+    setSalesFilter('');
+    setByproductsFilter('');
+  };
+
   const fetchSalesData = async () => {
     setLoading(true);
     setError('');
     try {
-      // Fetch rice sales from SalesInvoice API
-      const response = await salesInvoiceService.getSalesInvoices({
+      // Build filter parameters
+      const filterParams = {
         productType: 'rice',
         limit: 100
-      });
+      };
+      
+      // Add optional filters
+      if (deliveryStatusFilter) filterParams.deliveryStatus = deliveryStatusFilter;
+      if (paymentStatusFilter) filterParams.paymentStatus = paymentStatusFilter;
+      if (dateRange.startDate) filterParams.startDate = dateRange.startDate;
+      if (dateRange.endDate) filterParams.endDate = dateRange.endDate;
+      
+      // Fetch rice sales from SalesInvoice API
+      const response = await salesInvoiceService.getSalesInvoices(filterParams);
       
       // Transform data to match existing frontend structure
       const riceSales = response.data.map(invoice => ({
@@ -161,10 +230,10 @@ const SalesDispatch = () => {
         deliveryDate: invoice.deliveryDate,
         paymentStatus: invoice.paymentStatus,
         deliveryStatus: invoice.deliveryStatus,
-        paymentMethod: invoice.payment?.paymentType?.toLowerCase() || 'cash',
-        notes: invoice.items[0]?.itemNote || '',
+        paymentMethod: mapPaymentType(invoice.payment?.paymentType),
+        notes: invoice.notes || '',
         placeOfSupply: invoice.customer.placeOfSupply,
-        invoiceNumber: invoice.invoiceNumber,
+        invoiceNumber: invoice.formattedInvoiceNumber || invoice.invoiceNumber,
         createdAt: invoice.createdAt,
         updatedAt: invoice.updatedAt
       }));
@@ -178,42 +247,98 @@ const SalesDispatch = () => {
     }
   };
 
+  // Helper function to convert frontend payment values to backend enum values
+  const convertPaymentValues = (paymentMethod, paymentStatus) => {
+    // Convert payment method to backend enum
+    let backendPaymentType = paymentMethod;
+    if (paymentMethod === 'Bank Transfer') {
+      backendPaymentType = 'BANK_TRANSFER';
+    } else if (paymentMethod === 'Credit') {
+      backendPaymentType = 'CREDIT';
+    } else {
+      backendPaymentType = paymentMethod.toUpperCase();
+    }
+    
+    // Convert payment status to backend enum (already lowercase)
+    const backendPaymentStatus = paymentStatus.toLowerCase();
+    
+    return { backendPaymentType, backendPaymentStatus };
+  };
+
+  // Helper function to convert backend payment values back to frontend format
+  const convertBackendToFrontendPayment = (backendPaymentType) => {
+    if (backendPaymentType === 'BANK_TRANSFER') {
+      return 'Bank Transfer';
+    } else if (backendPaymentType === 'CREDIT') {
+      return 'Credit';
+    } else {
+      // Convert other values like 'CASH', 'CHEQUE', 'UPI' to Title Case
+      return backendPaymentType.charAt(0) + backendPaymentType.slice(1).toLowerCase();
+    }
+  };
+
+  // Helper function to transform backend data to frontend format
+  const transformBackendToFrontend = (invoice) => {
+    // Handle date formatting
+    let formattedDate = '';
+    if (invoice.orderDate) {
+      if (typeof invoice.orderDate === 'string') {
+        formattedDate = invoice.orderDate.split('T')[0];
+      } else if (invoice.orderDate instanceof Date) {
+        formattedDate = invoice.orderDate.toISOString().split('T')[0];
+      }
+    }
+    
+    const transformed = {
+      _id: invoice._id,
+      date: formattedDate,
+      vehicleNumber: invoice.vehicleNumber || '',
+      material: invoice.items?.[0]?.productName || '',
+      weight: invoice.items?.[0]?.quantity || 0,
+      unit: invoice.items?.[0]?.uom || 'kg',
+      rate: invoice.items?.[0]?.price || 0,
+      totalAmount: invoice.totals?.grandTotal || 0,
+      vendorName: invoice.customer?.name || '',
+      vendorPhone: invoice.customer?.phoneNo || '',
+      vendorEmail: invoice.customer?.email || '',
+      vendorAddress: invoice.customer?.address || '',
+      vendorGstin: invoice.customer?.gstinPan || '',
+      vendorPan: invoice.customer?.gstinPan || '',
+      paymentMethod: mapPaymentType(invoice.payment?.paymentType),
+      paymentStatus: invoice.paymentStatus || '',
+      notes: invoice.notes || '',
+      invoiceNumber: invoice.formattedInvoiceNumber || invoice.invoiceNumber,
+      invoiceGenerated: !!invoice.invoiceNumber,
+      branch_id: invoice.branch_id,
+      createdBy: invoice.createdBy,
+      createdAt: invoice.createdAt,
+      updatedAt: invoice.updatedAt
+    };
+    
+    return transformed;
+  };
+
   const fetchByproductsData = async () => {
     setLoading(true);
     setError('');
     try {
-      // Fetch byproduct sales from SalesInvoice API
-      const response = await salesInvoiceService.getSalesInvoices({
+      // Build filter parameters
+      const filterParams = {
         productType: 'byproduct',
         limit: 100
-      });
+      };
+      
+      // Add optional filters
+      if (deliveryStatusFilter) filterParams.deliveryStatus = deliveryStatusFilter;
+      if (paymentStatusFilter) filterParams.paymentStatus = paymentStatusFilter;
+      if (dateRange.startDate) filterParams.startDate = dateRange.startDate;
+      if (dateRange.endDate) filterParams.endDate = dateRange.endDate;
+      
+      // Fetch byproduct sales from SalesInvoice API
+      const response = await salesInvoiceService.getSalesInvoices(filterParams);
       
       // Transform data to match existing frontend structure
-      const byproductSales = response.data.map(invoice => ({
-        _id: invoice._id,
-        date: invoice.orderDate,
-        vehicleNumber: invoice.vehicleNumber || '',
-        material: invoice.items[0]?.productName || '',
-        weight: invoice.items[0]?.quantity || 0,
-        unit: invoice.items[0]?.uom || 'kg',
-        rate: invoice.items[0]?.price || 0,
-        totalAmount: invoice.totals?.grandTotal || 0,
-        vendorName: invoice.customer.name,
-        vendorPhone: invoice.customer.phoneNo,
-        vendorEmail: invoice.customer.email || '',
-        vendorAddress: invoice.customer.address,
-        vendorGstin: invoice.customer.gstinPan,
-        vendorPan: invoice.customer.gstinPan,
-        paymentMethod: invoice.payment?.paymentType || 'Cash',
-        paymentStatus: invoice.paymentStatus,
-        notes: invoice.items[0]?.itemNote || '',
-        invoiceNumber: invoice.invoiceNumber,
-        invoiceGenerated: !!invoice.invoiceNumber,
-        branch_id: invoice.branch_id,
-        createdBy: invoice.createdBy,
-        createdAt: invoice.createdAt,
-        updatedAt: invoice.updatedAt
-      }));
+      const byproductSales = response.data.map(invoice => transformBackendToFrontend(invoice));
       
       setByproducts(byproductSales);
     } catch (error) {
@@ -241,6 +366,10 @@ const SalesDispatch = () => {
     } else {
       setSalesForm(initialSalesForm);
     }
+    
+    // Debug: Log form state when modal opens
+
+    
     setShowSalesModal(true);
   };
 
@@ -367,48 +496,56 @@ const SalesDispatch = () => {
 
   const saveSales = async (e) => {
     e.preventDefault();
+    
+
+    
     try {
       setLoading(true);
       
       if (editingSale) {
         // Update existing sale
-        setSales(prev => prev.map(sale => 
-          sale._id === editingSale._id ? { ...salesForm, _id: sale._id } : sale
-        ));
-        closeSalesModal();
+        await updateSale(editingSale._id);
       } else {
         // Create new sale with SalesInvoice integration
+        const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(salesForm.paymentMethod, salesForm.paymentStatus);
+        
+
+        
         const salesInvoiceData = {
           productType: 'rice',
           orderDate: salesForm.orderDate,
           deliveryDate: salesForm.deliveryDate,
           deliveryStatus: salesForm.deliveryStatus,
           vehicleNumber: salesForm.vehicleNumber || '',
-          paymentStatus: salesForm.paymentStatus,
+          paymentStatus: backendPaymentStatus,
           customer: {
             name: salesForm.customerName,
             phoneNo: salesForm.customerPhone,
+            email: salesForm.customerEmail,
             address: salesForm.customerAddress,
             gstinPan: salesForm.customerGstin,
             placeOfSupply: salesForm.placeOfSupply
           },
           items: [{
-            productName: salesForm.riceVariety || 'Unknown Rice',  // ← Add fallback
+            productName: salesForm.riceVariety,
             quantity: salesForm.quantity,
             uom: 'kg',
             price: salesForm.unitPrice,
             hsnSacCode: '10063090'
           }],
           payment: {
-            paymentType: salesForm.paymentMethod?.toUpperCase() || 'CASH',
+            paymentType: backendPaymentType,
             tcsType: 'Rs',
             tcsValue: 0,
             discountType: 'Rs',
             discountValue: 0,
             roundOff: 'Yes',
             smartSuggestion: ''
-          }
+          },
+          notes: salesForm.notes || ''
         };
+
+
 
         // Call actual SalesInvoice API
         const response = await salesInvoiceService.createSalesInvoice(salesInvoiceData);
@@ -432,6 +569,136 @@ const SalesDispatch = () => {
     }
   };
 
+  // NEW: Edit sale function
+  const editSale = (sale) => {
+    setEditingSale(sale);
+    setSalesForm({
+      customerName: sale.customer?.name || sale.customerName || '',
+      customerPhone: sale.customer?.phoneNo || sale.customerPhone || '',
+      customerEmail: sale.customer?.email || sale.customerEmail || '',
+      customerAddress: sale.customer?.address || sale.customerAddress || '',
+      customerGstin: sale.customer?.gstinPan || sale.customerGstin || '',
+      customerPan: sale.customer?.gstinPan || sale.customerPan || '',
+      placeOfSupply: sale.customer?.placeOfSupply || sale.placeOfSupply || '',
+      riceVariety: sale.items?.[0]?.productName || sale.riceVariety || '',
+      quantity: sale.items?.[0]?.quantity || sale.quantity || 0,
+      unitPrice: sale.items?.[0]?.price || sale.unitPrice || 0,
+      totalAmount: sale.totals?.grandTotal || sale.totalAmount || 0,
+      orderDate: sale.orderDate ? sale.orderDate.split('T')[0] : sale.orderDate || '',
+      deliveryDate: sale.deliveryDate ? sale.deliveryDate.split('T')[0] : sale.deliveryDate || '',
+      deliveryStatus: sale.deliveryStatus || 'pending',
+      vehicleNumber: sale.vehicleNumber || '',
+      paymentStatus: sale.paymentStatus || 'pending',
+      paymentMethod: mapPaymentType(sale.payment?.paymentType),
+      notes: sale.documentNotes || sale.notes || ''
+    });
+    setShowSalesModal(true);
+  };
+
+  // NEW: Update sale function
+  const updateSale = async (saleId) => {
+    try {
+      setLoading(true);
+      
+      // Prepare update data
+      const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(salesForm.paymentMethod, salesForm.paymentStatus);
+      
+      const updateData = {
+        productType: 'rice',
+        orderDate: salesForm.orderDate,
+        deliveryDate: salesForm.deliveryDate,
+        deliveryStatus: salesForm.deliveryStatus,
+        vehicleNumber: salesForm.vehicleNumber || '',
+        paymentStatus: backendPaymentStatus,
+        customer: {
+          name: salesForm.customerName,
+          phoneNo: salesForm.customerPhone,
+          email: salesForm.customerEmail,
+          address: salesForm.customerAddress,
+          gstinPan: salesForm.customerGstin,
+          placeOfSupply: salesForm.placeOfSupply
+        },
+        items: [{
+          productName: salesForm.riceVariety,
+          quantity: salesForm.quantity,
+          uom: 'kg',
+          price: salesForm.unitPrice,
+          hsnSacCode: '10063090'
+        }],
+        payment: {
+          paymentType: backendPaymentType,
+          tcsType: 'Rs',
+          tcsValue: 0,
+          discountType: 'Rs',
+          discountValue: 0,
+          roundOff: 'Yes',
+          smartSuggestion: ''
+        },
+        notes: salesForm.notes 
+      };
+
+      // Call update API
+      const response = await salesInvoiceService.updateSalesInvoice(saleId, updateData);
+      
+      // Update local state with the response data
+      setSales(prev => prev.map(sale => 
+        sale._id === saleId 
+          ? { 
+              ...sale, 
+              customerName: salesForm.customerName,
+              customerPhone: salesForm.customerPhone,
+              customerEmail: salesForm.customerEmail,
+              customerAddress: salesForm.customerAddress,
+              customerGstin: salesForm.customerGstin,
+              customerPan: salesForm.customerPan,
+              placeOfSupply: salesForm.placeOfSupply,
+              riceVariety: salesForm.riceVariety,
+              quantity: salesForm.quantity,
+              unitPrice: salesForm.unitPrice,
+              totalAmount: salesForm.quantity * salesForm.unitPrice,
+              orderDate: salesForm.orderDate,
+              deliveryDate: salesForm.deliveryDate,
+              deliveryStatus: salesForm.deliveryStatus,
+              vehicleNumber: salesForm.vehicleNumber,
+              paymentStatus: salesForm.paymentStatus,
+              paymentMethod: salesForm.paymentMethod,
+              notes: salesForm.notes,
+              updatedAt: response.data.updatedAt
+            }
+          : sale
+      ));
+      
+      closeSalesModal();
+      
+    } catch (error) {
+      setError('Error updating sale: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: Delete sale function
+  const deleteSale = async (saleId) => {
+    if (!window.confirm('Are you sure you want to delete this sale record? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Call delete API
+      await salesInvoiceService.deleteSalesInvoice(saleId);
+      
+      // Remove from local state
+      setSales(prev => prev.filter(sale => sale._id !== saleId));
+      
+    } catch (error) {
+      setError('Error deleting sale: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const saveByproduct = async (e) => {
     e.preventDefault();
     try {
@@ -439,22 +706,22 @@ const SalesDispatch = () => {
       
       if (editingByproduct) {
         // Update existing byproduct
-        setByproducts(prev => prev.map(byproduct => 
-          byproduct._id === editingByproduct._id ? { ...byproductForm, _id: byproduct._id } : byproduct
-        ));
-        closeByproductsModal();
+        await updateByproduct(editingByproduct._id);
       } else {
         // Create new byproduct with SalesInvoice integration
+        const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(byproductForm.paymentMethod, byproductForm.paymentStatus);
+        
         const salesInvoiceData = {
           productType: 'byproduct',
           orderDate: byproductForm.date,
           deliveryDate: byproductForm.date,
           deliveryStatus: 'pending',
           vehicleNumber: byproductForm.vehicleNumber,
-          paymentStatus: byproductForm.paymentStatus,
+          paymentStatus: backendPaymentStatus,
           customer: {
             name: byproductForm.vendorName,
             phoneNo: byproductForm.vendorPhone,
+            email: byproductForm.vendorEmail,
             address: byproductForm.vendorAddress,
             gstinPan: byproductForm.vendorGstin,
             placeOfSupply: 'Tamil Nadu (33)'
@@ -465,8 +732,20 @@ const SalesDispatch = () => {
             uom: byproductForm.unit,
             price: byproductForm.rate,
             hsnSacCode: '23020000'
-          }]
+          }],
+          payment: {
+            paymentType: backendPaymentType,
+            tcsType: 'Rs',
+            tcsValue: 0,
+            discountType: 'Rs',
+            discountValue: 0,
+            roundOff: 'Yes',
+            smartSuggestion: ''
+          },
+          notes: byproductForm.notes || ''
         };
+
+
 
         // Call actual SalesInvoice API
         const response = await salesInvoiceService.createSalesInvoice(salesInvoiceData);
@@ -490,17 +769,94 @@ const SalesDispatch = () => {
     }
   };
 
-  const deleteSales = async (saleId) => {
-    if (window.confirm('Are you sure you want to delete this sales record?')) {
-      try {
-        setLoading(true);
-        // Simulate API call - replace with actual service
-        setSales(prev => prev.filter(sale => sale._id !== saleId));
-      } catch (error) {
-        setError('Error deleting sales record: ' + error.message);
-      } finally {
-        setLoading(false);
-      }
+  // NEW: Edit byproduct function
+  const editByproduct = (byproduct) => {
+    
+    setEditingByproduct(byproduct);
+    
+    // Data is already transformed, use it directly
+    setByproductForm({
+      date: byproduct.date || '',
+      vehicleNumber: byproduct.vehicleNumber || '',
+      material: byproduct.material || '',
+      weight: byproduct.weight || 0,
+      unit: byproduct.unit || 'kg',
+      rate: byproduct.rate || 0,
+      totalAmount: byproduct.totalAmount || 0,
+      vendorName: byproduct.vendorName || '',
+      vendorPhone: byproduct.vendorPhone || '',
+      vendorEmail: byproduct.vendorEmail || '',
+      vendorAddress: byproduct.vendorAddress || '',
+      vendorGstin: byproduct.vendorGstin || '',
+      vendorPan: byproduct.vendorPan || '',
+      paymentMethod: byproduct.paymentMethod || '',
+      paymentStatus: byproduct.paymentStatus || '',
+      notes: byproduct.notes || ''
+    });
+    
+
+    
+    setShowByproductsModal(true);
+  };
+
+  // NEW: Update byproduct function
+  const updateByproduct = async (byproductId) => {
+    try {
+      setLoading(true);
+      
+      // Prepare update data
+      const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(byproductForm.paymentMethod, byproductForm.paymentStatus);
+      
+      const updateData = {
+        productType: 'byproduct',
+        orderDate: byproductForm.date,
+        deliveryDate: byproductForm.date,
+        deliveryStatus: 'pending',
+        vehicleNumber: byproductForm.vehicleNumber,
+        paymentStatus: backendPaymentStatus,
+        customer: {
+          name: byproductForm.vendorName,
+          phoneNo: byproductForm.vendorPhone,
+          email: byproductForm.vendorEmail,
+          address: byproductForm.vendorAddress,
+          gstinPan: byproductForm.vendorGstin,
+          placeOfSupply: 'Tamil Nadu (33)'
+        },
+        items: [{
+          productName: byproductForm.material,
+          quantity: byproductForm.weight,
+          uom: byproductForm.unit,
+          price: byproductForm.rate,
+          hsnSacCode: '23020000'
+        }],
+        payment: {
+          paymentType: backendPaymentType,
+          tcsType: 'Rs',
+          tcsValue: 0,
+          discountType: 'Rs',
+          discountValue: 0,
+          roundOff: 'Yes',
+          smartSuggestion: ''
+        },
+        notes: byproductForm.notes
+      };
+
+      // Call update API
+      const response = await salesInvoiceService.updateSalesInvoice(byproductId, updateData);
+      
+      // Update local state with the response data
+      setByproducts(prev => prev.map(byproduct => 
+        byproduct._id === byproductId 
+          ? transformBackendToFrontend(response.data)
+          : byproduct
+      ));
+      
+      closeByproductsModal();
+      
+    } catch (error) {
+      setError('Error updating byproduct: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -508,8 +864,13 @@ const SalesDispatch = () => {
     if (window.confirm('Are you sure you want to delete this byproduct record?')) {
       try {
         setLoading(true);
-        // Simulate API call - replace with actual service
+        
+        // Call delete API
+        await salesInvoiceService.deleteSalesInvoice(byproductId);
+        
+        // Remove from local state
         setByproducts(prev => prev.filter(byproduct => byproduct._id !== byproductId));
+        
       } catch (error) {
         setError('Error deleting byproduct record: ' + error.message);
       } finally {
@@ -519,15 +880,17 @@ const SalesDispatch = () => {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'completed':
       case 'delivered':
+      case 'paid':
         return 'text-green-600 bg-green-100';
       case 'pending':
         return 'text-yellow-600 bg-yellow-100';
       case 'in_transit':
         return 'text-blue-600 bg-blue-100';
       case 'cancelled':
+      case 'partial':
         return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
@@ -704,8 +1067,7 @@ const SalesDispatch = () => {
         generatedAt: new Date().toISOString()
       };
 
-      // Simulate API call - replace with actual service
-      console.log('Generating invoice:', invoiceData);
+
       
       // Check if it's a byproduct or rice sale based on the presence of material field
       if (selectedSaleForInvoice.material) {
@@ -754,8 +1116,7 @@ const SalesDispatch = () => {
         generatedAt: new Date().toISOString()
       };
 
-      // Simulate API call - replace with actual service
-      console.log('Generating byproduct invoice:', invoiceData);
+
       
       // Update byproduct with invoice information
       setByproducts(prev => prev.map(byproduct => 
@@ -1302,13 +1663,8 @@ const SalesDispatch = () => {
       key: "paymentStatus", 
       label: "Payment Status",
       renderCell: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          value === 'Completed' ? 'bg-green-100 text-green-800' :
-          value === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-          value === 'Partial' ? 'bg-blue-100 text-blue-800' :
-          'bg-red-100 text-red-800'
-        }`}>
-          {value}
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
+          {value.charAt(0).toUpperCase() + value.slice(1)}
         </span>
       )
     }
@@ -1317,7 +1673,7 @@ const SalesDispatch = () => {
   const filteredSales = sales.filter(sale => {
     const q = salesFilter.toLowerCase();
     return (
-      sale.orderNumber?.toLowerCase().includes(q) ||
+      sale.invoiceNumber?.toLowerCase().includes(q) ||
       sale.customerName?.toLowerCase().includes(q) ||
       sale.riceVariety?.toLowerCase().includes(q) ||
       sale.paymentStatus?.toLowerCase().includes(q) ||
@@ -1420,10 +1776,10 @@ const SalesDispatch = () => {
                 <p className="text-sm text-gray-600">
                   {activeTab === 'rice' ? 'Pending Delivery' : 'Pending Payment'}
                 </p>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-yellow-600">
                   {activeTab === 'rice' 
                     ? sales.filter(sale => sale.deliveryStatus === 'pending').length
-                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'Pending').length
+                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'pending').length
                   }
                 </p>
               </div>
@@ -1436,12 +1792,12 @@ const SalesDispatch = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">
-                  {activeTab === 'rice' ? 'Completed' : 'Completed'}
+                  {activeTab === 'rice' ? 'completed' : 'completed'}
                 </p>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-green-600">
                   {activeTab === 'rice' 
                     ? sales.filter(sale => sale.deliveryStatus === 'delivered').length
-                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'Completed').length
+                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'completed').length
                   }
                 </p>
               </div>
@@ -1480,7 +1836,7 @@ const SalesDispatch = () => {
             <TableFilters
               searchValue={activeTab === 'rice' ? salesFilter : byproductsFilter}
               searchPlaceholder={activeTab === 'rice' 
-                ? "Search by order number, customer, variety..." 
+                ? "Search by invoice number..." 
                 : "Search by vehicle number, material, vendor..."
               }
               onSearchChange={(e) => activeTab === 'rice' 
@@ -1489,22 +1845,32 @@ const SalesDispatch = () => {
               }
               showSelect={false}
             />
+
             <BranchFilter
               value={currentBranchId || ''}
               onChange={(value) => {
-                console.log('Branch changed in Sales:', value);
+                // Branch filter change handled by Redux store
               }}
             />
           </div>
-          <div className="mt-4">
+          <div className="mt-4 flex items-center justify-between">
             <DateRangeFilter
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
-              onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-              onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              onStartDateChange={(e) => handleFilterChange('dateRange', { ...dateRange, startDate: e.target.value })}
+              onEndDateChange={(e) => handleFilterChange('dateRange', { ...dateRange, endDate: e.target.value })}
               startDateLabel={activeTab === 'rice' ? "Order Date From" : "Sale Date From"}
               endDateLabel={activeTab === 'rice' ? "Order Date To" : "Sale Date To"}
             />
+            {/* NEW: Clear Filters Button */}
+            <Button
+              onClick={clearFilters}
+              variant="secondary"
+              icon="refresh"
+              className="ml-4 px-3 mt-4 text-md"
+            >
+              Clear
+            </Button>
           </div>
         </ResponsiveFilters>
 
@@ -1530,7 +1896,7 @@ const SalesDispatch = () => {
               </Button>,
               <Button
                 key="delete"
-                onClick={() => deleteSales(sale._id)}
+                onClick={() => deleteSale(sale._id)}
                 variant="danger"
                 icon="delete"
                 className="text-xs px-2 py-1"
@@ -1692,7 +2058,7 @@ const SalesDispatch = () => {
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteSales(sale._id);
+                              deleteSale(sale._id);
                             }}
                             variant="danger"
                             icon="delete"
@@ -1816,7 +2182,7 @@ const SalesDispatch = () => {
                 actions={(byproduct) => [
                   <Button
                     key="edit"
-                    onClick={() => openByproductsModal(byproduct)}
+                    onClick={() => editByproduct(byproduct)}
                     variant="info"
                     icon="edit"
                     className="text-xs px-2 py-1"
@@ -1896,13 +2262,8 @@ const SalesDispatch = () => {
                         </div>
                         <div className="flex items-center">
                           <span className="w-24 text-sm font-medium text-gray-600">Payment:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            byproduct.paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-                            byproduct.paymentStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                            byproduct.paymentStatus === 'Partial' ? 'bg-blue-100 text-blue-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {byproduct.paymentStatus}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(byproduct.paymentStatus)}`}>
+                            {byproduct.paymentStatus?.charAt(0).toUpperCase() + byproduct.paymentStatus?.slice(1)}
                           </span>
                         </div>
                         <div className="flex items-center">
@@ -2039,13 +2400,8 @@ const SalesDispatch = () => {
                               </div>
                               <div>
                                 <span className="text-gray-600">Payment:</span>
-                                <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                  byproduct.paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-                                  byproduct.paymentStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  byproduct.paymentStatus === 'Partial' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}>
-                                  {byproduct.paymentStatus}
+                                <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(byproduct.paymentStatus)}`}>
+                                  {byproduct.paymentStatus?.charAt(0).toUpperCase() + byproduct.paymentStatus?.slice(1)}
                                 </span>
                               </div>
                               <div>
@@ -2220,10 +2576,11 @@ const SalesDispatch = () => {
               value={salesForm.paymentMethod}
               onChange={handleSalesFormChange}
               options={[
-                { value: 'cash', label: 'Cash' },
-                { value: 'bank_transfer', label: 'Bank Transfer' },
-                { value: 'cheque', label: 'Cheque' },
-                { value: 'upi', label: 'UPI' }
+                { value: 'Cash', label: 'Cash' },
+                { value: 'Bank Transfer', label: 'Bank Transfer' },
+                { value: 'Cheque', label: 'Cheque' },
+                { value: 'UPI', label: 'UPI' },
+                { value: 'Credit', label: 'Credit' }
               ]}
               icon="wallet"
             />
@@ -2582,7 +2939,7 @@ const SalesDispatch = () => {
         title={editingByproduct ? 'Edit Byproduct Sale' : 'Add New Byproduct Sale'}
         size="2xl"
       >
-        <form onSubmit={saveByproduct} className="space-y-6">
+        <form onSubmit={saveByproduct} className="space-y-6" key={editingByproduct ? `edit-${editingByproduct._id}` : 'add'}>
           {/* Basic Information */}
           <fieldset className="border border-gray-200 rounded p-4">
             <legend className="text-sm font-semibold text-gray-700 px-2">

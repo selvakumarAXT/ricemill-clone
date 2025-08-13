@@ -51,7 +51,7 @@ const salesInvoiceSchema = new mongoose.Schema({
   },
   deliveryStatus: {
     type: String,
-    enum: ['pending', 'in_transit', 'delivered'],
+    enum: ['pending', 'in_transit', 'delivered','cancelled'],
     default: 'pending'
   },
   vehicleNumber: {
@@ -60,7 +60,7 @@ const salesInvoiceSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'partial', 'paid'],
+    enum: ['pending', 'completed', 'cancelled'],
     default: 'pending'
   },
 
@@ -80,6 +80,10 @@ const salesInvoiceSchema = new mongoose.Schema({
       trim: true
     },
     phoneNo: {
+      type: String,
+      trim: true
+    },
+    email: {
       type: String,
       trim: true
     },
@@ -243,6 +247,12 @@ const salesInvoiceSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: 'Not Visible on Print'
+  },
+
+  // General Notes
+  notes: {
+    type: String,
+    trim: true
   },
 
   // Payment Details
