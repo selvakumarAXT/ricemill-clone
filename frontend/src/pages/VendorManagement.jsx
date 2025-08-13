@@ -10,6 +10,8 @@ import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
 import FileUpload from '../components/common/FileUpload';
+import FileDisplay from '../components/common/FileDisplay';
+import vendorService from '../services/vendorService';
 
 const VendorManagement = () => {
   const [vendors, setVendors] = useState([]);
@@ -45,71 +47,41 @@ const VendorManagement = () => {
   const [vendorForm, setVendorForm] = useState(initialVendorForm);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   useEffect(() => {
     fetchVendorData();
   }, [currentBranchId]);
 
+  // Auto-clear success message after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
   const fetchVendorData = async () => {
     setLoading(true);
     setError('');
     try {
-      // Simulate API call - replace with actual service
-      const mockVendors = [
-        {
-          _id: '1',
-          vendorCode: 'V001',
-          vendorName: 'ABC Rice Suppliers',
-          contactPerson: 'Rajesh Kumar',
-          phone: '+91 9876543210',
-          email: 'rajesh@abcrice.com',
-          address: '123 Rice Market, Main Street',
-          city: 'Mumbai',
-          state: 'Maharashtra',
-          pincode: '400001',
-          gstNumber: '27ABCDE1234F1Z5',
-          panNumber: 'ABCDE1234F',
-          vendorType: 'supplier',
-          creditLimit: 500000,
-          paymentTerms: '30_days',
-          rating: 4,
-          status: 'active',
-          remarks: 'Reliable supplier with good quality rice',
-          totalOrders: 45,
-          totalAmount: 2500000,
-          lastOrderDate: '2024-01-15',
-          createdAt: '2023-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:30:00Z'
-        },
-        {
-          _id: '2',
-          vendorCode: 'V002',
-          vendorName: 'XYZ Grain Traders',
-          contactPerson: 'Priya Sharma',
-          phone: '+91 8765432109',
-          email: 'priya@xyzgrains.com',
-          address: '456 Grain Market, Industrial Area',
-          city: 'Delhi',
-          state: 'Delhi',
-          pincode: '110001',
-          gstNumber: '07FGHIJ5678G2Z6',
-          panNumber: 'FGHIJ5678G',
-          vendorType: 'supplier',
-          creditLimit: 300000,
-          paymentTerms: '15_days',
-          rating: 3,
-          status: 'active',
-          remarks: 'Good prices but sometimes delayed delivery',
-          totalOrders: 28,
-          totalAmount: 1200000,
-          lastOrderDate: '2024-01-10',
-          createdAt: '2023-03-20T11:00:00Z',
-          updatedAt: '2024-01-10T11:15:00Z'
-        }
-      ];
-      setVendors(mockVendors);
+      const response = await vendorService.getAllVendors({
+        branch_id: currentBranchId,
+        page: 1,
+        limit: 100
+      });
+      
+      if (response.success) {
+        const formattedVendors = response.data.map(vendorService.formatVendorResponse);
+        setVendors(formattedVendors);
+      } else {
+        throw new Error(response.message || 'Failed to fetch vendor data');
+      }
     } catch (err) {
       setError(err.message || 'Failed to fetch vendor data');
+      setVendors([]);
     } finally {
       setLoading(false);
     }
@@ -133,6 +105,8 @@ const VendorManagement = () => {
     setShowVendorModal(false);
     setEditingVendor(null);
     setVendorForm(initialVendorForm);
+    setSelectedFiles([]);
+    setUploadedFiles([]);
   };
 
   const handleVendorFormChange = (e) => {
@@ -147,32 +121,40 @@ const VendorManagement = () => {
     setSelectedFiles(files);
   };
 
+  const handleFileUploadSuccess = (uploadedFiles) => {
+    setUploadedFiles(uploadedFiles);
+    setSelectedFiles([]); // Clear selected files after upload
+  };
+
   const saveVendor = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+    
     try {
-      setLoading(true);
-      // Simulate API call - replace with actual service
+      const formattedVendor = vendorService.formatVendorData(vendorForm);
+      
       if (editingVendor) {
-        // Update existing vendor
-        setVendors(prev => prev.map(vendor => 
-          vendor._id === editingVendor._id ? { ...vendorForm, _id: vendor._id } : vendor
-        ));
+        const response = await vendorService.updateVendor(editingVendor.id, formattedVendor, uploadedFiles);
+        if (response.success) {
+          setSuccessMessage('Vendor updated successfully!');
+          fetchVendorData();
+          closeVendorModal();
+        } else {
+          setError(response.message || 'Failed to update vendor');
+        }
       } else {
-        // Create new vendor
-        const newVendor = {
-          ...vendorForm,
-          _id: Date.now().toString(),
-          totalOrders: 0,
-          totalAmount: 0,
-          lastOrderDate: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        setVendors(prev => [newVendor, ...prev]);
+        const response = await vendorService.createVendor(formattedVendor, uploadedFiles);
+        if (response.success) {
+          setSuccessMessage('Vendor created successfully!');
+          fetchVendorData();
+          closeVendorModal();
+        } else {
+          setError(response.message || 'Failed to create vendor');
+        }
       }
-      closeVendorModal();
     } catch (error) {
-      setError('Error saving vendor: ' + error.message);
+      setError(error.message || 'Failed to save vendor');
     } finally {
       setLoading(false);
     }
@@ -182,15 +164,22 @@ const VendorManagement = () => {
     if (window.confirm('Are you sure you want to delete this vendor?')) {
       try {
         setLoading(true);
-        // Simulate API call - replace with actual service
-        setVendors(prev => prev.filter(vendor => vendor._id !== vendorId));
+        const response = await vendorService.deleteVendor(vendorId);
+        if (response.success) {
+          setSuccessMessage('Vendor deleted successfully!');
+          fetchVendorData();
+        } else {
+          setError(response.message || 'Failed to delete vendor');
+        }
       } catch (error) {
-        setError('Error deleting vendor: ' + error.message);
+        setError(error.message || 'Failed to delete vendor');
       } finally {
         setLoading(false);
       }
     }
   };
+
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -323,8 +312,20 @@ const VendorManagement = () => {
           </div>
         )}
 
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-green-700 font-medium">{successMessage}</span>
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
@@ -350,11 +351,13 @@ const VendorManagement = () => {
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-purple-600 text-lg">📦</span>
+                <span className="text-purple-600 text-lg">💰</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Suppliers</p>
-                <p className="text-xl font-bold text-gray-900">{vendors.filter(v => v.vendorType === 'supplier').length}</p>
+                <p className="text-sm text-gray-600">Total Outstanding</p>
+                <p className="text-xl font-bold text-gray-900">
+                  ₹{vendors.reduce((sum, v) => sum + (v.outstandingBalance || 0), 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
@@ -366,7 +369,50 @@ const VendorManagement = () => {
               <div>
                 <p className="text-sm text-gray-600">Avg Rating</p>
                 <p className="text-xl font-bold text-gray-900">
-                  {(vendors.reduce((sum, v) => sum + v.rating, 0) / vendors.length).toFixed(1)}
+                  {vendors.length > 0 ? (vendors.reduce((sum, v) => sum + (v.rating || 0), 0) / vendors.length).toFixed(1) : 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Financial Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-emerald-600 text-lg">📊</span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Credit Limit</p>
+                <p className="text-xl font-bold text-gray-900">
+                  ₹{vendors.reduce((sum, v) => sum + (v.creditLimit || 0), 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-orange-600 text-lg">⚠️</span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Vendors with Due</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {vendors.filter(v => (v.outstandingBalance || 0) > 0).length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-red-600 text-lg">🚨</span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Critical Status</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {vendors.filter(v => vendorService.getPaymentStatus(v) === 'critical').length}
                 </p>
               </div>
             </div>
@@ -502,14 +548,74 @@ const VendorManagement = () => {
                       <span className="font-medium">{vendor.lastOrderDate ? new Date(vendor.lastOrderDate).toLocaleDateString() : 'N/A'}</span>
                     </div>
                   </div>
-                  
-                  {vendor.remarks && (
-                    <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
-                      <h4 className="text-sm font-semibold text-gray-800 mb-1">Remarks</h4>
-                      <p className="text-gray-700 text-sm">{vendor.remarks}</p>
-                    </div>
-                  )}
                 </div>
+
+                {/* Financial Details */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3">Financial Details</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className={`text-lg font-bold ${vendor.outstandingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        ₹{vendor.outstandingBalance?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-xs text-gray-600">Outstanding</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-blue-600">₹{vendor.totalPaid?.toLocaleString() || 0}</div>
+                      <div className="text-xs text-gray-600">Total Paid</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-orange-600">
+                        {vendor.creditLimit > 0 ? ((vendor.outstandingBalance || 0) / vendor.creditLimit * 100).toFixed(1) : 0}%
+                      </div>
+                      <div className="text-xs text-gray-600">Credit Used</div>
+                    </div>
+                    <div className="text-center">
+                      <div className={`text-lg font-bold ${vendorService.getPaymentStatusColor(vendorService.getPaymentStatus(vendor))}`}>
+                        {vendorService.getPaymentStatusLabel(vendorService.getPaymentStatus(vendor))}
+                      </div>
+                      <div className="text-xs text-gray-600">Status</div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Last Payment:</span>
+                      <span className="font-medium">
+                        {vendor.lastPaymentDate ? new Date(vendor.lastPaymentDate).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Payment Status:</span>
+                      <span className={`font-medium px-2 py-1 rounded-full text-xs ${vendorService.getPaymentStatusColor(vendorService.getPaymentStatus(vendor))}`}>
+                        {vendorService.getPaymentStatusLabel(vendorService.getPaymentStatus(vendor))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Credit Limit:</span>
+                      <span className="font-medium">₹{vendor.creditLimit?.toLocaleString() || 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents */}
+                {vendor.documents && vendor.documents.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-3">Documents</h4>
+                    <FileDisplay 
+                      files={vendor.documents} 
+                      title=""
+                      showTitle={false}
+                    />
+                  </div>
+                )}
+                
+                {vendor.remarks && (
+                  <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Remarks</h4>
+                    <p className="text-gray-700 text-sm">{vendor.remarks}</p>
+                  </div>
+                )}
               </div>
             )}
           />
@@ -708,11 +814,7 @@ const VendorManagement = () => {
               name="vendorType"
               value={vendorForm.vendorType}
               onChange={handleVendorFormChange}
-              options={[
-                { value: 'supplier', label: 'Supplier' },
-                { value: 'service', label: 'Service Provider' },
-                { value: 'equipment', label: 'Equipment Supplier' }
-              ]}
+              options={vendorService.getVendorOptions()}
               icon="package"
             />
             <FormSelect
@@ -720,13 +822,7 @@ const VendorManagement = () => {
               name="paymentTerms"
               value={vendorForm.paymentTerms}
               onChange={handleVendorFormChange}
-              options={[
-                { value: 'immediate', label: 'Immediate' },
-                { value: '7_days', label: '7 Days' },
-                { value: '15_days', label: '15 Days' },
-                { value: '30_days', label: '30 Days' },
-                { value: '45_days', label: '45 Days' }
-              ]}
+              options={vendorService.getPaymentTermsOptions()}
               icon="calendar"
             />
             <FormSelect
@@ -734,13 +830,7 @@ const VendorManagement = () => {
               name="rating"
               value={vendorForm.rating}
               onChange={handleVendorFormChange}
-              options={[
-                { value: 1, label: '1 Star' },
-                { value: 2, label: '2 Stars' },
-                { value: 3, label: '3 Stars' },
-                { value: 4, label: '4 Stars' },
-                { value: 5, label: '5 Stars' }
-              ]}
+              options={vendorService.getRatingOptions()}
               icon="star"
             />
             <FormSelect
@@ -748,11 +838,7 @@ const VendorManagement = () => {
               name="status"
               value={vendorForm.status}
               onChange={handleVendorFormChange}
-              options={[
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
-                { value: 'suspended', label: 'Suspended' }
-              ]}
+              options={vendorService.getStatusOptions()}
               icon="check-circle"
             />
             <FormInput
@@ -801,11 +887,13 @@ const VendorManagement = () => {
             label="Upload Vendor Documents"
             module="vendor"
             onFilesChange={handleFilesChange}
+            onUploadSuccess={handleFileUploadSuccess}
             files={selectedFiles}
             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
             maxFiles={10}
             maxSize={10}
             showPreview={true}
+            disableAutoUpload={false}
           />
           
           <div className="flex justify-end space-x-3 pt-4">

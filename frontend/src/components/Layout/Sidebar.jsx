@@ -112,12 +112,6 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
       icon: <Icon name="sales" />,
       roles: ['admin', 'manager', 'superadmin']
     },
-    {
-      name: 'Byproducts Sales',
-      path: '/byproducts-sales',
-      icon: <Icon name="inventory" />,
-      roles: ['admin', 'manager', 'superadmin']
-    },
     // Branch Management (superadmin only)
     ...(user?.role === 'superadmin' ? [
       {

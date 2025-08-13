@@ -69,9 +69,12 @@ app.use('/api/bag-weight-options', require('./routes/bagWeightOptions'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/financial-transactions', require('./routes/financialTransactions'));
+app.use('/api/vendors', require('./routes/vendors'));
 
 // Upload routes
+console.log('🔧 Registering upload routes at /api/uploads');
 app.use('/api/uploads', require('./routes/uploads'));
+console.log('✅ Upload routes registered');
 
 // Document routes
 app.use('/api/documents', require('./routes/documents'));

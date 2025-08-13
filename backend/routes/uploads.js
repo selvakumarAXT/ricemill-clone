@@ -15,6 +15,23 @@ const {
 
 const router = express.Router();
 
+// Debug: Log all registered routes
+console.log('📁 Upload routes being registered:');
+console.log('  - GET /test');
+console.log('  - POST /upload/single');
+console.log('  - POST /upload/multiple');
+console.log('  - POST /upload/:module');
+console.log('  - POST /upload/:module/:branchId');
+
+// Test route to verify upload routes are working
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Upload routes are working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Serve static files from uploads directory
 router.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -75,18 +92,33 @@ router.post('/upload/multiple', protect, uploadMultiple('files', 10), (req, res)
 // Upload files for specific module with branch context
 router.post('/upload/:module', protect, uploadMultiple('files', 10), (req, res) => {
   try {
+    console.log('Upload route hit for module:', req.params.module);
+    console.log('Request body:', req.body);
+    console.log('Request files:', req.files);
+    console.log('User:', req.user);
+    
     const { module } = req.params;
-    const branchId = req.body.branchId || req.user?.branchId;
+    const branchId = req.body.branchId || req.user?.branch_id || req.user?.branchId;
+    
+    console.log('Module:', module);
+    console.log('Branch ID:', branchId);
     
     if (!req.files || req.files.length === 0) {
+      console.log('No files received');
       return res.status(400).json({
         success: false,
         message: 'No files uploaded'
       });
     }
 
-    const files = req.files.map(file => getFileInfo(file, branchId));
+    console.log('Processing files:', req.files.length);
+    const files = req.files.map(file => {
+      const fileInfo = getFileInfo(file, branchId);
+      console.log('File info:', fileInfo);
+      return fileInfo;
+    });
     
+    console.log('Upload successful, returning files:', files);
     res.status(200).json({
       success: true,
       message: `Files uploaded successfully for ${module}`,
