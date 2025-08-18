@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import TableFilters from '../components/common/TableFilters';
 import BranchFilter from '../components/common/BranchFilter';
@@ -14,6 +14,7 @@ import DateRangeFilter from '../components/common/DateRangeFilter';
 import InvoiceTemplate from '../components/common/InvoiceTemplate';
 import PreviewInvoice from '../components/common/PreviewInvoice';
 import { formatDate, formatCurrency } from '../utils/calculations';
+import { salesInvoiceService } from '../services/salesInvoiceService';
 
 const SalesDispatch = () => {
   const [sales, setSales] = useState([]);
@@ -27,6 +28,13 @@ const SalesDispatch = () => {
     endDate: ''
   });
   const [activeTab, setActiveTab] = useState('rice'); // 'rice' or 'byproducts'
+  
+  // NEW: Enhanced filter states
+  const [productTypeFilter, setProductTypeFilter] = useState('');
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
+
+  
   const [showSalesModal, setShowSalesModal] = useState(false);
   const [showByproductsModal, setShowByproductsModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -40,7 +48,6 @@ const SalesDispatch = () => {
   const { user } = useSelector((state) => state.auth);
 
   const initialSalesForm = {
-    orderNumber: '',
     customerName: '',
     customerPhone: '',
     customerEmail: '',
@@ -126,136 +133,219 @@ const SalesDispatch = () => {
   const BYPRODUCT_TYPES = ['Husk', 'Broken Rice', 'Brown Rice', 'Bran', 'Rice Flour', 'Rice Starch', 'Rice Bran Oil', 'Other'];
   const UNITS = ['kg', 'tons', 'bags', 'quintals'];
   const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'UPI', 'Credit'];
-  const PAYMENT_STATUS = ['Pending', 'Partial', 'Completed', 'Overdue'];
+  const PAYMENT_STATUS = ['pending', 'completed', 'cancelled'];
+
+  // Helper function to map backend payment types to frontend format
+  const mapPaymentType = (backendPaymentType) => {
+    if (!backendPaymentType) return 'Cash';
+    
+    const paymentMap = {
+      'CASH': 'Cash',
+      'CHEQUE': 'Cheque', 
+      'UPI': 'UPI',
+      'BANK_TRANSFER': 'Bank Transfer',
+      'ONLINE': 'Bank Transfer',
+      'CREDIT': 'Credit'
+    };
+    
+    return paymentMap[backendPaymentType] || backendPaymentType;
+  };
 
   useEffect(() => {
     fetchSalesData();
     fetchByproductsData();
   }, [currentBranchId]);
 
+  // NEW: Refetch data when filters change
+  useEffect(() => {
+    if (activeTab === 'rice') {
+      fetchSalesData();
+    } else {
+      fetchByproductsData();
+    }
+  }, [deliveryStatusFilter, paymentStatusFilter, dateRange.startDate, dateRange.endDate]);
+
+  // NEW: Handle filter changes
+  const handleFilterChange = (filterType, value) => {
+    switch (filterType) {
+      case 'deliveryStatus':
+        setDeliveryStatusFilter(value);
+        break;
+      case 'paymentStatus':
+        setPaymentStatusFilter(value);
+        break;
+      case 'dateRange':
+        setDateRange(value);
+        break;
+
+      default:
+        break;
+    }
+  };
+
+  // NEW: Clear all filters
+  const clearFilters = () => {
+    setDeliveryStatusFilter('');
+    setPaymentStatusFilter('');
+    setDateRange({ startDate: '', endDate: '' });
+
+    setSalesFilter('');
+    setByproductsFilter('');
+  };
+
   const fetchSalesData = async () => {
     setLoading(true);
     setError('');
     try {
-      // Simulate API call - replace with actual service
-      const mockSales = [
-        {
-          _id: '1',
-          orderNumber: 'ORD-001',
-          customerName: 'ABC Traders',
-          customerPhone: '+91 9876543210',
-          customerEmail: 'abc@example.com',
-          customerAddress: '123 Main St, City',
-          customerGstin: '22AAAAA0000A1Z5',
-          customerPan: 'ABCD1234EFGH',
-          placeOfSupply: 'Maharashtra',
-          riceVariety: 'Basmati',
-          quantity: 500,
-          unitPrice: 120,
-          totalAmount: 60000,
-          orderDate: '2024-01-15',
-          deliveryDate: '2024-01-20',
-          paymentStatus: 'completed',
-          deliveryStatus: 'delivered',
-          paymentMethod: 'bank_transfer',
-          notes: 'Premium quality rice',
-          invoiceNumber: 'INV-20240115-001',
-          invoiceGenerated: true,
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-20T15:30:00Z'
-        },
-        {
-          _id: '2',
-          orderNumber: 'ORD-002',
-          customerName: 'XYZ Foods',
-          customerPhone: '+91 8765432109',
-          customerEmail: 'xyz@example.com',
-          customerAddress: '456 Market Rd, Town',
-          customerGstin: '33BBBBB0000B2Z6',
-          customerPan: 'EFGH5678IJKL',
-          placeOfSupply: 'Karnataka',
-          riceVariety: 'Sona Masoori',
-          quantity: 300,
-          unitPrice: 85,
-          totalAmount: 25500,
-          orderDate: '2024-01-16',
-          deliveryDate: '2024-01-22',
-          paymentStatus: 'pending',
-          deliveryStatus: 'in_transit',
-          paymentMethod: 'cash',
-          notes: 'Regular order',
-          invoiceNumber: null,
-          invoiceGenerated: false,
-          createdAt: '2024-01-16T11:00:00Z',
-          updatedAt: '2024-01-18T09:15:00Z'
-        }
-      ];
-      setSales(mockSales);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch sales data');
+      // Build filter parameters
+      const filterParams = {
+        productType: 'rice',
+        limit: 100
+      };
+      
+      // Add optional filters
+      if (deliveryStatusFilter) filterParams.deliveryStatus = deliveryStatusFilter;
+      if (paymentStatusFilter) filterParams.paymentStatus = paymentStatusFilter;
+      if (dateRange.startDate) filterParams.startDate = dateRange.startDate;
+      if (dateRange.endDate) filterParams.endDate = dateRange.endDate;
+      
+      // Fetch rice sales from SalesInvoice API
+      const response = await salesInvoiceService.getSalesInvoices(filterParams);
+      
+      // Transform data to match existing frontend structure
+      const riceSales = response.data.map(invoice => ({
+        _id: invoice._id,
+        orderNumber: invoice.invoiceNumber, // Use invoiceNumber as orderNumber
+        customerName: invoice.customer.name,
+        customerPhone: invoice.customer.phoneNo,
+        customerEmail: invoice.customer.email || '',
+        customerAddress: invoice.customer.address,
+        customerGstin: invoice.customer.gstinPan,
+        customerPan: invoice.customer.gstinPan,
+        riceVariety: invoice.items[0]?.productName || '',
+        quantity: invoice.items[0]?.quantity || 0,
+        unitPrice: invoice.items[0]?.price || 0,
+        totalAmount: invoice.totals?.grandTotal || 0,
+        orderDate: invoice.orderDate,
+        deliveryDate: invoice.deliveryDate,
+        paymentStatus: invoice.paymentStatus,
+        deliveryStatus: invoice.deliveryStatus,
+        paymentMethod: mapPaymentType(invoice.payment?.paymentType),
+        notes: invoice.notes || '',
+        placeOfSupply: invoice.customer.placeOfSupply,
+        invoiceNumber: invoice.formattedInvoiceNumber || invoice.invoiceNumber,
+        createdAt: invoice.createdAt,
+        updatedAt: invoice.updatedAt
+      }));
+      
+      setSales(riceSales);
+    } catch (error) {
+      setError('Error fetching sales data: ' + error.message);
+      console.error('Error fetching sales:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Helper function to convert frontend payment values to backend enum values
+  const convertPaymentValues = (paymentMethod, paymentStatus) => {
+    // Convert payment method to backend enum
+    let backendPaymentType = paymentMethod;
+    if (paymentMethod === 'Bank Transfer') {
+      backendPaymentType = 'BANK_TRANSFER';
+    } else if (paymentMethod === 'Credit') {
+      backendPaymentType = 'CREDIT';
+    } else {
+      backendPaymentType = paymentMethod.toUpperCase();
+    }
+    
+    // Convert payment status to backend enum (already lowercase)
+    const backendPaymentStatus = paymentStatus.toLowerCase();
+    
+    return { backendPaymentType, backendPaymentStatus };
+  };
+
+  // Helper function to convert backend payment values back to frontend format
+  const convertBackendToFrontendPayment = (backendPaymentType) => {
+    if (backendPaymentType === 'BANK_TRANSFER') {
+      return 'Bank Transfer';
+    } else if (backendPaymentType === 'CREDIT') {
+      return 'Credit';
+    } else {
+      // Convert other values like 'CASH', 'CHEQUE', 'UPI' to Title Case
+      return backendPaymentType.charAt(0) + backendPaymentType.slice(1).toLowerCase();
+    }
+  };
+
+  // Helper function to transform backend data to frontend format
+  const transformBackendToFrontend = (invoice) => {
+    // Handle date formatting
+    let formattedDate = '';
+    if (invoice.orderDate) {
+      if (typeof invoice.orderDate === 'string') {
+        formattedDate = invoice.orderDate.split('T')[0];
+      } else if (invoice.orderDate instanceof Date) {
+        formattedDate = invoice.orderDate.toISOString().split('T')[0];
+      }
+    }
+    
+    const transformed = {
+      _id: invoice._id,
+      date: formattedDate,
+      vehicleNumber: invoice.vehicleNumber || '',
+      material: invoice.items?.[0]?.productName || '',
+      weight: invoice.items?.[0]?.quantity || 0,
+      unit: invoice.items?.[0]?.uom || 'kg',
+      rate: invoice.items?.[0]?.price || 0,
+      totalAmount: invoice.totals?.grandTotal || 0,
+      vendorName: invoice.customer?.name || '',
+      vendorPhone: invoice.customer?.phoneNo || '',
+      vendorEmail: invoice.customer?.email || '',
+      vendorAddress: invoice.customer?.address || '',
+      vendorGstin: invoice.customer?.gstinPan || '',
+      vendorPan: invoice.customer?.gstinPan || '',
+      paymentMethod: mapPaymentType(invoice.payment?.paymentType),
+      paymentStatus: invoice.paymentStatus || '',
+      notes: invoice.notes || '',
+      invoiceNumber: invoice.formattedInvoiceNumber || invoice.invoiceNumber,
+      invoiceGenerated: !!invoice.invoiceNumber,
+      branch_id: invoice.branch_id,
+      createdBy: invoice.createdBy,
+      createdAt: invoice.createdAt,
+      updatedAt: invoice.updatedAt
+    };
+    
+    return transformed;
+  };
+
   const fetchByproductsData = async () => {
+    setLoading(true);
+    setError('');
     try {
-      // Simulate API call - replace with actual service
-      const mockByproducts = [
-        {
-          _id: '1',
-          date: '2024-01-15',
-          vehicleNumber: 'TN-20-BU-4006',
-          material: 'Husk',
-          weight: 5000,
-          unit: 'kg',
-          rate: 2.5,
-          totalAmount: 12500,
-          vendorName: 'ABC Traders',
-          vendorPhone: '+91 9876543210',
-          vendorEmail: 'abc@example.com',
-          vendorAddress: '123 Main St, Chennai',
-          vendorGstin: '33AAAAA0000A1Z5',
-          vendorPan: 'ABCD1234EFGH',
-          paymentMethod: 'Cash',
-          paymentStatus: 'Completed',
-          notes: 'Monthly husk supply',
-          invoiceNumber: 'INV-BP-20240115-001',
-          invoiceGenerated: true,
-          branch_id: 'branch1',
-          createdBy: 'user1',
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z'
-        },
-        {
-          _id: '2',
-          date: '2024-01-16',
-          vehicleNumber: 'TN-21-CD-5678',
-          material: 'Broken Rice',
-          weight: 2000,
-          unit: 'kg',
-          rate: 35,
-          totalAmount: 70000,
-          vendorName: 'XYZ Foods',
-          vendorPhone: '+91 8765432109',
-          vendorEmail: 'xyz@example.com',
-          vendorAddress: '456 Market Rd, Madurai',
-          vendorGstin: '33BBBBB0000B2Z6',
-          vendorPan: 'EFGH5678IJKL',
-          paymentMethod: 'Bank Transfer',
-          paymentStatus: 'Pending',
-          notes: 'Premium broken rice for animal feed',
-          invoiceNumber: null,
-          invoiceGenerated: false,
-          branch_id: 'branch1',
-          createdBy: 'user1',
-          createdAt: '2024-01-16T11:00Z',
-          updatedAt: '2024-01-16T11:00Z'
-        }
-      ];
-      setByproducts(mockByproducts);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch byproducts data');
+      // Build filter parameters
+      const filterParams = {
+        productType: 'byproduct',
+        limit: 100
+      };
+      
+      // Add optional filters
+      if (deliveryStatusFilter) filterParams.deliveryStatus = deliveryStatusFilter;
+      if (paymentStatusFilter) filterParams.paymentStatus = paymentStatusFilter;
+      if (dateRange.startDate) filterParams.startDate = dateRange.startDate;
+      if (dateRange.endDate) filterParams.endDate = dateRange.endDate;
+      
+      // Fetch byproduct sales from SalesInvoice API
+      const response = await salesInvoiceService.getSalesInvoices(filterParams);
+      
+      // Transform data to match existing frontend structure
+      const byproductSales = response.data.map(invoice => transformBackendToFrontend(invoice));
+      
+      setByproducts(byproductSales);
+    } catch (error) {
+      setError('Error fetching byproducts data: ' + error.message);
+      console.error('Error fetching byproducts:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -276,6 +366,10 @@ const SalesDispatch = () => {
     } else {
       setSalesForm(initialSalesForm);
     }
+    
+    // Debug: Log form state when modal opens
+
+    
     setShowSalesModal(true);
   };
 
@@ -402,27 +496,204 @@ const SalesDispatch = () => {
 
   const saveSales = async (e) => {
     e.preventDefault();
+    
+
+    
     try {
       setLoading(true);
-      // Simulate API call - replace with actual service
+      
       if (editingSale) {
         // Update existing sale
-        setSales(prev => prev.map(sale => 
-          sale._id === editingSale._id ? { ...salesForm, _id: sale._id } : sale
-        ));
+        await updateSale(editingSale._id);
       } else {
-        // Create new sale
+        // Create new sale with SalesInvoice integration
+        const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(salesForm.paymentMethod, salesForm.paymentStatus);
+        
+
+        
+        const salesInvoiceData = {
+          productType: 'rice',
+          orderDate: salesForm.orderDate,
+          deliveryDate: salesForm.deliveryDate,
+          deliveryStatus: salesForm.deliveryStatus,
+          vehicleNumber: salesForm.vehicleNumber || '',
+          paymentStatus: backendPaymentStatus,
+          customer: {
+            name: salesForm.customerName,
+            phoneNo: salesForm.customerPhone,
+            email: salesForm.customerEmail,
+            address: salesForm.customerAddress,
+            gstinPan: salesForm.customerGstin,
+            placeOfSupply: salesForm.placeOfSupply
+          },
+          items: [{
+            productName: salesForm.riceVariety,
+            quantity: salesForm.quantity,
+            uom: 'kg',
+            price: salesForm.unitPrice,
+            hsnSacCode: '10063090'
+          }],
+          payment: {
+            paymentType: backendPaymentType,
+            tcsType: 'Rs',
+            tcsValue: 0,
+            discountType: 'Rs',
+            discountValue: 0,
+            roundOff: 'Yes',
+            smartSuggestion: ''
+          },
+          notes: salesForm.notes || ''
+        };
+
+
+
+        // Call actual SalesInvoice API
+        const response = await salesInvoiceService.createSalesInvoice(salesInvoiceData);
+        
+        // Add to local state for immediate display
         const newSale = {
           ...salesForm,
-          _id: Date.now().toString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          _id: response.data._id,
+          invoiceNumber: response.data.invoiceNumber,
+          createdAt: response.data.createdAt,
+          updatedAt: response.data.updatedAt
         };
+        
         setSales(prev => [newSale, ...prev]);
+        closeSalesModal();
       }
-      closeSalesModal();
     } catch (error) {
       setError('Error saving sales record: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: Edit sale function
+  const editSale = (sale) => {
+    setEditingSale(sale);
+    setSalesForm({
+      customerName: sale.customer?.name || sale.customerName || '',
+      customerPhone: sale.customer?.phoneNo || sale.customerPhone || '',
+      customerEmail: sale.customer?.email || sale.customerEmail || '',
+      customerAddress: sale.customer?.address || sale.customerAddress || '',
+      customerGstin: sale.customer?.gstinPan || sale.customerGstin || '',
+      customerPan: sale.customer?.gstinPan || sale.customerPan || '',
+      placeOfSupply: sale.customer?.placeOfSupply || sale.placeOfSupply || '',
+      riceVariety: sale.items?.[0]?.productName || sale.riceVariety || '',
+      quantity: sale.items?.[0]?.quantity || sale.quantity || 0,
+      unitPrice: sale.items?.[0]?.price || sale.unitPrice || 0,
+      totalAmount: sale.totals?.grandTotal || sale.totalAmount || 0,
+      orderDate: sale.orderDate ? sale.orderDate.split('T')[0] : sale.orderDate || '',
+      deliveryDate: sale.deliveryDate ? sale.deliveryDate.split('T')[0] : sale.deliveryDate || '',
+      deliveryStatus: sale.deliveryStatus || 'pending',
+      vehicleNumber: sale.vehicleNumber || '',
+      paymentStatus: sale.paymentStatus || 'pending',
+      paymentMethod: mapPaymentType(sale.payment?.paymentType),
+      notes: sale.documentNotes || sale.notes || ''
+    });
+    setShowSalesModal(true);
+  };
+
+  // NEW: Update sale function
+  const updateSale = async (saleId) => {
+    try {
+      setLoading(true);
+      
+      // Prepare update data
+      const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(salesForm.paymentMethod, salesForm.paymentStatus);
+      
+      const updateData = {
+        productType: 'rice',
+        orderDate: salesForm.orderDate,
+        deliveryDate: salesForm.deliveryDate,
+        deliveryStatus: salesForm.deliveryStatus,
+        vehicleNumber: salesForm.vehicleNumber || '',
+        paymentStatus: backendPaymentStatus,
+        customer: {
+          name: salesForm.customerName,
+          phoneNo: salesForm.customerPhone,
+          email: salesForm.customerEmail,
+          address: salesForm.customerAddress,
+          gstinPan: salesForm.customerGstin,
+          placeOfSupply: salesForm.placeOfSupply
+        },
+        items: [{
+          productName: salesForm.riceVariety,
+          quantity: salesForm.quantity,
+          uom: 'kg',
+          price: salesForm.unitPrice,
+          hsnSacCode: '10063090'
+        }],
+        payment: {
+          paymentType: backendPaymentType,
+          tcsType: 'Rs',
+          tcsValue: 0,
+          discountType: 'Rs',
+          discountValue: 0,
+          roundOff: 'Yes',
+          smartSuggestion: ''
+        },
+        notes: salesForm.notes 
+      };
+
+      // Call update API
+      const response = await salesInvoiceService.updateSalesInvoice(saleId, updateData);
+      
+      // Update local state with the response data
+      setSales(prev => prev.map(sale => 
+        sale._id === saleId 
+          ? { 
+              ...sale, 
+              customerName: salesForm.customerName,
+              customerPhone: salesForm.customerPhone,
+              customerEmail: salesForm.customerEmail,
+              customerAddress: salesForm.customerAddress,
+              customerGstin: salesForm.customerGstin,
+              customerPan: salesForm.customerPan,
+              placeOfSupply: salesForm.placeOfSupply,
+              riceVariety: salesForm.riceVariety,
+              quantity: salesForm.quantity,
+              unitPrice: salesForm.unitPrice,
+              totalAmount: salesForm.quantity * salesForm.unitPrice,
+              orderDate: salesForm.orderDate,
+              deliveryDate: salesForm.deliveryDate,
+              deliveryStatus: salesForm.deliveryStatus,
+              vehicleNumber: salesForm.vehicleNumber,
+              paymentStatus: salesForm.paymentStatus,
+              paymentMethod: salesForm.paymentMethod,
+              notes: salesForm.notes,
+              updatedAt: response.data.updatedAt
+            }
+          : sale
+      ));
+      
+      closeSalesModal();
+      
+    } catch (error) {
+      setError('Error updating sale: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: Delete sale function
+  const deleteSale = async (saleId) => {
+    if (!window.confirm('Are you sure you want to delete this sale record? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Call delete API
+      await salesInvoiceService.deleteSalesInvoice(saleId);
+      
+      // Remove from local state
+      setSales(prev => prev.filter(sale => sale._id !== saleId));
+      
+    } catch (error) {
+      setError('Error deleting sale: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -432,23 +703,65 @@ const SalesDispatch = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      // Simulate API call - replace with actual service
+      
       if (editingByproduct) {
         // Update existing byproduct
-        setByproducts(prev => prev.map(byproduct => 
-          byproduct._id === editingByproduct._id ? { ...byproductForm, _id: byproduct._id } : byproduct
-        ));
+        await updateByproduct(editingByproduct._id);
       } else {
-        // Create new byproduct
+        // Create new byproduct with SalesInvoice integration
+        const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(byproductForm.paymentMethod, byproductForm.paymentStatus);
+        
+        const salesInvoiceData = {
+          productType: 'byproduct',
+          orderDate: byproductForm.date,
+          deliveryDate: byproductForm.date,
+          deliveryStatus: 'pending',
+          vehicleNumber: byproductForm.vehicleNumber,
+          paymentStatus: backendPaymentStatus,
+          customer: {
+            name: byproductForm.vendorName,
+            phoneNo: byproductForm.vendorPhone,
+            email: byproductForm.vendorEmail,
+            address: byproductForm.vendorAddress,
+            gstinPan: byproductForm.vendorGstin,
+            placeOfSupply: 'Tamil Nadu (33)'
+          },
+          items: [{
+            productName: byproductForm.material,
+            quantity: byproductForm.weight,
+            uom: byproductForm.unit,
+            price: byproductForm.rate,
+            hsnSacCode: '23020000'
+          }],
+          payment: {
+            paymentType: backendPaymentType,
+            tcsType: 'Rs',
+            tcsValue: 0,
+            discountType: 'Rs',
+            discountValue: 0,
+            roundOff: 'Yes',
+            smartSuggestion: ''
+          },
+          notes: byproductForm.notes || ''
+        };
+
+
+
+        // Call actual SalesInvoice API
+        const response = await salesInvoiceService.createSalesInvoice(salesInvoiceData);
+        
+        // Add to local state for immediate display
         const newByproduct = {
           ...byproductForm,
-          _id: Date.now().toString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          _id: response.data._id,
+          invoiceNumber: response.data.invoiceNumber,
+          createdAt: response.data.createdAt,
+          updatedAt: response.data.updatedAt
         };
+        
         setByproducts(prev => [newByproduct, ...prev]);
+        closeByproductsModal();
       }
-      closeByproductsModal();
     } catch (error) {
       setError('Error saving byproduct record: ' + error.message);
     } finally {
@@ -456,17 +769,94 @@ const SalesDispatch = () => {
     }
   };
 
-  const deleteSales = async (saleId) => {
-    if (window.confirm('Are you sure you want to delete this sales record?')) {
-      try {
-        setLoading(true);
-        // Simulate API call - replace with actual service
-        setSales(prev => prev.filter(sale => sale._id !== saleId));
-      } catch (error) {
-        setError('Error deleting sales record: ' + error.message);
-      } finally {
-        setLoading(false);
-      }
+  // NEW: Edit byproduct function
+  const editByproduct = (byproduct) => {
+    
+    setEditingByproduct(byproduct);
+    
+    // Data is already transformed, use it directly
+    setByproductForm({
+      date: byproduct.date || '',
+      vehicleNumber: byproduct.vehicleNumber || '',
+      material: byproduct.material || '',
+      weight: byproduct.weight || 0,
+      unit: byproduct.unit || 'kg',
+      rate: byproduct.rate || 0,
+      totalAmount: byproduct.totalAmount || 0,
+      vendorName: byproduct.vendorName || '',
+      vendorPhone: byproduct.vendorPhone || '',
+      vendorEmail: byproduct.vendorEmail || '',
+      vendorAddress: byproduct.vendorAddress || '',
+      vendorGstin: byproduct.vendorGstin || '',
+      vendorPan: byproduct.vendorPan || '',
+      paymentMethod: byproduct.paymentMethod || '',
+      paymentStatus: byproduct.paymentStatus || '',
+      notes: byproduct.notes || ''
+    });
+    
+
+    
+    setShowByproductsModal(true);
+  };
+
+  // NEW: Update byproduct function
+  const updateByproduct = async (byproductId) => {
+    try {
+      setLoading(true);
+      
+      // Prepare update data
+      const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(byproductForm.paymentMethod, byproductForm.paymentStatus);
+      
+      const updateData = {
+        productType: 'byproduct',
+        orderDate: byproductForm.date,
+        deliveryDate: byproductForm.date,
+        deliveryStatus: 'pending',
+        vehicleNumber: byproductForm.vehicleNumber,
+        paymentStatus: backendPaymentStatus,
+        customer: {
+          name: byproductForm.vendorName,
+          phoneNo: byproductForm.vendorPhone,
+          email: byproductForm.vendorEmail,
+          address: byproductForm.vendorAddress,
+          gstinPan: byproductForm.vendorGstin,
+          placeOfSupply: 'Tamil Nadu (33)'
+        },
+        items: [{
+          productName: byproductForm.material,
+          quantity: byproductForm.weight,
+          uom: byproductForm.unit,
+          price: byproductForm.rate,
+          hsnSacCode: '23020000'
+        }],
+        payment: {
+          paymentType: backendPaymentType,
+          tcsType: 'Rs',
+          tcsValue: 0,
+          discountType: 'Rs',
+          discountValue: 0,
+          roundOff: 'Yes',
+          smartSuggestion: ''
+        },
+        notes: byproductForm.notes
+      };
+
+      // Call update API
+      const response = await salesInvoiceService.updateSalesInvoice(byproductId, updateData);
+      
+      // Update local state with the response data
+      setByproducts(prev => prev.map(byproduct => 
+        byproduct._id === byproductId 
+          ? transformBackendToFrontend(response.data)
+          : byproduct
+      ));
+      
+      closeByproductsModal();
+      
+    } catch (error) {
+      setError('Error updating byproduct: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -474,8 +864,13 @@ const SalesDispatch = () => {
     if (window.confirm('Are you sure you want to delete this byproduct record?')) {
       try {
         setLoading(true);
-        // Simulate API call - replace with actual service
+        
+        // Call delete API
+        await salesInvoiceService.deleteSalesInvoice(byproductId);
+        
+        // Remove from local state
         setByproducts(prev => prev.filter(byproduct => byproduct._id !== byproductId));
+        
       } catch (error) {
         setError('Error deleting byproduct record: ' + error.message);
       } finally {
@@ -485,15 +880,17 @@ const SalesDispatch = () => {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'completed':
       case 'delivered':
+      case 'paid':
         return 'text-green-600 bg-green-100';
       case 'pending':
         return 'text-yellow-600 bg-yellow-100';
       case 'in_transit':
         return 'text-blue-600 bg-blue-100';
       case 'cancelled':
+      case 'partial':
         return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
@@ -572,26 +969,64 @@ const SalesDispatch = () => {
     try {
       setLoading(true);
       
-      // Check the type from the invoice data
-      if (invoiceData.type === 'byproduct') {
+      // Handle invoice generation
+      if (selectedSaleForInvoice) {
+        if (selectedSaleForInvoice.material) {
+          // It's a byproduct
+          setByproducts(prev => prev.map(byproduct => 
+            byproduct._id === selectedSaleForInvoice._id 
+              ? { ...byproduct, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+              : byproduct
+          ));
+        } else {
+          // It's a rice sale
+          setSales(prev => prev.map(sale => 
+            sale._id === selectedSaleForInvoice._id 
+              ? { ...sale, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+              : sale
+          ));
+        }
+      }
+      
+      closeInvoiceGenerator();
+      
+    } catch (error) {
+      setError('Error generating invoice: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateInvoiceFromSale = async (sale) => {
+    try {
+      setLoading(true);
+      
+      // Get next invoice number for the branch
+      const invoiceNumberResponse = await salesInvoiceService.generateInvoiceNumber({
+        branch_id: currentBranchId,
+        productType: sale.material ? 'byproduct' : 'rice'
+      });
+      
+      const invoiceNumber = invoiceNumberResponse.data.invoiceNumber;
+      
+      // Update the sale with invoice number
+      if (sale.material) {
         // It's a byproduct
         setByproducts(prev => prev.map(byproduct => 
-          byproduct._id === selectedSaleForInvoice._id 
-            ? { ...byproduct, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
+          byproduct._id === sale._id 
+            ? { ...byproduct, invoiceNumber, invoiceGenerated: true }
             : byproduct
         ));
-        alert('Byproduct invoice generated successfully!');
       } else {
         // It's a rice sale
-      setSales(prev => prev.map(sale => 
-        sale._id === selectedSaleForInvoice._id 
-          ? { ...sale, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
-          : sale
-      ));
-        alert('Rice sale invoice generated successfully!');
+        setSales(prev => prev.map(saleItem => 
+          saleItem._id === sale._id 
+            ? { ...saleItem, invoiceNumber, invoiceGenerated: true }
+            : saleItem
+        ));
       }
-
-      closeInvoiceGenerator();
+      
+      alert('Invoice generated successfully! Invoice Number: ' + invoiceNumber);
       
     } catch (error) {
       setError('Error generating invoice: ' + error.message);
@@ -632,8 +1067,7 @@ const SalesDispatch = () => {
         generatedAt: new Date().toISOString()
       };
 
-      // Simulate API call - replace with actual service
-      console.log('Generating invoice:', invoiceData);
+
       
       // Check if it's a byproduct or rice sale based on the presence of material field
       if (selectedSaleForInvoice.material) {
@@ -682,8 +1116,7 @@ const SalesDispatch = () => {
         generatedAt: new Date().toISOString()
       };
 
-      // Simulate API call - replace with actual service
-      console.log('Generating byproduct invoice:', invoiceData);
+
       
       // Update byproduct with invoice information
       setByproducts(prev => prev.map(byproduct => 
@@ -1135,11 +1568,6 @@ const SalesDispatch = () => {
 
   // Define columns for the table
   const columns = [
-    { 
-      key: "orderNumber", 
-      label: "Order #",
-      renderCell: (value) => <span className="font-semibold text-blue-600">{value}</span>
-    },
     { key: "customerName", label: "Customer" },
     { 
       key: "riceVariety", 
@@ -1235,13 +1663,8 @@ const SalesDispatch = () => {
       key: "paymentStatus", 
       label: "Payment Status",
       renderCell: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          value === 'Completed' ? 'bg-green-100 text-green-800' :
-          value === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-          value === 'Partial' ? 'bg-blue-100 text-blue-800' :
-          'bg-red-100 text-red-800'
-        }`}>
-          {value}
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
+          {value.charAt(0).toUpperCase() + value.slice(1)}
         </span>
       )
     }
@@ -1250,7 +1673,7 @@ const SalesDispatch = () => {
   const filteredSales = sales.filter(sale => {
     const q = salesFilter.toLowerCase();
     return (
-      sale.orderNumber?.toLowerCase().includes(q) ||
+      sale.invoiceNumber?.toLowerCase().includes(q) ||
       sale.customerName?.toLowerCase().includes(q) ||
       sale.riceVariety?.toLowerCase().includes(q) ||
       sale.paymentStatus?.toLowerCase().includes(q) ||
@@ -1353,10 +1776,10 @@ const SalesDispatch = () => {
                 <p className="text-sm text-gray-600">
                   {activeTab === 'rice' ? 'Pending Delivery' : 'Pending Payment'}
                 </p>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-yellow-600">
                   {activeTab === 'rice' 
                     ? sales.filter(sale => sale.deliveryStatus === 'pending').length
-                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'Pending').length
+                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'pending').length
                   }
                 </p>
               </div>
@@ -1369,12 +1792,12 @@ const SalesDispatch = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">
-                  {activeTab === 'rice' ? 'Completed' : 'Completed'}
+                  {activeTab === 'rice' ? 'completed' : 'completed'}
                 </p>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-green-600">
                   {activeTab === 'rice' 
                     ? sales.filter(sale => sale.deliveryStatus === 'delivered').length
-                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'Completed').length
+                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'completed').length
                   }
                 </p>
               </div>
@@ -1413,7 +1836,7 @@ const SalesDispatch = () => {
             <TableFilters
               searchValue={activeTab === 'rice' ? salesFilter : byproductsFilter}
               searchPlaceholder={activeTab === 'rice' 
-                ? "Search by order number, customer, variety..." 
+                ? "Search by invoice number..." 
                 : "Search by vehicle number, material, vendor..."
               }
               onSearchChange={(e) => activeTab === 'rice' 
@@ -1422,22 +1845,32 @@ const SalesDispatch = () => {
               }
               showSelect={false}
             />
+
             <BranchFilter
               value={currentBranchId || ''}
               onChange={(value) => {
-                console.log('Branch changed in Sales:', value);
+                // Branch filter change handled by Redux store
               }}
             />
           </div>
-          <div className="mt-4">
+          <div className="mt-4 flex items-center justify-between">
             <DateRangeFilter
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
-              onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-              onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              onStartDateChange={(e) => handleFilterChange('dateRange', { ...dateRange, startDate: e.target.value })}
+              onEndDateChange={(e) => handleFilterChange('dateRange', { ...dateRange, endDate: e.target.value })}
               startDateLabel={activeTab === 'rice' ? "Order Date From" : "Sale Date From"}
               endDateLabel={activeTab === 'rice' ? "Order Date To" : "Sale Date To"}
             />
+            {/* NEW: Clear Filters Button */}
+            <Button
+              onClick={clearFilters}
+              variant="secondary"
+              icon="refresh"
+              className="ml-4 px-3 mt-4 text-md"
+            >
+              Clear
+            </Button>
           </div>
         </ResponsiveFilters>
 
@@ -1463,7 +1896,7 @@ const SalesDispatch = () => {
               </Button>,
               <Button
                 key="delete"
-                onClick={() => deleteSales(sale._id)}
+                onClick={() => deleteSale(sale._id)}
                 variant="danger"
                 icon="delete"
                 className="text-xs px-2 py-1"
@@ -1494,7 +1927,7 @@ const SalesDispatch = () => {
               ) : (
                 <Button
                   key="generate-invoice"
-                  onClick={() => openInvoiceModal(sale)}
+                  onClick={() => generateInvoiceFromSale(sale)}
                   variant="primary"
                   icon="document-text"
                   className="text-xs px-2 py-1"
@@ -1625,7 +2058,7 @@ const SalesDispatch = () => {
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteSales(sale._id);
+                              deleteSale(sale._id);
                             }}
                             variant="danger"
                             icon="delete"
@@ -1749,7 +2182,7 @@ const SalesDispatch = () => {
                 actions={(byproduct) => [
                   <Button
                     key="edit"
-                    onClick={() => openByproductsModal(byproduct)}
+                    onClick={() => editByproduct(byproduct)}
                     variant="info"
                     icon="edit"
                     className="text-xs px-2 py-1"
@@ -1780,7 +2213,7 @@ const SalesDispatch = () => {
                   ) : (
                     <Button
                       key="generate-invoice"
-                      onClick={() => openByproductInvoiceModal(byproduct)}
+                      onClick={() => generateInvoiceFromSale(byproduct)}
                       variant="primary"
                       icon="document-text"
                       className="text-xs px-2 py-1"
@@ -1829,13 +2262,8 @@ const SalesDispatch = () => {
                         </div>
                         <div className="flex items-center">
                           <span className="w-24 text-sm font-medium text-gray-600">Payment:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            byproduct.paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-                            byproduct.paymentStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                            byproduct.paymentStatus === 'Partial' ? 'bg-blue-100 text-blue-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {byproduct.paymentStatus}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(byproduct.paymentStatus)}`}>
+                            {byproduct.paymentStatus?.charAt(0).toUpperCase() + byproduct.paymentStatus?.slice(1)}
                           </span>
                         </div>
                         <div className="flex items-center">
@@ -1972,13 +2400,8 @@ const SalesDispatch = () => {
                               </div>
                               <div>
                                 <span className="text-gray-600">Payment:</span>
-                                <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                  byproduct.paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-                                  byproduct.paymentStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  byproduct.paymentStatus === 'Partial' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}>
-                                  {byproduct.paymentStatus}
+                                <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(byproduct.paymentStatus)}`}>
+                                  {byproduct.paymentStatus?.charAt(0).toUpperCase() + byproduct.paymentStatus?.slice(1)}
                                 </span>
                               </div>
                               <div>
@@ -2021,15 +2444,6 @@ const SalesDispatch = () => {
          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput
-              label="Order Number"
-              name="orderNumber"
-              value={salesForm.orderNumber || ''}
-              onChange={handleSalesFormChange}
-              required
-              icon="hash"
-            />
-           
-            <FormInput
               label="Customer Name"
               name="customerName"
               value={salesForm.customerName || ''}
@@ -2037,7 +2451,7 @@ const SalesDispatch = () => {
               required
               icon="user"
             />
-         
+           
             <FormInput
               label="Customer Phone"
               name="customerPhone"
@@ -2067,11 +2481,15 @@ const SalesDispatch = () => {
               onChange={handleSalesFormChange}
               icon="id-card"
             />
-            <FormInput
-              label="Rice Variety"
+            <FormSelect
+              label="Rice Variety*"
               name="riceVariety"
               value={salesForm.riceVariety}
               onChange={handleSalesFormChange}
+              options={[
+                { value: 'A', label: 'A' },
+                { value: 'C', label: 'C' }
+              ]}
               required
               icon="grain"
             />
@@ -2158,10 +2576,11 @@ const SalesDispatch = () => {
               value={salesForm.paymentMethod}
               onChange={handleSalesFormChange}
               options={[
-                { value: 'cash', label: 'Cash' },
-                { value: 'bank_transfer', label: 'Bank Transfer' },
-                { value: 'cheque', label: 'Cheque' },
-                { value: 'upi', label: 'UPI' }
+                { value: 'Cash', label: 'Cash' },
+                { value: 'Bank Transfer', label: 'Bank Transfer' },
+                { value: 'Cheque', label: 'Cheque' },
+                { value: 'UPI', label: 'UPI' },
+                { value: 'Credit', label: 'Credit' }
               ]}
               icon="wallet"
             />
@@ -2520,7 +2939,7 @@ const SalesDispatch = () => {
         title={editingByproduct ? 'Edit Byproduct Sale' : 'Add New Byproduct Sale'}
         size="2xl"
       >
-        <form onSubmit={saveByproduct} className="space-y-6">
+        <form onSubmit={saveByproduct} className="space-y-6" key={editingByproduct ? `edit-${editingByproduct._id}` : 'add'}>
           {/* Basic Information */}
           <fieldset className="border border-gray-200 rounded p-4">
             <legend className="text-sm font-semibold text-gray-700 px-2">
