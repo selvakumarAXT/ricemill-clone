@@ -2626,7 +2626,7 @@ const SalesDispatch = () => {
                       <div className="relative mb-2">
                         {file.mimetype?.startsWith('image/') ? (
                           <img
-                            src={`http://localhost:3001${file.url}`}
+                            src={`${import.meta.env.VITE_API_URL  }${file.url}`}
                             alt={file.originalName}
                             className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => openPreview(file)}
@@ -2671,7 +2671,7 @@ const SalesDispatch = () => {
                           👁️
                         </button>
                         <a
-                          href={`http://localhost:3001${file.url}`}
+                                                      href={`${import.meta.env.VITE_API_URL  }${file.url}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="bg-green-600 text-white p-1 rounded text-xs hover:bg-green-700 transition-colors"

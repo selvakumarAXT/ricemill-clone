@@ -4,9 +4,10 @@ const FinancialTransaction = require('./models/FinancialTransaction');
 const Production = require('./models/Production');
 const Paddy = require('./models/Paddy');
 const Inventory = require('./models/Inventory');
+require('dotenv').config();
 
 // Database connection
-mongoose.connect('mongodb://localhost:27017/ricemill', {
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

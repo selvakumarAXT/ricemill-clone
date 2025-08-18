@@ -1,8 +1,13 @@
 const mongoose = require('mongoose');
 const User = require('./models/User');
+require('dotenv').config();
 
-// Database connection
-mongoose.connect('mongodb://localhost:27017/ricemill', {
+// Database connection - you can change this to your new database name
+const MONGODB_URI = process.env.MONGODB_URI 
+
+console.log(`🔗 Connecting to: ${MONGODB_URI}`);
+
+mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -10,14 +15,21 @@ mongoose.connect('mongodb://localhost:27017/ricemill', {
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 db.once('open', async () => {
-  console.log('✅ Connected to MongoDB');
+  console.log(`✅ Connected to MongoDB database: ${db.name}`);
   
   try {
+    // Check if we want to start fresh (uncomment the next line if you want to drop all users)
+    // await User.deleteMany({});
+    // console.log('🗑️  All users deleted, starting fresh...');
+    
     // Find existing superadmin
-    let superadmin = await User.findOne({ email: 'superadmin@ricemill.com' });
+    let superadmin = await User.findOne({ role: 'superadmin' });
     
     if (superadmin) {
       console.log('👑 Found existing superadmin, updating password...');
+      console.log(`   User ID: ${superadmin._id}`);
+      console.log(`   Email: ${superadmin.email}`);
+      console.log(`   Created: ${superadmin.createdAt}`);
       
       // Set the password directly (will be hashed by pre-save middleware)
       superadmin.password = 'superadmin123';
@@ -53,10 +65,17 @@ db.once('open', async () => {
     
     console.log('🔑 Login credentials: superadmin@ricemill.com / superadmin123');
     
+    // Show all users in the database
+    const allUsers = await User.find({}).select('name email role createdAt');
+    console.log(`\n👥 Total users in database: ${allUsers.length}`);
+    allUsers.forEach(user => {
+      console.log(`   - ${user.name} (${user.email}) - ${user.role} - Created: ${user.createdAt}`);
+    });
+    
   } catch (error) {
     console.error('❌ Error fixing superadmin:', error);
   } finally {
     mongoose.connection.close();
     console.log('🔌 Database connection closed');
   }
-}); 
+});

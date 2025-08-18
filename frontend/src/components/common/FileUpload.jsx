@@ -96,7 +96,7 @@ const FileUpload = ({
       const authToken = token || localStorage.getItem('token') || sessionStorage.getItem('token');
       console.log('Using token:', authToken ? 'Available' : 'Not available');
       
-      const response = await fetch(`http://localhost:3001/api/uploads/upload/${module}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/uploads/upload/${module}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`
