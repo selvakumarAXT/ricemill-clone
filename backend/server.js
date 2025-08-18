@@ -81,6 +81,7 @@ app.use('/api/documents', require('./routes/documents'));
 
 // Sales Invoice routes
 app.use('/api/sales-invoices', require('./routes/salesInvoices'));
+app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/qc', require('./routes/qc'));
 app.use('/api/byproducts', require('./routes/byproducts'));
 

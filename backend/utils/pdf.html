@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Purchase Invoice</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fff;
+      margin: 0;
+      padding: 20px;
+      color: #000;
+      display: flex;
+      justify-content: center;
+    }
+
+    :root {
+      --paper: #ffffff;
+      --border: #c7d5e6;
+      --accent: #0b66a3; /* deep blue */
+      --accent-2: #dff2ff; /* pale blue fill */
+      --muted: #6b7280;
+      --text: #12202b;
+      --small: 12px;
+      --base-font: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    html, body {
+      margin: 0;
+      background: #f4f6f8;
+      font-family: var(--base-font);
+      color: var(--text);
+    }
+
+    .page {
+      width: 820px;
+      margin: 22px auto;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 18px 20px;
+      border-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .company { max-width: 63%; text-align: left }
+    .company h1 { margin: 0; font-size: 26px; letter-spacing: 0.6px; font-weight: 700; }
+    .company .addr { margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.35; }
+
+    .contact { text-align: right; font-size: 13px; color: var(--muted); line-height: 0.5; }
+    .contact p { color: var(--text); }
+
+    .invoice-header { border-collapse: collapse; width: 100%; }
+    .invoice-table { width: 100%; border-collapse: collapse; }
+    .invoice-table th, .invoice-table td {
+      border: 1px solid #0070c0;
+      padding: 5px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .invoice-table thead { background: #eaf3fa; }
+
+    table { border-collapse: collapse; width: 100%; }
+    .invoice-header { border: 1px solid #0070c0; }
+    .invoice-header td, .invoice-header th {
+      border: 1px solid #0070c0;
+      padding: 5px;
+      vertical-align: top;
+    }
+
+    .invoice-header .rightblue td { border-left: 0; border: 0; }
+    .invoice-header .rightblue .rblue { border-left: 0; border: 0; border-right: 1px solid #0070c0; }
+
+    .t4 { border-right: none; }
+    .amount { text-align: right; border-left: none; }
+    .center { text-align: center; }
+    .center-heading { border-bottom: none; text-align: center; }
+    td, th { border: 1px solid #0070c0; padding: 8px; vertical-align: top; border-top: none; }
+    .bg-soft { background-color: #eaf3fa; }
+
+    /* Preserve the “empty rows” visual height */
+    /* #itemsBody { height: 28vh; } */
+  </style>
+</head>
+<body>
+  <section style="border:1px solid #0070c0; padding: 0px 15px;">
+    <!-- header -->
+    <header class="header">
+      <div class="company" aria-label="company details">
+        <h1 id="companyName"></h1>
+        <div class="addr" id="companyAddress"></div>
+      </div>
+      <div class="contact" aria-label="company contact">
+        <p><b>Name: </b><span id="contactName"></span></p>
+        <p><b>Phone: </b><span id="contactPhone"></span></p>
+        <p><b>Email: </b><span id="contactEmail"></span></p>
+      </div>
+    </header>
+
+    <!-- Top strip -->
+    <table class="invoice-header">
+      <tr style="border:1px; border-bottom: solid 0px;">
+        <td style="width:40%; border: 0;">
+          <b>GSTIN :</b> <span id="invoiceGST"></span>
+        </td>
+        <td id="invoiceTitle" style="text-align: center; width: 30%; border:0;color: #0072BC;font-weight: bold;font-size:18px;">
+          <!-- PURCHASE INVOICE-->
+        </td>
+        <td style="width: 30%; border:0;justify-content: space-between;text-align: right;">
+          <b id="copyType"></b>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Vendor detail table -->
+    <table class="invoice-header">
+      <tr class="rightblue">
+        <th colspan="2" style="text-align:center;">Vendor Detail</th>
+        <td>Invoice No.</td>
+        <td id="invoiceNo"></td>
+        <td>Invoice Date</td>
+        <td id="invoiceDate" class="rblue"></td>
+      </tr>
+      <tr class="rightblue">
+        <td><b>M/S</b></td>
+        <td id="vendorName" class="rblue"></td>
+        <td>Reverse Charge</td>
+        <td colspan="3" id="reverseCharge"></td>
+      </tr>
+      <tr class="rightblue">
+        <td><b>Address</b></td>
+        <td id="vendorAddress" class="rblue"></td>
+      </tr>
+      <tr class="rightblue">
+        <td><b>Phone</b></td>
+        <td id="vendorPhone" class="rblue"></td>
+        <td colspan="4"></td>
+      </tr>
+      <tr class="rightblue">
+        <td><b>GSTIN</b></td>
+        <td id="vendorGST" class="rblue"></td>
+        <td colspan="4"></td>
+      </tr>
+      <tr class="rightblue">
+        <td><b>PAN</b></td>
+        <td id="vendorPAN" class="rblue"></td>
+        <td colspan="4"></td>
+      </tr>
+      <tr class="rightblue">
+        <td><b>Place of Supply</b></td>
+        <td id="placeOfSupply" class="rblue"></td>
+        <td colspan="4"></td>
+      </tr>
+    </table>
+
+    <div style="border-left:1px solid #0070c0;border-right: 1px solid #0070c0;"><br></div>
+
+    <!-- Items Table -->
+    <table class="invoice-table">
+      <thead>
+        <tr>
+          <th rowspan="2">Sr. No.</th>
+          <th rowspan="2">Name of Product / Service</th>
+          <th rowspan="2">HSN / SAC</th>
+          <th rowspan="2">Qty</th>
+          <th rowspan="2">Rate</th>
+          <th rowspan="2">Taxable Value</th>
+          <th colspan="2">CGST</th>
+          <th colspan="2">SGST</th>
+          <th rowspan="2">Total</th>
+        </tr>
+        <tr>
+          <th>%</th>
+          <th>Amount</th>
+          <th>%</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+
+      <!-- Dynamic rows go here, filler rows added to preserve height -->
+      <tbody id="itemsBody"></tbody>
+
+      <tfoot>
+        <tr style="border: 0px; background-color: #eaf3fa">
+          <td colspan="3">Total</td>
+          <td id="totalQty"></td>
+          <td></td>
+          <td id="totalTaxable"></td>
+          <td colspan="2" id="totalCGST"></td>
+          <td colspan="2" id="totalSGST"></td>
+          <td id="grandTotal"></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- Summary table -->
+    <table>
+      <tr style="background-color: #eaf3fa">
+        <td class="center heading" style="width: 50%;"><b>Total in words</b></td>
+        <td class="t4"><b>Taxable Amount</b></td>
+        <td class="amount" id="taxableAmount"></td>
+      </tr>
+      <tr>
+        <td style="justify-content: space-around; font-size: smaller; text-align: center;" rowspan="2">
+          <br><span id="amountWords"></span>
+        </td>
+        <td class="t4"><b>Add : CGST</b></td>
+        <td class="amount" id="addCGST"></td>
+      </tr>
+      <tr>
+        <td class="t4"><b>Add : SGST</b></td>
+        <td class="amount" id="addSGST"></td>
+      </tr>
+      <tr style="background-color: #eaf3fa">
+        <td class="center-heading"><b>Terms & Condition</b></td>
+        <td class="t4"><b>Total Tax</b></td>
+        <td class="amount" id="totalTax"></td>
+      </tr>
+      <tr>
+        <td rowspan="6"></td>
+        <td class="t4"><b>Discount</b></td>
+        <td class="amount" id="discount"></td>
+      </tr>
+      <tr style="background-color: #eaf3fa">
+        <td class="t4"><b>Total Amount After Tax</b></td>
+        <td class="amount bold"><b id="finalAmount"></b></td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: end;"><b>(E & O.E.)</b></td>
+      </tr>
+      <tr style="border-right: 1px solid;">
+        <td colspan="2" style="text-align: center; width: 100%;">
+          Certified that the particulars given above are true and correct.<br>
+          <b id="forCompany"></b>
+        </td>
+      </tr>
+      <tr><td colspan="3" style="height: 100px;"></td></tr>
+      <tr><td colspan="3" class="center"><b>Authorised Signatory</b></td></tr>
+    </table>
+  </section>
+
+  <script>
+   
+    // helpers
+    const inr = n => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const qtyFmt = n => Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 3 });
+
+    let invoiceData = null;
+
+    function fillHeader() {
+      const { company, invoice, vendor } = invoiceData;
+
+      // Company block
+      document.getElementById('companyName').textContent = company.name || '';
+      document.getElementById('companyAddress').innerHTML = company.addressHTML || '';
+      document.getElementById('contactName').textContent = company.contactName || '';
+      document.getElementById('contactPhone').textContent = company.phone || '';
+      document.getElementById('contactEmail').textContent = company.email || '';
+
+      // Top strip
+      document.getElementById('invoiceGST').textContent = invoice.displayGST || '';
+      document.getElementById('invoiceTitle').textContent = invoice.title || 'PURCHASE INVOICE';
+      document.getElementById('copyType').textContent = invoice.copyType || 'ORIGINAL FOR RECIPIENT';
+
+      // Vendor table
+      document.getElementById('invoiceNo').textContent = invoice.number || '';
+      document.getElementById('invoiceDate').textContent = invoice.date || '';
+      document.getElementById('reverseCharge').textContent = invoice.reverseCharge || '';
+
+      document.getElementById('vendorName').textContent = vendor.name || '';
+      document.getElementById('vendorAddress').innerHTML = vendor.addressHTML || '';
+      document.getElementById('vendorPhone').textContent = vendor.phone || '';
+      document.getElementById('vendorGST').textContent = vendor.gstin || '';
+      document.getElementById('vendorPAN').textContent = vendor.pan || '';
+      document.getElementById('placeOfSupply').textContent = vendor.placeOfSupply || '';
+
+      // Footer “For Company”
+      document.getElementById('forCompany').textContent = company.name ? `For ${company.name}` : '';
+    }
+
+    function renderItems() {
+      const tbody = document.getElementById('itemsBody');
+      tbody.innerHTML = '';
+
+      let totalQty = 0, totalTaxable = 0, totalCGST = 0, totalSGST = 0, grand = 0;
+
+      (invoiceData.items || []).forEach((it, idx) => {
+        const qty = Number(it.qty) || 0;
+        const rate = Number(it.rate) || 0;
+        const taxable = ('taxable' in it) ? Number(it.taxable) : qty * rate;
+        const cgstPct = Number(it.cgstPct) || 0;
+        const sgstPct = Number(it.sgstPct) || 0;
+        const cgstAmt = ('cgstAmt' in it) ? Number(it.cgstAmt) : taxable * cgstPct / 100;
+        const sgstAmt = ('sgstAmt' in it) ? Number(it.sgstAmt) : taxable * sgstPct / 100;
+        const lineTotal = ('total' in it) ? Number(it.total) : taxable + cgstAmt + sgstAmt;
+
+        totalQty += qty;
+        totalTaxable += taxable;
+        totalCGST += cgstAmt;
+        totalSGST += sgstAmt;
+        grand += lineTotal;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${it.name || ''}</td>
+          <td>${it.hsn || ''}</td>
+          <td>${qtyFmt(qty)}</td>
+          <td>${inr(rate)}</td>
+          <td class="bg-soft">${inr(taxable)}</td>
+          <td>${inr(cgstPct)}</td>
+          <td>${inr(cgstAmt)}</td>
+          <td>${inr(sgstPct)}</td>
+          <td>${inr(sgstAmt)}</td>
+          <td class="bg-soft">${inr(lineTotal)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+    //   filler rows to preserve visual height (empty rows)
+      const fillersNeeded = Math.max(0, invoiceData.length - (invoiceData.items || []).length);
+      for (let i = 0; i < fillersNeeded; i++) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>&nbsp;</td><td></td><td></td><td></td><td></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td>
+        `;
+        tbody.appendChild(tr);
+      }   
+
+      // Footer totals
+      document.getElementById('totalQty').textContent = qtyFmt(totalQty);
+      document.getElementById('totalTaxable').textContent = inr(totalTaxable);
+      document.getElementById('totalCGST').textContent = inr(totalCGST);
+      document.getElementById('totalSGST').textContent = inr(totalSGST);
+      document.getElementById('grandTotal').textContent = inr(grand);
+
+      // Summary
+      const discount = Number(invoiceData.discount) || 0;
+      const final = Math.max(0, grand - discount);
+
+      document.getElementById('taxableAmount').textContent = inr(totalTaxable);
+      document.getElementById('addCGST').textContent = inr(totalCGST);
+      document.getElementById('addSGST').textContent = inr(totalSGST);
+      document.getElementById('totalTax').textContent = inr(totalCGST + totalSGST);
+      document.getElementById('discount').textContent = `-${inr(discount)}`;
+      document.getElementById('finalAmount').textContent = `₹${inr(final)}`;
+      document.getElementById('amountWords').textContent = invoiceData.amountWords || '';
+    }
+
+    // Public API: set all data at once
+    function setInvoiceData(data) {
+      invoiceData = JSON.parse(JSON.stringify(data || {}));
+      fillHeader();
+      renderItems();
+    }
+
+    // Public API: add an item and re-render (optional helper)
+    function addItem(item) {
+      if (!invoiceData) invoiceData = { items: [] };
+      if (!invoiceData.items) invoiceData.items = [];
+      invoiceData.items.push(item || {});
+      renderItems();
+    }
+
+    // Expose helpers globally if you want to call them later
+    window.setInvoiceData = setInvoiceData;
+    window.addItem = addItem;
+
+    // —— Example initial data (replace at runtime by calling setInvoiceData(...)) ——
+    setInvoiceData({
+      company: {
+        name: "SREE ESWAR HI-TECH MODERN RICE MILL",
+        addressHTML: "99, REDHILLS MAIN ROAD, KILANUR VILLAGE, THIRUVALLUR<br>THIRUVALLUR, Tamil Nadu (33) - 602021",
+        contactName: "VIKRAMSELVAM",
+        phone: "8608012345",
+        email: "eswarofficial@gmail.com"
+      },
+      invoice: {
+        displayGST: "33AVLPV6754C3Z8",
+        title: "PURCHASE INVOICE",
+        copyType: "ORIGINAL FOR RECIPIENT",
+        number: "4",
+        date: "21-Apr-2025",
+        reverseCharge: "Yes"
+      },
+      vendor: {
+        name: "ESWAR & CO",
+        addressHTML: "#189, JAYANAGAR 2ND MAIN ROAD<br>TIRUVALLUR, Tamil Nadu (33) - 602001",
+        phone: "9659737475",
+        gstin: "-",
+        pan: "AVLP6754C",
+        placeOfSupply: "Tamil Nadu (33)"
+      },
+      items: [
+        { name: "PADDY", hsn: "10064000", qty: 69.37, rate: 1730.00, cgstPct: 0, sgstPct: 0 },
+       
+        // { name: "PADDY", hsn: "10064000", qty: 69.37, rate: 1730.00, cgstPct: 0, sgstPct: 0 },
+        // { name: "PADDY", hsn: "10064000", qty: 69.37, rate: 1730.00, cgstPct: 0, sgstPct: 0 },
+        // { name: "PADDY", hsn: "10064000", qty: 69.37, rate: 1730.00, cgstPct: 0, sgstPct: 0 },
+        // { name: "PADDY", hsn: "10064000", qty: 69.37, rate: 1730.00, cgstPct: 0, sgstPct: 0 },
+        // { name: "PADDY", hsn: "10064000", qty: 69.37, rate: 1730.00, cgstPct: 0, sgstPct: 0 }
+
+        // Add more: { name, hsn, qty, rate, cgstPct, sgstPct }
+      ],
+      discount: 10.00,
+      amountWords: "ONE LAKH TWENTY THOUSAND RUPEES ONLY"
+    });
+  </script>
+</body>
+</html>

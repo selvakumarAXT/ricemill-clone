@@ -14,7 +14,7 @@ const getAllVendors = asyncHandler(async (req, res) => {
     search = '', 
     vendorType = '', 
     status = '',
-    paymentStatus = '',
+    balanceStatus = '',
     sortBy = 'vendorName', 
     sortOrder = 'asc' 
   } = req.query;
@@ -35,7 +35,9 @@ const getAllVendors = asyncHandler(async (req, res) => {
       { vendorName: { $regex: search, $options: 'i' } },
       { vendorCode: { $regex: search, $options: 'i' } },
       { contactPerson: { $regex: search, $options: 'i' } },
-      { gstNumber: { $regex: search, $options: 'i' } }
+      { gstNumber: { $regex: search, $options: 'i' } },
+      { panNumber: { $regex: search, $options: 'i' } },
+      { placeOfSupply: { $regex: search, $options: 'i' } }
     ];
   }
 
@@ -47,20 +49,17 @@ const getAllVendors = asyncHandler(async (req, res) => {
     query.status = status;
   }
 
-  // Filter by payment status
-  if (paymentStatus) {
-    switch (paymentStatus) {
-      case 'paid':
-        query.outstandingBalance = 0;
+  // Filter by balance status
+  if (balanceStatus) {
+    switch (balanceStatus) {
+      case 'settled':
+        query.currentBalance = 0;
         break;
-      case 'due':
-        query.outstandingBalance = { $gt: 0 };
+      case 'vendor_owes_us':
+        query.currentBalance = { $gt: 0 };
         break;
-      case 'overdue':
-        query.outstandingBalance = { $gt: 0 };
-        break;
-      case 'critical':
-        query.outstandingBalance = { $gt: 0 };
+      case 'we_owe_vendor':
+        query.currentBalance = { $lt: 0 };
         break;
     }
   }
@@ -90,7 +89,9 @@ const getAllVendors = asyncHandler(async (req, res) => {
       $group: {
         _id: null,
         totalVendors: { $sum: 1 },
-        totalOutstanding: { $sum: '$outstandingBalance' },
+        totalBalance: { $sum: '$currentBalance' },
+        totalPaymentsGiven: { $sum: '$totalPaymentsGiven' },
+        totalPaymentsReceived: { $sum: '$totalPaymentsReceived' },
         totalCreditLimit: { $sum: '$creditLimit' },
         avgRating: { $avg: '$rating' }
       }
@@ -108,7 +109,9 @@ const getAllVendors = asyncHandler(async (req, res) => {
     },
     summary: financialSummary[0] || {
       totalVendors: 0,
-      totalOutstanding: 0,
+      totalBalance: 0,
+      totalPaymentsGiven: 0,
+      totalPaymentsReceived: 0,
       totalCreditLimit: 0,
       avgRating: 0
     }
@@ -305,6 +308,98 @@ const deleteVendor = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Add financial transaction for vendor
+// @route   POST /api/vendors/:id/transaction
+// @access  Private
+const addVendorTransaction = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { branch_id, isSuperAdmin } = req.user;
+  const { amount, type, reference, description, remarks } = req.body;
+
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400);
+    throw new Error('Invalid Vendor ID format');
+  }
+
+  // Validate required fields
+  if (!amount || !type) {
+    res.status(400);
+    throw new Error('Amount and transaction type are required');
+  }
+
+  if (!['payment_given', 'payment_received', 'credit', 'debit', 'adjustment'].includes(type)) {
+    res.status(400);
+    throw new Error('Invalid transaction type');
+  }
+
+  let query = { _id: id };
+  
+  if (!isSuperAdmin) {
+    query.branch_id = branch_id;
+  }
+
+  const vendor = await Vendor.findOne(query);
+  if (!vendor) {
+    res.status(404);
+    throw new Error('Vendor not found');
+  }
+
+  // Create transaction record
+  const transaction = {
+    date: new Date(),
+    amount: parseFloat(amount),
+    type,
+    reference: reference || '',
+    description: description || '',
+    remarks: remarks || '',
+    transactionId: `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  };
+
+  // Update vendor financials based on transaction type
+  let updateData = {
+    $push: { paymentHistory: transaction }
+  };
+
+  switch (type) {
+    case 'payment_given':
+      updateData.$inc = { totalPaymentsGiven: parseFloat(amount) };
+      break;
+    case 'payment_received':
+      updateData.$inc = { totalPaymentsReceived: parseFloat(amount) };
+      break;
+    case 'credit':
+      updateData.$inc = { totalPaymentsReceived: parseFloat(amount) };
+      break;
+    case 'debit':
+      updateData.$inc = { totalPaymentsGiven: parseFloat(amount) };
+      break;
+    case 'adjustment':
+      // For adjustments, we need to specify whether it's positive or negative
+      if (req.body.adjustmentType === 'positive') {
+        updateData.$inc = { totalPaymentsReceived: parseFloat(amount) };
+      } else {
+        updateData.$inc = { totalPaymentsGiven: parseFloat(amount) };
+      }
+      break;
+  }
+
+  const updatedVendor = await Vendor.findByIdAndUpdate(
+    id,
+    updateData,
+    { new: true, runValidators: true }
+  ).populate('createdBy', 'name email').populate('branch_id', 'name millCode');
+
+  res.json({
+    success: true,
+    message: 'Transaction added successfully',
+    data: {
+      vendor: updatedVendor,
+      transaction
+    }
+  });
+});
+
 // @desc    Get vendor financial summary
 // @route   GET /api/vendors/:id/financial
 // @access  Private
@@ -330,54 +425,25 @@ const getVendorFinancialSummary = asyncHandler(async (req, res) => {
     throw new Error('Vendor not found');
   }
 
-  // Get financial transactions for this vendor
-  const transactions = await FinancialTransaction.find({
-    vendor: id,
-    branch_id: vendor.branch_id
-  })
-  .sort({ transactionDate: -1 })
-  .lean();
+  // Get recent transactions
+  const recentTransactions = vendor.paymentHistory
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 10);
 
-  // Calculate financial summary
-  const totalIncome = transactions
-    .filter(t => t.transactionType === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalExpense = transactions
-    .filter(t => t.transactionType === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const netAmount = totalIncome - totalExpense;
+  // Calculate summary
+  const summary = {
+    currentBalance: vendor.currentBalance,
+    totalPaymentsGiven: vendor.totalPaymentsGiven,
+    totalPaymentsReceived: vendor.totalPaymentsReceived,
+    balanceStatus: vendor.balanceStatus,
+    creditLimit: vendor.creditLimit,
+    creditUtilization: vendor.creditUtilization,
+    recentTransactions
+  };
 
   res.json({
     success: true,
-    data: {
-      vendor: {
-        _id: vendor._id,
-        vendorName: vendor.vendorName,
-        vendorCode: vendor.vendorCode,
-        creditLimit: vendor.creditLimit,
-        outstandingBalance: vendor.outstandingBalance,
-        paymentStatus: vendor.paymentStatus
-      },
-      financial: {
-        totalOrders: vendor.totalOrders,
-        totalAmount: vendor.totalAmount,
-        totalPaid: vendor.totalPaid,
-        totalDue: vendor.totalDue,
-        outstandingBalance: vendor.outstandingBalance,
-        creditUtilization: vendor.creditUtilization,
-        lastOrderDate: vendor.lastOrderDate,
-        lastPaymentDate: vendor.lastPaymentDate
-      },
-      transactions: {
-        total: transactions.length,
-        income: totalIncome,
-        expense: totalExpense,
-        net: netAmount,
-        recent: transactions.slice(0, 10)
-      }
-    }
+    data: summary
   });
 });
 
@@ -568,5 +634,6 @@ module.exports = {
   deleteVendor,
   getVendorFinancialSummary,
   updateVendorFinancial,
-  getVendorStats
+  getVendorStats,
+  addVendorTransaction
 };

@@ -18,86 +18,86 @@ const PreviewInvoice = ({
     return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-     // Get invoice title based on type or use custom title from data
-   const getInvoiceTitle = () => {
-     return invoiceData.invoiceTitle || invoiceData.title || 'INVOICE';
-   };
+  // Get invoice title based on type or use custom title from data
+  const getInvoiceTitle = () => {
+    return invoiceData.invoiceTitle || invoiceData.title || 'PURCHASE INVOICE';
+  };
 
-     // Get recipient title based on data or use default
-   const getRecipientTitle = () => {
-     return invoiceData.recipientTitle || 'Recipient Detail:';
-   };
+  // Get recipient title based on data or use default
+  const getRecipientTitle = () => {
+    return invoiceData.recipientTitle || 'Recipient Detail:';
+  };
 
-     // Get recipient info based on invoice type
-   const getRecipientInfo = () => {
-     // Use the most appropriate field names based on the data structure
-     return {
-       name: invoiceData.customerName || invoiceData.vendorName || invoiceData.depositorName || invoiceData.depositGodown || 'Recipient Name',
-       address: invoiceData.customerAddress || invoiceData.vendorAddress || invoiceData.depositorAddress || 'Recipient Address',
-       phone: invoiceData.customerPhone || invoiceData.vendorPhone || invoiceData.depositorPhone || invoiceData.phone || 'Phone Number',
-       email: invoiceData.customerEmail || invoiceData.vendorEmail || invoiceData.depositorEmail || invoiceData.email || '',
-       gstin: invoiceData.customerGstin || invoiceData.vendorGstin || invoiceData.depositorGstin || invoiceData.gstin || '-',
-       pan: invoiceData.customerPan || invoiceData.vendorPan || invoiceData.depositorPan || invoiceData.pan || ''
-     };
-   };
+  // Get recipient info based on invoice type
+  const getRecipientInfo = () => {
+    // Use the most appropriate field names based on the data structure
+    return {
+      name: invoiceData.customerName || invoiceData.vendorName || invoiceData.depositorName || invoiceData.depositGodown || 'Recipient Name',
+      address: invoiceData.customerAddress || invoiceData.vendorAddress || invoiceData.depositorAddress || 'Recipient Address',
+      phone: invoiceData.customerPhone || invoiceData.vendorPhone || invoiceData.depositorPhone || invoiceData.phone || 'Phone Number',
+      email: invoiceData.customerEmail || invoiceData.vendorEmail || invoiceData.depositorEmail || invoiceData.email || '',
+      gstin: invoiceData.customerGstin || invoiceData.vendorGstin || invoiceData.depositorGstin || invoiceData.gstin || '-',
+      pan: invoiceData.customerPan || invoiceData.vendorPan || invoiceData.depositorPan || invoiceData.pan || ''
+    };
+  };
 
-     // Get product info based on invoice type
-   const getProductInfo = () => {
-     // Use the most appropriate field names based on the data structure
-     return {
-       name: invoiceData.productName || invoiceData.riceVariety || invoiceData.material || invoiceData.variety || 'PRODUCT',
-       hsn: invoiceData.hsnCode || invoiceData.hsn || '10064000',
-       quantity: invoiceData.quantity || invoiceData.weight || invoiceData.totalRiceDeposit || invoiceData.riceBag || 0,
-       unit: invoiceData.unit || 'kg',
-       rate: invoiceData.rate || invoiceData.unitPrice || 0,
-       taxableValue: invoiceData.taxableValue || invoiceData.totalAmount || 0,
-       cgst: invoiceData.cgst || invoiceData.cgstRate || 0,
-       sgst: invoiceData.sgst || invoiceData.sgstRate || 0,
-       total: invoiceData.totalAmount || 0
-     };
-   };
+  // Get product info based on invoice type
+  const getProductInfo = () => {
+    // Use the most appropriate field names based on the data structure
+    return {
+      name: invoiceData.productName || invoiceData.riceVariety || invoiceData.material || invoiceData.variety || 'PRODUCT',
+      hsn: invoiceData.hsnCode || invoiceData.hsn || '10064000',
+      quantity: invoiceData.quantity || invoiceData.weight || invoiceData.totalRiceDeposit || invoiceData.riceBag || 0,
+      unit: invoiceData.unit || 'kg',
+      rate: invoiceData.rate || invoiceData.unitPrice || 0,
+      taxableValue: invoiceData.taxableValue || invoiceData.totalAmount || 0,
+      cgst: invoiceData.cgst || invoiceData.cgstRate || 0,
+      sgst: invoiceData.sgst || invoiceData.sgstRate || 0,
+      total: invoiceData.totalAmount || 0
+    };
+  };
 
-     // Get invoice details
-   const getInvoiceDetails = () => {
-     return {
-       number: invoiceData.invoiceNumber || 'INV-001',
-       date: formatDate(invoiceData.invoiceDate || invoiceData.date || invoiceData.orderDate),
-       reverseCharge: invoiceData.reverseCharge || 'No',
-       placeOfSupply: invoiceData.placeOfSupply || 'Place of Supply'
-     };
-   };
+  // Get invoice details
+  const getInvoiceDetails = () => {
+    return {
+      number: invoiceData.invoiceNumber || 'INV-001',
+      date: formatDate(invoiceData.invoiceDate || invoiceData.date || invoiceData.orderDate),
+      reverseCharge: invoiceData.reverseCharge || 'No',
+      placeOfSupply: invoiceData.placeOfSupply || 'Place of Supply'
+    };
+  };
 
-     // Get financial details
-   const getFinancialDetails = () => {
-     const taxableAmount = invoiceData.taxableValue || 
-                          (invoiceData.quantity * (invoiceData.unitPrice || invoiceData.rate)) || 
-                          invoiceData.totalAmount || 0;
-     const discount = invoiceData.discount || 0;
-     const totalAfterTax = taxableAmount - discount;
-     
-     return {
-       taxableAmount,
-       discount,
-       totalAfterTax,
-       amountInWords: invoiceData.amountInWords || (numberToWords(Math.round(totalAfterTax)) + ' RUPEES ONLY')
-     };
-   };
+  // Get financial details
+  const getFinancialDetails = () => {
+    const taxableAmount = invoiceData.taxableValue || 
+                         (invoiceData.quantity * (invoiceData.unitPrice || invoiceData.rate)) || 
+                         invoiceData.totalAmount || 0;
+    const discount = invoiceData.discount || 0;
+    const totalAfterTax = taxableAmount - discount;
+    
+    return {
+      taxableAmount,
+      discount,
+      totalAfterTax,
+      amountInWords: invoiceData.amountInWords || (numberToWords(Math.round(totalAfterTax)) + ' RUPEES ONLY')
+    };
+  };
 
-     // Convert number to words
-   const numberToWords = (num) => {
-     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-     const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-     
-     if (num === 0) return 'Zero';
-     if (num < 10) return ones[num];
-     if (num < 20) return teens[num - 10];
-     if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
-     if (num < 1000) return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' and ' + numberToWords(num % 100) : '');
-     if (num < 100000) return numberToWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 ? ' ' + numberToWords(num % 1000) : '');
-     if (num < 10000000) return numberToWords(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 ? ' ' + numberToWords(num % 100000) : '');
-     return numberToWords(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 ? ' ' + numberToWords(num % 10000000) : '');
-   };
+  // Convert number to words
+  const numberToWords = (num) => {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    
+    if (num === 0) return 'Zero';
+    if (num < 10) return ones[num];
+    if (num < 20) return teens[num - 10];
+    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
+    if (num < 1000) return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' and ' + numberToWords(num % 100) : '');
+    if (num < 100000) return numberToWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 ? ' ' + numberToWords(num % 1000) : '');
+    if (num < 10000000) return numberToWords(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 ? ' ' + numberToWords(num % 100000) : '');
+    return numberToWords(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 ? ' ' + numberToWords(num % 10000000) : '');
+  };
 
   const recipientInfo = getRecipientInfo();
   const productInfo = getProductInfo();
@@ -106,7 +106,7 @@ const PreviewInvoice = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
@@ -122,195 +122,206 @@ const PreviewInvoice = ({
 
         {/* Invoice Content */}
         <div className="p-4">
-          <div className="bg-white border border-gray-300 p-4 rounded-lg" style={{ fontFamily: 'Arial, sans-serif', fontSize: '12px' }}>
-                         {/* Company Header */}
-             <div className="text-center mb-4">
-               <h1 className="text-lg font-bold mb-1">{invoiceData.companyName || 'COMPANY NAME'}</h1>
-               <p className="mb-1">{invoiceData.companyAddress1 || 'COMPANY ADDRESS LINE 1'}</p>
-               <p className="mb-1">{invoiceData.companyAddress2 || 'COMPANY ADDRESS LINE 2'}</p>
-             </div>
-             
-             <div className="border-t border-b border-gray-300 py-1 mb-4">
-               <p className="font-bold">GSTIN : {invoiceData.companyGstin || 'COMPANY GSTIN'}</p>
-             </div>
-            
-            {/* Invoice Title */}
-            <div className="flex justify-between mb-2">
-              <h2 className="font-bold">{getInvoiceTitle()}</h2>
-              <p className="font-bold">ORIGINAL FOR RECIPIENT</p>
-            </div>
-            
-            {/* Recipient Details */}
-            <table className="w-full mb-4">
+          {/* Invoice Preview Section - Using Exact HTML Template */}
+          <div style={{ border: '1px solid #0070c0', padding: '0px 15px', background: '#fff' }}>
+            {/* Company Header */}
+            <header style={{ padding: '18px 20px', borderBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ maxWidth: '63%', textAlign: 'left' }}>
+                <h1 style={{ margin: 0, fontSize: '26px', letterSpacing: '0.6px', fontWeight: 700, color: '#12202b' }}>
+                  {invoiceData.companyName || 'SREE ESWAR HI-TECH MODERN RICE MILL'}
+                </h1>
+                <div style={{ marginTop: '8px', fontSize: '13px', color: '#6b7280', lineHeight: 1.35 }}>
+                  {invoiceData.companyAddress1 || '99, REDHILLS MAIN ROAD, KILANUR VILLAGE, THIRUVALLUR'}
+                  <br />
+                  {invoiceData.companyAddress2 || 'THIRUVALLUR, Tamil Nadu (33) - 602021'}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', fontSize: '13px', color: '#6b7280', lineHeight: 0.5 }}>
+                <p style={{ color: '#12202b' }}><b>Name: </b>{invoiceData.contactName || 'VIKRAMSELVAM'}</p>
+                <p><b>Phone: </b>{invoiceData.contactPhone || '8608012345'}</p>
+                <p><b>Email: </b>{invoiceData.contactEmail || 'eswarofficial@gmail.com'}</p>
+              </div>
+            </header>
+
+            {/* Top strip */}
+            <table style={{ borderCollapse: 'collapse', width: '100%', border: '1px solid #0070c0' }}>
+              <tbody>
+                <tr style={{ border: '1px', borderBottom: 'solid 0px' }}>
+                  <td style={{ width: '40%', border: 0 }}>
+                    <b>GSTIN :</b> {invoiceData.companyGstin || '33AVLPV6754C3Z8'}
+                  </td>
+                  <td style={{ textAlign: 'center', width: '30%', border: 0, color: '#0072BC', fontWeight: 'bold', fontSize: '18px' }}>
+                    {getInvoiceTitle()}
+                  </td>
+                  <td style={{ width: '30%', border: 0, justifyContent: 'space-between', textAlign: 'right' }}>
+                    <b>ORIGINAL FOR RECIPIENT</b>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Vendor detail table */}
+            <table style={{ borderCollapse: 'collapse', width: '100%', border: '1px solid #0070c0' }}>
               <tbody>
                 <tr>
-                  <td width="15%"><strong>M/S</strong></td>
-                  <td width="35%">{recipientInfo.name}</td>
-                  <td width="15%"><strong>Invoice No.</strong></td>
-                  <td width="15%">{invoiceDetails.number}</td>
-                  <td width="10%"><strong>Invoice Date</strong></td>
-                  <td width="10%">{invoiceDetails.date}</td>
+                  <th colSpan="2" style={{ textAlign: 'center', border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>Vendor Detail</th>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>Invoice No.</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>{invoiceDetails.number}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>Invoice Date</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>{invoiceDetails.date}</td>
                 </tr>
                 <tr>
-                  <td><strong>Address</strong></td>
-                  <td colSpan="5">{recipientInfo.address}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}><b>M/S</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>{recipientInfo.name}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>Reverse Charge</td>
+                  <td colSpan="3" style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>{invoiceDetails.reverseCharge}</td>
                 </tr>
                 <tr>
-                  <td><strong>Phone</strong></td>
-                  <td>{recipientInfo.phone}</td>
-                  <td><strong>Reverse Charge</strong></td>
-                  <td>{invoiceDetails.reverseCharge}</td>
-                  <td colSpan="2"></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}><b>Address</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>
+                    {recipientInfo.address}
+                  </td>
                 </tr>
                 <tr>
-                  <td><strong>GSTIN</strong></td>
-                  <td>{recipientInfo.gstin}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}><b>Phone</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>{recipientInfo.phone}</td>
                   <td colSpan="4"></td>
                 </tr>
-                {recipientInfo.pan && (
-                  <tr>
-                    <td><strong>PAN</strong></td>
-                    <td>{recipientInfo.pan}</td>
-                    <td colSpan="4"></td>
-                  </tr>
-                )}
                 <tr>
-                  <td><strong>Place of Supply</strong></td>
-                  <td>{invoiceDetails.placeOfSupply}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}><b>GSTIN</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>{recipientInfo.gstin}</td>
+                  <td colSpan="4"></td>
+                </tr>
+                <tr>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}><b>PAN</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>{recipientInfo.pan}</td>
+                  <td colSpan="4"></td>
+                </tr>
+                <tr>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}><b>Place of Supply</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', verticalAlign: 'top' }}>{invoiceDetails.placeOfSupply}</td>
                   <td colSpan="4"></td>
                 </tr>
               </tbody>
             </table>
-            
+
+            <div style={{ borderLeft: '1px solid #0070c0', borderRight: '1px solid #0070c0' }}><br /></div>
+
             {/* Items Table */}
-            <table className="w-full border border-gray-300 mb-4">
-              <thead>
-                <tr className="bg-gray-100">
-                                     <th className="border border-gray-300 p-1 text-center">{invoiceData.tableHeaders?.srNo || 'Sr. No.'}</th>
-                   <th className="border border-gray-300 p-1 text-left">{invoiceData.tableHeaders?.productName || 'Name of Product / Service'}</th>
-                   <th className="border border-gray-300 p-1 text-center">{invoiceData.tableHeaders?.hsn || 'HSN / SAC'}</th>
-                   <th className="border border-gray-300 p-1 text-center">{invoiceData.tableHeaders?.quantity || 'Qty'}</th>
-                   <th className="border border-gray-300 p-1 text-right">{invoiceData.tableHeaders?.rate || 'Rate'}</th>
-                   <th className="border border-gray-300 p-1 text-right">{invoiceData.tableHeaders?.taxableValue || 'Taxable Value'}</th>
-                   <th className="border border-gray-300 p-1 text-center">{invoiceData.tableHeaders?.cgst || 'CGST %'}</th>
-                   <th className="border border-gray-300 p-1 text-center">{invoiceData.tableHeaders?.cgstAmount || 'Amount'}</th>
-                   <th className="border border-gray-300 p-1 text-center">{invoiceData.tableHeaders?.sgst || 'SGST %'}</th>
-                   <th className="border border-gray-300 p-1 text-center">{invoiceData.tableHeaders?.sgstAmount || 'Amount'}</th>
-                   <th className="border border-gray-300 p-1 text-right">{invoiceData.tableHeaders?.total || 'Total'}</th>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ background: '#eaf3fa' }}>
+                <tr>
+                  <th rowSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>Sr. No.</th>
+                  <th rowSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>Name of Product / Service</th>
+                  <th rowSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>HSN / SAC</th>
+                  <th rowSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>Qty</th>
+                  <th rowSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>Rate</th>
+                  <th rowSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>Taxable Value</th>
+                  <th colSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>CGST</th>
+                  <th colSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>SGST</th>
+                  <th rowSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>Total</th>
+                </tr>
+                <tr>
+                  <th style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>%</th>
+                  <th style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>Amount</th>
+                  <th style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>%</th>
+                  <th style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>Amount</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 p-1 text-center">1</td>
-                  <td className="border border-gray-300 p-1">{productInfo.name}</td>
-                  <td className="border border-gray-300 p-1 text-center">{productInfo.hsn}</td>
-                  <td className="border border-gray-300 p-1 text-center">
-                    {productInfo.quantity.toFixed(2)} {productInfo.unit}
-                  </td>
-                  <td className="border border-gray-300 p-1 text-right">
-                    {productInfo.rate.toLocaleString('en-IN')}.00
-                  </td>
-                  <td className="border border-gray-300 p-1 text-right">
-                    {productInfo.taxableValue.toLocaleString('en-IN')}
-                  </td>
-                  <td className="border border-gray-300 p-1 text-center">
-                    {productInfo.cgst}
-                  </td>
-                  <td className="border border-gray-300 p-1 text-center">
-                    {(productInfo.taxableValue * productInfo.cgst / 100).toFixed(2)}
-                  </td>
-                  <td className="border border-gray-300 p-1 text-center">
-                    {productInfo.sgst}
-                  </td>
-                  <td className="border border-gray-300 p-1 text-center">
-                    {(productInfo.taxableValue * productInfo.sgst / 100).toFixed(2)}
-                  </td>
-                  <td className="border border-gray-300 p-1 text-right">
-                    {productInfo.total.toLocaleString('en-IN')}
-                  </td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>1</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>{productInfo.name}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>{productInfo.hsn}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>{productInfo.quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 })}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>{productInfo.rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px', backgroundColor: '#eaf3fa' }}>{productInfo.taxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>{productInfo.cgst}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>{(productInfo.taxableValue * productInfo.cgst / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>{productInfo.sgst}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>{(productInfo.taxableValue * productInfo.sgst / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px', backgroundColor: '#eaf3fa' }}>{productInfo.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
               </tbody>
               <tfoot>
-                <tr className="bg-gray-100">
-                  <td className="border border-gray-300 p-1 text-center font-bold" colSpan="3">Total</td>
-                  <td className="border border-gray-300 p-1 text-center font-bold">
-                    {productInfo.quantity.toFixed(2)} {productInfo.unit}
+                <tr style={{ border: '0px', backgroundColor: '#eaf3fa' }}>
+                  <td colSpan="3" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>Total</td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>
+                    {productInfo.quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 })}
                   </td>
-                  <td className="border border-gray-300 p-1 text-center font-bold"></td>
-                  <td className="border border-gray-300 p-1 text-right font-bold">
-                    {productInfo.taxableValue.toLocaleString('en-IN')}
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>
+                    {productInfo.taxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td className="border border-gray-300 p-1 text-center font-bold">
-                    {productInfo.cgst.toFixed(2)}
+                  <td colSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>
+                    {(productInfo.taxableValue * productInfo.cgst / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td className="border border-gray-300 p-1 text-center font-bold">
-                    {(productInfo.taxableValue * productInfo.cgst / 100).toFixed(2)}
+                  <td colSpan="2" style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>
+                    {(productInfo.taxableValue * productInfo.sgst / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td className="border border-gray-300 p-1 text-center font-bold">
-                    {productInfo.sgst.toFixed(2)}
-                  </td>
-                  <td className="border border-gray-300 p-1 text-center font-bold">
-                    {(productInfo.taxableValue * productInfo.sgst / 100).toFixed(2)}
-                  </td>
-                  <td className="border border-gray-300 p-1 text-right font-bold">
-                    {productInfo.total.toLocaleString('en-IN')}
+                  <td style={{ border: '1px solid #0070c0', padding: '5px', textAlign: 'center', fontSize: '13px' }}>
+                    {productInfo.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
               </tfoot>
             </table>
-            
-            {/* Financial Summary */}
-            <div className="flex justify-between mb-4">
-              <div className="w-1/2">
-                <p><strong>Total in words</strong></p>
-                <p>{financialDetails.amountInWords}</p>
-                                 <p className="mt-2"><strong>{invoiceData.termsLabel || 'Terms & Condition'}</strong></p>
-              </div>
-              <div className="w-1/2">
-                <table className="w-full">
-                                     <tr>
-                     <td className="text-right"><strong>{invoiceData.labels?.taxableAmount || 'Taxable Amount'}</strong></td>
-                     <td className="text-right">{financialDetails.taxableAmount.toLocaleString('en-IN')}</td>
-                   </tr>
-                   <tr>
-                     <td className="text-right"><strong>{invoiceData.labels?.cgst || 'Add : CGST'}</strong></td>
-                     <td className="text-right">
-                       {(financialDetails.taxableAmount * productInfo.cgst / 100).toFixed(2)}
-                     </td>
-                   </tr>
-                   <tr>
-                     <td className="text-right"><strong>{invoiceData.labels?.sgst || 'Add : SGST'}</strong></td>
-                     <td className="text-right">
-                       {(financialDetails.taxableAmount * productInfo.sgst / 100).toFixed(2)}
-                     </td>
-                   </tr>
-                   <tr>
-                     <td className="text-right"><strong>{invoiceData.labels?.totalTax || 'Total Tax'}</strong></td>
-                     <td className="text-right">
-                       {(financialDetails.taxableAmount * (productInfo.cgst + productInfo.sgst) / 100).toFixed(2)}
-                     </td>
-                   </tr>
-                   <tr>
-                     <td className="text-right"><strong>{invoiceData.labels?.discount || 'Discount'}</strong></td>
-                     <td className="text-right">-{financialDetails.discount.toFixed(2)}</td>
-                   </tr>
-                   <tr>
-                     <td className="text-right"><strong>{invoiceData.labels?.totalAfterTax || 'Total Amount After Tax'}</strong></td>
-                     <td className="text-right">
-                       ₹{financialDetails.totalAfterTax.toLocaleString('en-IN')}.00
-                     </td>
-                   </tr>
-                </table>
-                <p className="text-right mt-1">(E & O.E.)</p>
-                                 <p className="text-right">{invoiceData.certificationText || 'Certified that the particulars given above are true and correct.'}</p>
-                                 <p className="text-right mt-4">For {invoiceData.companyName || 'COMPANY NAME'}</p>
-              </div>
-            </div>
-            
-            {/* Signature */}
-                         <div className="text-right mt-8">
-               <p className="font-bold">{invoiceData.signatureLabel || 'Authorised Signatory'}</p>
-             </div>
+
+            {/* Summary table */}
+            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <tbody>
+                <tr style={{ backgroundColor: '#eaf3fa' }}>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'center', width: '50%', borderBottom: 'none' }}><b>Total in words</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', borderRight: 'none' }}><b>Taxable Amount</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'right', borderLeft: 'none' }}>
+                    {productInfo.taxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', justifyContent: 'space-around', fontSize: 'smaller', textAlign: 'center' }} rowSpan="2">
+                    <br />{financialDetails.amountInWords}
+                  </td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', borderRight: 'none' }}><b>Add : CGST</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'right', borderLeft: 'none' }}>
+                    {(productInfo.taxableValue * productInfo.cgst / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', borderRight: 'none' }}><b>Add : SGST</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'right', borderLeft: 'none' }}>
+                    {(productInfo.taxableValue * productInfo.sgst / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr style={{ backgroundColor: '#eaf3fa' }}>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'center', borderBottom: 'none' }}><b>Terms & Condition</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', borderRight: 'none' }}><b>Total Tax</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'right', borderLeft: 'none' }}>
+                    {(productInfo.taxableValue * (productInfo.cgst + productInfo.sgst) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr>
+                  <td rowSpan="6" style={{ border: '1px solid #0070c0', padding: '8px' }}></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', borderRight: 'none' }}><b>Discount</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'right', borderLeft: 'none' }}>-{financialDetails.discount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr style={{ backgroundColor: '#eaf3fa' }}>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', borderRight: 'none' }}><b>Total Amount After Tax</b></td>
+                  <td style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'right', borderLeft: 'none', fontWeight: 'bold' }}>
+                    <b>₹{financialDetails.totalAfterTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan="2" style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'end' }}><b>(E & O.E.)</b></td>
+                </tr>
+                <tr style={{ borderRight: '1px solid' }}>
+                  <td colSpan="2" style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'center', width: '100%' }}>
+                    Certified that the particulars given above are true and correct.<br />
+                    <b>For {invoiceData.companyName || 'SREE ESWAR HI-TECH MODERN RICE MILL'}</b>
+                  </td>
+                </tr>
+                <tr><td colSpan="3" style={{ height: '100px', border: '1px solid #0070c0', padding: '8px' }}></td></tr>
+                <tr><td colSpan="3" style={{ border: '1px solid #0070c0', padding: '8px', textAlign: 'center' }}><b>Authorised Signatory</b></td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 

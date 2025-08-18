@@ -129,4 +129,86 @@ exports.validatePaddyData = [
     .isFloat({ min: 0 })
     .withMessage('Weight must be a non-negative number'),
   exports.handleValidationErrors
+];
+
+// Validation rules for vendor data
+exports.validateVendorData = [
+  body('vendorCode')
+    .notEmpty()
+    .withMessage('Vendor code is required')
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Vendor code must be between 1 and 50 characters'),
+  body('vendorName')
+    .notEmpty()
+    .withMessage('Vendor name is required')
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Vendor name must be between 1 and 100 characters'),
+  body('contactPerson')
+    .notEmpty()
+    .withMessage('Contact person is required')
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Contact person must be between 1 and 100 characters'),
+  body('phone')
+    .notEmpty()
+    .withMessage('Phone number is required')
+    .isLength({ min: 10, max: 15 })
+    .withMessage('Phone number must be between 10 and 15 characters'),
+  body('email')
+    .isEmail()
+    .withMessage('Please provide a valid email')
+    .normalizeEmail(),
+  body('address')
+    .notEmpty()
+    .withMessage('Address is required')
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Address must be between 1 and 200 characters'),
+  body('city')
+    .notEmpty()
+    .withMessage('City is required')
+    .isLength({ min: 1, max: 50 })
+    .withMessage('City must be between 1 and 50 characters'),
+  body('state')
+    .notEmpty()
+    .withMessage('State is required')
+    .isLength({ min: 1, max: 50 })
+    .withMessage('State must be between 1 and 50 characters'),
+  body('pincode')
+    .notEmpty()
+    .withMessage('Pincode is required')
+    .isLength({ min: 6, max: 10 })
+    .withMessage('Pincode must be between 6 and 10 characters'),
+  body('placeOfSupply')
+    .notEmpty()
+    .withMessage('Place of supply is required')
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Place of supply must be between 1 and 100 characters'),
+  body('gstNumber')
+    .optional()
+    .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
+    .withMessage('Invalid GST number format'),
+  body('panNumber')
+    .optional()
+    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)
+    .withMessage('Invalid PAN number format'),
+  body('vendorType')
+    .optional()
+    .isIn(['supplier', 'contractor', 'service_provider', 'other'])
+    .withMessage('Invalid vendor type'),
+  body('creditLimit')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Credit limit must be a non-negative number'),
+  body('paymentTerms')
+    .optional()
+    .isIn(['immediate', '7_days', '15_days', '30_days', '45_days', '60_days'])
+    .withMessage('Invalid payment terms'),
+  body('rating')
+    .optional()
+    .isInt({ min: 1, max: 5 })
+    .withMessage('Rating must be between 1 and 5'),
+  body('status')
+    .optional()
+    .isIn(['active', 'inactive', 'suspended'])
+    .withMessage('Invalid status'),
+  exports.handleValidationErrors
 ]; 

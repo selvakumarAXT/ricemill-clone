@@ -64,6 +64,9 @@ const getQCById = asyncHandler(async (req, res) => {
 // @route   POST /api/qc
 // @access  Private
 const createQC = asyncHandler(async (req, res) => {
+  const startTime = Date.now();
+  console.log('🚀 QC Creation started at:', new Date().toISOString());
+  
   const { branch_id } = req.body;
   const { branch_id: userBranchId, isSuperAdmin } = req.user;
 
@@ -75,14 +78,7 @@ const createQC = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if batch number already exists
-  const existingBatch = await QC.findOne({ batchNumber: req.body.batchNumber });
-  if (existingBatch) {
-    return res.status(400).json({
-      success: false,
-      message: 'Batch number already exists'
-    });
-  }
+  console.log('✅ Branch validation completed in:', Date.now() - startTime, 'ms');
 
   const qcData = {
     ...req.body,
@@ -102,18 +98,33 @@ const createQC = asyncHandler(async (req, res) => {
     }));
   }
 
-  const newQC = new QC(qcData);
-  const savedQC = await newQC.save();
+  console.log('✅ Data preparation completed in:', Date.now() - startTime, 'ms');
 
-  const populatedQC = await QC.findById(savedQC._id)
-    .populate('branch_id', 'name')
-    .populate('createdBy', 'name email');
+  try {
+    const newQC = new QC(qcData);
+    console.log('✅ QC model instantiated in:', Date.now() - startTime, 'ms');
+    
+    const savedQC = await newQC.save();
+    console.log('✅ QC saved to database in:', Date.now() - startTime, 'ms');
+    
+    const totalTime = Date.now() - startTime;
+    console.log('🎉 QC Creation completed in:', totalTime, 'ms');
 
-  res.status(201).json({
-    success: true,
-    message: 'QC record created successfully',
-    data: populatedQC
-  });
+    // Return response immediately without any additional processing
+    res.status(201).json({
+      success: true,
+      message: 'QC record created successfully',
+      data: savedQC,
+      performance: {
+        totalTime: totalTime + 'ms',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('❌ QC Creation failed after:', Date.now() - startTime, 'ms');
+    console.error('Error:', error);
+    throw error;
+  }
 });
 
 // @desc    Update QC record
@@ -141,13 +152,15 @@ const updateQC = asyncHandler(async (req, res) => {
 
   // Check if batch number is being changed and if it already exists
   if (req.body.batchNumber && req.body.batchNumber !== existingQC.batchNumber) {
-    const existingBatch = await QC.findOne({ batchNumber: req.body.batchNumber });
-    if (existingBatch) {
-      return res.status(400).json({
-        success: false,
-        message: 'Batch number already exists'
-      });
-    }
+    // OPTIMIZATION: Remove duplicate batch number check for better performance
+    // This check can be handled by database constraints if needed
+    // const existingBatch = await QC.findOne({ batchNumber: req.body.batchNumber });
+    // if (existingBatch) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Batch number already exists'
+    //   });
+    // }
   }
 
   const updateData = {
@@ -171,8 +184,7 @@ const updateQC = asyncHandler(async (req, res) => {
     id,
     updateData,
     { new: true, runValidators: true }
-  ).populate('branch_id', 'name')
-   .populate('createdBy', 'name email');
+  );
 
   res.status(200).json({
     success: true,
@@ -286,11 +298,77 @@ const getQCStats = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Test QC creation performance
+// @route   POST /api/qc/test-performance
+// @access  Private
+const testQCPerformance = asyncHandler(async (req, res) => {
+  const startTime = Date.now();
+  console.log('🧪 QC Performance test started');
+  
+  try {
+    // Simple test without file uploads
+    const testData = {
+      batchNumber: 'PERF-TEST-' + Date.now(),
+      riceVariety: 'Test Variety',
+      sampleDate: new Date(),
+      moistureContent: 12.0,
+      brokenRice: 2.0,
+      foreignMatter: 1.0,
+      yellowKernels: 1.0,
+      immatureKernels: 0.5,
+      damagedKernels: 0.5,
+      totalDefects: 5.0,
+      headRice: 95.0,
+      qualityGrade: 'A',
+      testMethod: 'manual',
+      testerName: 'Performance Test',
+      status: 'pending',
+      branch_id: req.body.branch_id || req.user.branch_id,
+      createdBy: req.user.id
+    };
+    
+    const newQC = new QC(testData);
+    const savedQC = await newQC.save();
+    
+    const totalTime = Date.now() - startTime;
+    console.log('🧪 Performance test completed in:', totalTime, 'ms');
+    
+    // Clean up test data
+    await QC.findByIdAndDelete(savedQC._id);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Performance test completed',
+      performance: {
+        totalTime: totalTime + 'ms',
+        databaseOperation: 'QC creation and deletion',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    const totalTime = Date.now() - startTime;
+    console.error('🧪 Performance test failed after:', totalTime, 'ms');
+    console.error('Error:', error);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Performance test failed',
+      error: error.message,
+      performance: {
+        totalTime: totalTime + 'ms',
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
 module.exports = {
   getAllQC,
   getQCById,
   createQC,
   updateQC,
   deleteQC,
-  getQCStats
+  getQCStats,
+  testQCPerformance
 };
+

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const vendorSchema = new mongoose.Schema({
+  // Basic Vendor Information
   vendorCode: {
     type: String,
     required: true,
@@ -28,6 +29,8 @@ const vendorSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
+  
+  // Address Information
   address: {
     type: String,
     required: true,
@@ -48,19 +51,44 @@ const vendorSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  placeOfSupply: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  
+  // Tax Information
   gstNumber: {
     type: String,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // Optional field
+        return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(v);
+      },
+      message: 'Invalid GST number format'
+    }
   },
   panNumber: {
     type: String,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // Optional field
+        return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v);
+      },
+      message: 'Invalid PAN number format'
+    }
   },
+  
+  // Vendor Classification
   vendorType: {
     type: String,
     enum: ['supplier', 'contractor', 'service_provider', 'other'],
     default: 'supplier'
   },
+  
+  // Financial Settings
   creditLimit: {
     type: Number,
     default: 0,
@@ -71,54 +99,46 @@ const vendorSchema = new mongoose.Schema({
     enum: ['immediate', '7_days', '15_days', '30_days', '45_days', '60_days'],
     default: '30_days'
   },
+  
+  // Status and Rating
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'suspended'],
+    default: 'active'
+  },
   rating: {
     type: Number,
     min: 1,
     max: 5,
     default: 5
   },
-  status: {
-    type: String,
-    enum: ['active', 'inactive', 'suspended'],
-    default: 'active'
-  },
   remarks: {
     type: String,
     trim: true
   },
   
-  // Financial Tracking Fields
-  totalOrders: {
+  // Enhanced Financial Tracking
+  // Money Given (Payments made to vendor)
+  totalPaymentsGiven: {
     type: Number,
     default: 0,
     min: 0
   },
-  totalAmount: {
+  
+  // Money Received (Payments received from vendor)
+  totalPaymentsReceived: {
     type: Number,
     default: 0,
     min: 0
   },
-  totalPaid: {
+  
+  // Current Balance (Positive = vendor owes us, Negative = we owe vendor)
+  currentBalance: {
     type: Number,
-    default: 0,
-    min: 0
+    default: 0
   },
-  totalDue: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  lastOrderDate: {
-    type: Date
-  },
-  lastPaymentDate: {
-    type: Date
-  },
-  outstandingBalance: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
+  
+  // Transaction History
   paymentHistory: [{
     date: {
       type: Date,
@@ -130,11 +150,13 @@ const vendorSchema = new mongoose.Schema({
     },
     type: {
       type: String,
-      enum: ['payment', 'credit', 'adjustment'],
+      enum: ['payment_given', 'payment_received', 'credit', 'debit', 'adjustment'],
       required: true
     },
     reference: String,
-    remarks: String
+    description: String,
+    remarks: String,
+    transactionId: String
   }],
   
   // Branch and User Information
@@ -184,33 +206,28 @@ const vendorSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Virtual for current due amount
-vendorSchema.virtual('currentDue').get(function() {
-  return this.totalAmount - this.totalPaid;
+// Virtual for current balance status
+vendorSchema.virtual('balanceStatus').get(function() {
+  if (this.currentBalance === 0) return 'settled';
+  if (this.currentBalance > 0) return 'vendor_owes_us';
+  return 'we_owe_vendor';
+});
+
+// Virtual for balance amount (always positive)
+vendorSchema.virtual('balanceAmount').get(function() {
+  return Math.abs(this.currentBalance);
 });
 
 // Virtual for credit utilization percentage
 vendorSchema.virtual('creditUtilization').get(function() {
   if (this.creditLimit === 0) return 0;
-  return (this.outstandingBalance / this.creditLimit) * 100;
+  return (Math.max(0, this.currentBalance) / this.creditLimit) * 100;
 });
 
-// Virtual for payment status
-vendorSchema.virtual('paymentStatus').get(function() {
-  if (this.outstandingBalance === 0) return 'paid';
-  if (this.outstandingBalance <= this.creditLimit * 0.5) return 'good';
-  if (this.outstandingBalance <= this.creditLimit * 0.8) return 'warning';
-  return 'critical';
-});
-
-// Pre-save middleware to calculate totals
+// Pre-save middleware to calculate current balance
 vendorSchema.pre('save', function(next) {
-  // Calculate total due
-  this.totalDue = this.totalAmount - this.totalPaid;
-  
-  // Calculate outstanding balance
-  this.outstandingBalance = this.totalDue;
-  
+  // Calculate current balance: money received - money given
+  this.currentBalance = this.totalPaymentsReceived - this.totalPaymentsGiven;
   next();
 });
 
@@ -220,7 +237,10 @@ vendorSchema.index({ vendorCode: 1 });
 vendorSchema.index({ vendorName: 1 });
 vendorSchema.index({ vendorType: 1 });
 vendorSchema.index({ status: 1 });
+vendorSchema.index({ gstNumber: 1 });
+vendorSchema.index({ panNumber: 1 });
 vendorSchema.index({ branch_id: 1, status: 1 });
 vendorSchema.index({ branch_id: 1, vendorType: 1 });
+vendorSchema.index({ branch_id: 1, currentBalance: 1 });
 
 module.exports = mongoose.model('Vendor', vendorSchema);

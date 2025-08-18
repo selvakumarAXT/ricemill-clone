@@ -239,6 +239,12 @@ const QCDataEntry = () => {
     try {
       setLoading(true);
       
+      // Add loading timeout to prevent infinite loading
+      const loadingTimeout = setTimeout(() => {
+        setError('QC creation is taking longer than expected. Please check your connection and try again.');
+        setLoading(false);
+      }, 20000); // 20 seconds timeout
+      
       // Add branch_id to form data
       const formDataWithBranch = {
         ...qcForm,
@@ -250,6 +256,8 @@ const QCDataEntry = () => {
       } else {
         await qcService.createQC(formDataWithBranch, selectedFiles);
       }
+      
+      clearTimeout(loadingTimeout);
       fetchQcData(); // Refresh data after save
       closeQcModal();
       setSelectedFiles([]); // Clear selected files
@@ -938,7 +946,14 @@ const QCDataEntry = () => {
               className="px-6 py-2"
               disabled={loading}
             >
-              {loading ? 'Saving...' : (editingQc ? 'Update' : 'Create')}
+              {loading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                editingQc ? 'Update' : 'Create'
+              )}
             </Button>
           </div>
         </form>

@@ -139,4 +139,12 @@ qcSchema.pre('save', function(next) {
   next();
 });
 
+// Performance indexes for better query performance
+qcSchema.index({ branch_id: 1, createdAt: -1 });
+qcSchema.index({ batchNumber: 1 }, { unique: true });
+qcSchema.index({ status: 1 });
+qcSchema.index({ riceVariety: 1 });
+qcSchema.index({ createdBy: 1 });
+
 module.exports = mongoose.model('QC', qcSchema);
+

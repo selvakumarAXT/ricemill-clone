@@ -99,35 +99,42 @@ export const vendorService = {
 
   // Delete vendor
   deleteVendor: async (id) => {
-    const response = await api.delete(`${BASE_URL}/${id}`);
-    return response.data;
+    try {
+      const response = await api.delete(`${BASE_URL}/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to delete vendor' };
+    }
+  },
+
+  // Add financial transaction for vendor
+  addVendorTransaction: async (vendorId, transactionData) => {
+    try {
+      const response = await api.post(`${BASE_URL}/${vendorId}/transaction`, transactionData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to add transaction' };
+    }
   },
 
   // Get vendor financial summary
-  getVendorFinancial: async (id) => {
-    const response = await api.get(`${BASE_URL}/${id}/financial`);
-    return response.data;
-  },
-
-  // Update vendor financial status
-  updateVendorFinancial: async (id, financialData) => {
-    const response = await api.put(`${BASE_URL}/${id}/financial`, financialData);
-    return response.data;
+  getVendorFinancialSummary: async (vendorId) => {
+    try {
+      const response = await api.get(`${BASE_URL}/${vendorId}/financial`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to get financial summary' };
+    }
   },
 
   // Get vendor statistics
-  getVendorStats: async (params = {}) => {
-    const queryParams = new URLSearchParams();
-    
-    Object.keys(params).forEach(key => {
-      if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
-        queryParams.append(key, params[key]);
-      }
-    });
-
-    const url = queryParams.toString() ? `${BASE_URL}/stats/overview?${queryParams.toString()}` : `${BASE_URL}/stats/overview`;
-    const response = await api.get(url);
-    return response.data;
+  getVendorStats: async () => {
+    try {
+      const response = await api.get(`${BASE_URL}/stats/overview`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to get vendor statistics' };
+    }
   },
 
   // Get vendor options for dropdowns

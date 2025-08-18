@@ -1285,13 +1285,13 @@ const SalesDispatch = () => {
             {/* Only show Add button when a specific branch is selected (not "All Branches") */}
             {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
               (!user?.isSuperAdmin && user?.branch?.id)) && (
-              <Button
+            <Button
                 onClick={() => activeTab === 'rice' ? openSalesModal() : openByproductsModal()}
-                variant="success"
-                className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-              >
+              variant="success"
+              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+            >
                 {activeTab === 'rice' ? '🛒 Add New Sale' : '📦 Add New Byproduct Sale'}
-              </Button>
+            </Button>
             )}
           </div>
         </div>

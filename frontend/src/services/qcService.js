@@ -41,12 +41,27 @@ const qcService = {
         });
       }
       
-      const response = await createAxiosInstance().post('/qc', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      try {
+        const response = await createAxiosInstance().post('/qc', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        return response.data;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again.');
+        }
+        throw error;
+      }
     } catch (error) {
       throw error.response?.data || error.message;
     }
@@ -71,12 +86,27 @@ const qcService = {
         });
       }
       
-      const response = await createAxiosInstance().put(`/qc/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      try {
+        const response = await createAxiosInstance().put(`/qc/${id}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        return response.data;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again.');
+        }
+        throw error;
+      }
     } catch (error) {
       throw error.response?.data || error.message;
     }
@@ -121,3 +151,4 @@ const qcService = {
 };
 
 export default qcService;
+

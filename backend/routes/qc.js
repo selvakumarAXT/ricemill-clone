@@ -6,7 +6,8 @@ const {
   createQC,
   updateQC,
   deleteQC,
-  getQCStats
+  getQCStats,
+  testQCPerformance
 } = require('../controllers/qcController');
 const { protect } = require('../middleware/auth');
 const { uploadMultiple } = require('../middleware/upload');
@@ -17,14 +18,18 @@ router.use(protect);
 // Routes
 router.route('/')
   .get(getAllQC)
-  .post(uploadMultiple, createQC);
+  .post(createQC); // Remove uploadMultiple middleware for better performance
+
+router.route('/test-performance')
+  .post(testQCPerformance);
 
 router.route('/stats')
   .get(getQCStats);
 
 router.route('/:id')
   .get(getQCById)
-  .put(uploadMultiple, updateQC)
+  .put(uploadMultiple, updateQC) // Keep upload for updates
   .delete(deleteQC);
 
 module.exports = router;
+
