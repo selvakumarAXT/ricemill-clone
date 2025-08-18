@@ -7,9 +7,10 @@ const Gunny = require('./models/Gunny');
 const Inventory = require('./models/Inventory');
 const { RiceDeposit } = require('./models/RiceDeposit');
 const BagWeightOption = require('./models/BagWeightOption');
+require('dotenv').config();
 
 // Database connection
-mongoose.connect('mongodb://localhost:27017/ricemill', {
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

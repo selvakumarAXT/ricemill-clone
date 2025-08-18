@@ -10,6 +10,7 @@ const { RiceDeposit } = require('./models/RiceDeposit');
 const BagWeightOption = require('./models/BagWeightOption');
 const SalesInvoice = require('./models/SalesInvoice');
 const FinancialTransaction = require('./models/FinancialTransaction');
+require('dotenv').config();
 
 // Invoice number generator function
 const generateInvoiceNumber = (transactionType, category, date, sequence) => {
@@ -47,7 +48,7 @@ const generateDescription = (transactionType, category, vendor, amount) => {
 };
 
 // Database connection
-mongoose.connect('mongodb://localhost:27017/ricemill', {
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

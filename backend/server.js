@@ -37,7 +37,7 @@ app.use(helmet());
 
 // CORS - Allow frontend origin and credentials for development
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176'], // Frontend URLs
+  origin: [process.env.FRONTEND_URL], // Frontend URLs
   credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

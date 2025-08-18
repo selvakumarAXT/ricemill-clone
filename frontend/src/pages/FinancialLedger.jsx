@@ -791,7 +791,7 @@ const FinancialLedger = () => {
                       <div className="relative mb-2">
                         {file.mimetype?.startsWith('image/') ? (
                           <img
-                            src={`http://localhost:3001${file.url}`}
+                            src={`${import.meta.env.VITE_API_URL}${file.url}`}
                             alt={file.originalName}
                             className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => openPreview(file)}
@@ -836,7 +836,7 @@ const FinancialLedger = () => {
                           👁️
                         </button>
                         <a
-                          href={`http://localhost:3001${file.url}`}
+                          href={`${import.meta.env.VITE_API_URL}${file.url}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="bg-green-600 text-white p-1 rounded text-xs hover:bg-green-700 transition-colors"
@@ -901,7 +901,7 @@ const FinancialLedger = () => {
               {previewFile.mimetype?.startsWith('image/') ? (
                 <div className="text-center">
                   <img
-                    src={`http://localhost:3001${previewFile.url}`}
+                    src={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
                     alt={previewFile.originalName}
                     className="max-w-full max-h-80 object-contain mx-auto rounded-lg shadow-lg"
                   />
@@ -909,7 +909,7 @@ const FinancialLedger = () => {
               ) : previewFile.mimetype?.includes('pdf') ? (
                 <div className="text-center">
                   <iframe
-                    src={`http://localhost:3001${previewFile.url}`}
+                    src={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
                     className="w-full h-96 border rounded-lg"
                     title={previewFile.originalName}
                   />
@@ -918,7 +918,7 @@ const FinancialLedger = () => {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 mb-2">Text files cannot be previewed directly.</p>
                   <a
-                    href={`http://localhost:3001${previewFile.url}`}
+                    href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -933,7 +933,7 @@ const FinancialLedger = () => {
                   <p className="text-gray-600 mb-4">This file type cannot be previewed directly.</p>
                   <div className="flex gap-3 justify-center">
                     <a
-                      href={`http://localhost:3001${previewFile.url}`}
+                      href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -941,7 +941,7 @@ const FinancialLedger = () => {
                       📄 Open in New Tab
                     </a>
                     <a
-                      href={`http://localhost:3001${previewFile.url}`}
+                      href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
                       download={previewFile.originalName}
                       className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
@@ -962,7 +962,7 @@ const FinancialLedger = () => {
                 Close
               </Button>
               <a
-                href={`http://localhost:3001${previewFile.url}`}
+                href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -970,7 +970,7 @@ const FinancialLedger = () => {
                 📄 Open in New Tab
               </a>
               <a
-                href={`http://localhost:3001${previewFile.url}`}
+                href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
                 download={previewFile.originalName}
                 className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
