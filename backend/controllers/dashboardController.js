@@ -449,17 +449,16 @@ const getOverviewData = async (params = {}, branch_id = null) => {
         }
       }
     ]),
-    // Get total sales amount from FinancialTransaction with date filter and optional branch filter
-    FinancialTransaction.aggregate([
+    // Get total sales amount from SalesInvoice with date filter and optional branch filter
+    SalesInvoice.aggregate([
       {
         $match: (() => {
           const matchObj = {
-            transactionType: 'income',
-            category: { $in: ['rice_sales', 'paddy_sales', 'other_sales', 'sales'] }
+            paymentStatus: 'completed'
           };
           
           if (startDateObj && endDateObj) {
-            matchObj.transactionDate = { $gte: startDateObj, $lte: endDateObj };
+            matchObj.invoiceDate = { $gte: startDateObj, $lte: endDateObj };
           }
           
           if (branch_id) {
@@ -472,7 +471,7 @@ const getOverviewData = async (params = {}, branch_id = null) => {
       {
         $group: {
           _id: null,
-          totalAmount: { $sum: '$amount' }
+          totalAmount: { $sum: '$totals.grandTotal' }
         }
       }
     ])
@@ -587,7 +586,7 @@ const getSalesAnalyticsData = async (params = {}, branch_id = null) => {
         {
           $match: {
             invoiceDate: { $gte: monthStart, $lte: monthEnd }, // Use invoiceDate for SalesInvoice
-            status: { $in: ['paid', 'partial'] },  // Only count paid invoices
+            paymentStatus: { $in: ['completed'] },  // Only count paid invoices
             ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
           }
         },
@@ -739,7 +738,7 @@ const getOutstandingBalancesData = async (params = {}, branch_id = null) => {
     const salesOutstandingData = await SalesInvoice.aggregate([
       {
         $match: {
-          status: { $in: ['pending', 'partial', 'overdue'] }, // Unpaid invoices
+          paymentStatus: { $in: ['pending'] }, // Unpaid invoices
           dueDate: { $exists: true }, // Removed invoiceDate filter - show all outstanding regardless of creation date
           ...(startDateObj && endDateObj ? { invoiceDate: { $gte: startDateObj, $lte: endDateObj } } : {}),
           ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
@@ -1169,7 +1168,7 @@ const getInvoiceAnalyticsData = async (params = {}, branch_id = null) => {
     const dueInvoices = await SalesInvoice.aggregate([
       {
         $match: {
-          status: { $in: ['pending', 'partial'] },
+          paymentStatus: { $in: ['pending'] },
           dueDate: { $exists: true },
           ...(salesDateFilter),
           ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})

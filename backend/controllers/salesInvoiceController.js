@@ -616,6 +616,7 @@ exports.markAsPaid = asyncHandler(async (req, res) => {
   invoice.isPaid = true;
   invoice.paidAmount = paidAmount || invoice.totals.grandTotal;
   invoice.paidDate = new Date();
+  invoice.paymentStatus = 'completed';
   await invoice.save();
 
   res.status(200).json({

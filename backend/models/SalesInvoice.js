@@ -427,7 +427,7 @@ salesInvoiceSchema.virtual('isDelivered').get(function() {
 });
 
 salesInvoiceSchema.virtual('isPaymentComplete').get(function() {
-  return this.paymentStatus === 'paid';
+  return this.paymentStatus === 'completed';
 });
 
 salesInvoiceSchema.virtual('daysOverdue').get(function() {
@@ -485,9 +485,7 @@ salesInvoiceSchema.pre('save', function(next) {
 
   // Update payment status based on paid amount
   if (this.paidAmount >= this.totals.grandTotal) {
-    this.paymentStatus = 'paid';
-  } else if (this.paidAmount > 0) {
-    this.paymentStatus = 'partial';
+    this.paymentStatus = 'completed';
   } else {
     this.paymentStatus = 'pending';
   }
