@@ -33,6 +33,37 @@ const salesInvoiceSchema = new mongoose.Schema({
     required: [true, 'Due date is required']
   },
 
+  // Product Type (NEW)
+  productType: {
+    type: String,
+    enum: ['rice', 'byproduct'],
+    required: [true, 'Product type is required']
+  },
+
+  // Order Management Fields (NEW)
+  orderDate: {
+    type: Date,
+    required: [true, 'Order date is required']
+  },
+  deliveryDate: {
+    type: Date,
+    required: [true, 'Delivery date is required']
+  },
+  deliveryStatus: {
+    type: String,
+    enum: ['pending', 'in_transit', 'delivered','cancelled'],
+    default: 'pending'
+  },
+  vehicleNumber: {
+    type: String,
+    trim: true
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'cancelled'],
+    default: 'pending'
+  },
+
   // Customer Information
   customer: {
     name: {
@@ -49,6 +80,10 @@ const salesInvoiceSchema = new mongoose.Schema({
       trim: true
     },
     phoneNo: {
+      type: String,
+      trim: true
+    },
+    email: {
       type: String,
       trim: true
     },
@@ -214,6 +249,12 @@ const salesInvoiceSchema = new mongoose.Schema({
     default: 'Not Visible on Print'
   },
 
+  // General Notes
+  notes: {
+    type: String,
+    trim: true
+  },
+
   // Payment Details
   payment: {
     tcsType: {
@@ -373,6 +414,22 @@ salesInvoiceSchema.virtual('formattedDueDate').get(function() {
   return this.dueDate.toLocaleDateString('en-IN');
 });
 
+salesInvoiceSchema.virtual('formattedOrderDate').get(function() {
+  return this.orderDate ? this.orderDate.toLocaleDateString('en-IN') : '';
+});
+
+salesInvoiceSchema.virtual('formattedDeliveryDate').get(function() {
+  return this.deliveryDate ? this.deliveryDate.toLocaleDateString('en-IN') : '';
+});
+
+salesInvoiceSchema.virtual('isDelivered').get(function() {
+  return this.deliveryStatus === 'delivered';
+});
+
+salesInvoiceSchema.virtual('isPaymentComplete').get(function() {
+  return this.paymentStatus === 'completed';
+});
+
 salesInvoiceSchema.virtual('daysOverdue').get(function() {
   if (this.status === 'paid' || this.status === 'cancelled') return 0;
   const today = new Date();
@@ -388,6 +445,15 @@ salesInvoiceSchema.virtual('isOverdue').get(function() {
 
 // Pre-save middleware to calculate totals
 salesInvoiceSchema.pre('save', function(next) {
+  // Set default dates if not provided
+  if (!this.orderDate) {
+    this.orderDate = this.invoiceDate || new Date();
+  }
+  
+  if (!this.deliveryDate) {
+    this.deliveryDate = new Date(this.orderDate.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from order date
+  }
+
   // Calculate item totals
   this.items.forEach(item => {
     const qty = parseFloat(item.quantity) || 0;
@@ -415,6 +481,13 @@ salesInvoiceSchema.pre('save', function(next) {
   // Update status if overdue
   if (this.isOverdue && this.status === 'pending') {
     this.status = 'overdue';
+  }
+
+  // Update payment status based on paid amount
+  if (this.paidAmount >= this.totals.grandTotal) {
+    this.paymentStatus = 'completed';
+  } else {
+    this.paymentStatus = 'pending';
   }
 
   next();
@@ -445,5 +518,11 @@ salesInvoiceSchema.index({ invoiceDate: 1 });
 salesInvoiceSchema.index({ dueDate: 1 });
 salesInvoiceSchema.index({ 'customer.name': 1 });
 salesInvoiceSchema.index({ isActive: 1, isDeleted: 1 });
+salesInvoiceSchema.index({ productType: 1 });
+salesInvoiceSchema.index({ orderDate: 1 });
+salesInvoiceSchema.index({ deliveryDate: 1 });
+salesInvoiceSchema.index({ deliveryStatus: 1 });
+salesInvoiceSchema.index({ paymentStatus: 1 });
+salesInvoiceSchema.index({ vehicleNumber: 1 });
 
 module.exports = mongoose.model('SalesInvoice', salesInvoiceSchema); 
