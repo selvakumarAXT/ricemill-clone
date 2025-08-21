@@ -7,6 +7,7 @@ import LoadingSpinner from './LoadingSpinner';
 const VendorSelector = ({
   value = '',
   onChange,
+  onVendorSelect = null, // New callback to get full vendor object
   placeholder = 'Select Vendor',
   className = '',
   disabled = false,
@@ -18,7 +19,7 @@ const VendorSelector = ({
   onVendorCreate = null, // Callback when create option is selected
   label = 'Vendor',
   icon = 'building',
-  error = null
+  errorMessage = null
 }) => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -172,7 +173,7 @@ const VendorSelector = ({
         disabled={disabled}
         required={required}
         icon={icon}
-        error={error}
+        error={errorMessage}
       />
       
       {/* Show vendor info if selected */}

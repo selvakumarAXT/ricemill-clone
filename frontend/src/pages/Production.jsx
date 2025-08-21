@@ -12,6 +12,7 @@ import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import FileUpload from '../components/common/FileUpload';
 import DateRangeFilter from '../components/common/DateRangeFilter';
+import ProductionDashboard from '../components/common/ProductionDashboard';
 
 const Production = () => {
   const [production, setProduction] = useState([]);
@@ -30,6 +31,11 @@ const Production = () => {
   const [editingProduction, setEditingProduction] = useState(null);
   const [productionForm, setProductionForm] = useState({
     name: '',
+    category: 'rice',
+    productionType: 'milling',
+    riceVariety: '',
+    paddyVariety: '',
+    byproductType: '',
     description: '',
     quantity: '',
     unit: 'kg',
@@ -38,6 +44,8 @@ const Production = () => {
     status: 'Completed',
     batchNumber: '',
     operator: '',
+    efficiency: 85,
+    machineUsed: '',
     notes: ''
   });
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -47,6 +55,50 @@ const Production = () => {
 
   const { currentBranchId } = useSelector((state) => state.branch);
   const { user, token } = useSelector((state) => state.auth);
+
+  const categories = [
+    { value: 'rice', label: 'Rice Production' },
+    { value: 'paddy', label: 'Paddy Processing' },
+    { value: 'byproduct', label: 'Byproducts' },
+    { value: 'other', label: 'Other' }
+  ];
+
+  const productionTypes = [
+    { value: 'milling', label: 'Milling' },
+    { value: 'processing', label: 'Processing' },
+    { value: 'packaging', label: 'Packaging' },
+    { value: 'quality_check', label: 'Quality Check' },
+    { value: 'storage', label: 'Storage' },
+    { value: 'other', label: 'Other' }
+  ];
+
+  const riceVarieties = [
+    { value: 'Basmati', label: 'Basmati' },
+    { value: 'Sona Masuri', label: 'Sona Masuri' },
+    { value: 'IR64', label: 'IR64' },
+    { value: 'Ponni', label: 'Ponni' },
+    { value: 'BPT', label: 'BPT' },
+    { value: 'Jaya', label: 'Jaya' },
+    { value: 'Swarna', label: 'Swarna' }
+  ];
+
+  const paddyVarieties = [
+    { value: 'Basmati', label: 'Basmati' },
+    { value: 'Sona Masuri', label: 'Sona Masuri' },
+    { value: 'IR64', label: 'IR64' },
+    { value: 'Ponni', label: 'Ponni' },
+    { value: 'BPT', label: 'BPT' },
+    { value: 'Jaya', label: 'Jaya' },
+    { value: 'Swarna', label: 'Swarna' }
+  ];
+
+  const byproductTypes = [
+    { value: 'bran', label: 'Bran' },
+    { value: 'husk', label: 'Husk' },
+    { value: 'broken_rice', label: 'Broken Rice' },
+    { value: 'rice_powder', label: 'Rice Powder' },
+    { value: 'other', label: 'Other' }
+  ];
 
   const units = [
     { value: 'kg', label: 'Kilograms (kg)' },
@@ -89,7 +141,20 @@ const Production = () => {
   };
 
   const handleFormChange = (e) => {
-    setProductionForm({ ...productionForm, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setProductionForm(prev => ({ ...prev, [name]: value }));
+    
+    // Reset category-specific fields when category changes
+    if (name === 'category') {
+      setProductionForm(prev => ({
+        ...prev,
+        [name]: value,
+        riceVariety: '',
+        paddyVariety: '',
+        byproductType: '',
+        unit: value === 'rice' || value === 'paddy' || value === 'byproduct' ? 'kg' : 'units'
+      }));
+    }
   };
 
   const handleFilesChange = (files) => {
@@ -181,6 +246,11 @@ const Production = () => {
       setEditingProduction(editProduction);
       setProductionForm({
         name: editProduction.name || '',
+        category: editProduction.category || 'rice',
+        productionType: editProduction.productionType || 'milling',
+        riceVariety: editProduction.riceVariety || '',
+        paddyVariety: editProduction.paddyVariety || '',
+        byproductType: editProduction.byproductType || '',
         description: editProduction.description || '',
         quantity: editProduction.quantity || '',
         unit: editProduction.unit || 'kg',
@@ -189,6 +259,8 @@ const Production = () => {
         status: editProduction.status || 'Completed',
         batchNumber: editProduction.batchNumber || '',
         operator: editProduction.operator || '',
+        efficiency: editProduction.efficiency || 85,
+        machineUsed: editProduction.machineUsed || '',
         notes: editProduction.notes || ''
       });
       // Handle existing documents - convert string URLs to file objects
@@ -226,6 +298,11 @@ const Production = () => {
     setEditingProduction(null);
     setProductionForm({
       name: '',
+      category: 'rice',
+      productionType: 'milling',
+      riceVariety: '',
+      paddyVariety: '',
+      byproductType: '',
       description: '',
       quantity: '',
       unit: 'kg',
@@ -234,6 +311,8 @@ const Production = () => {
       status: 'Completed',
       batchNumber: '',
       operator: '',
+      efficiency: 85,
+      machineUsed: '',
       notes: ''
     });
     setUploadedFiles([]);
@@ -276,7 +355,7 @@ const Production = () => {
             <div key={index} className="relative">
               {file.mimetype?.startsWith('image/') ? (
                 <img
-                  src={`${import.meta.env.VITE_API_URL  }${file.url}`}
+                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${file.url}`}
                   alt={file.originalName}
                   className="w-full h-20 object-cover rounded border"
                 />
@@ -287,7 +366,7 @@ const Production = () => {
               )}
               <div className="absolute top-1 right-1">
                 <a
-                  href={`${import.meta.env.VITE_API_URL  }${file.url}`}
+                  href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${file.url}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-blue-600 text-white p-1 rounded text-xs hover:bg-blue-700"
@@ -376,6 +455,11 @@ const Production = () => {
             </div>
           </div>
         )}
+
+        {/* Production Dashboard */}
+        <div className="mb-8">
+          <ProductionDashboard productionData={production} loading={loading} />
+        </div>
 
         {/* Filters */}
         <ResponsiveFilters title="Filters & Search" className="mb-6">
@@ -689,6 +773,88 @@ const Production = () => {
               required
               icon="factory"
             />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormSelect
+                label="Category"
+                name="category"
+                value={productionForm.category}
+                onChange={handleFormChange}
+                required
+              >
+                {categories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </FormSelect>
+              <FormSelect
+                label="Production Type"
+                name="productionType"
+                value={productionForm.productionType}
+                onChange={handleFormChange}
+                required
+              >
+                {productionTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </FormSelect>
+            </div>
+
+            {/* Category-specific fields */}
+            {productionForm.category === 'rice' && (
+              <FormSelect
+                label="Rice Variety"
+                name="riceVariety"
+                value={productionForm.riceVariety}
+                onChange={handleFormChange}
+                required
+              >
+                <option value="">Select Rice Variety</option>
+                {riceVarieties.map((variety) => (
+                  <option key={variety.value} value={variety.value}>
+                    {variety.label}
+                  </option>
+                ))}
+              </FormSelect>
+            )}
+
+            {productionForm.category === 'paddy' && (
+              <FormSelect
+                label="Paddy Variety"
+                name="paddyVariety"
+                value={productionForm.paddyVariety}
+                onChange={handleFormChange}
+                required
+              >
+                <option value="">Select Paddy Variety</option>
+                {paddyVarieties.map((variety) => (
+                  <option key={variety.value} value={variety.value}>
+                    {variety.label}
+                  </option>
+                ))}
+              </FormSelect>
+            )}
+
+            {productionForm.category === 'byproduct' && (
+              <FormSelect
+                label="Byproduct Type"
+                name="byproductType"
+                value={productionForm.byproductType}
+                onChange={handleFormChange}
+                required
+              >
+                <option value="">Select Byproduct Type</option>
+                {byproductTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </FormSelect>
+            )}
+
             <FormInput
               label="Description"
               name="description"
@@ -773,6 +939,26 @@ const Production = () => {
                 icon="user"
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput
+                label="Efficiency (%)"
+                name="efficiency"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={productionForm.efficiency}
+                onChange={handleFormChange}
+                icon="quality"
+              />
+              <FormInput
+                label="Machine Used"
+                name="machineUsed"
+                value={productionForm.machineUsed}
+                onChange={handleFormChange}
+                icon="mill"
+              />
+            </div>
             <FormInput
               label="Notes"
               name="notes"
@@ -806,7 +992,7 @@ const Production = () => {
                         <div className="relative mb-2">
                           {file.mimetype?.startsWith('image/') ? (
                             <img
-                              src={`${import.meta.env.VITE_API_URL  }${file.url}`}
+                              src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${file.url}`}
                               alt={file.originalName}
                               className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={() => openPreview(file)}
@@ -851,7 +1037,7 @@ const Production = () => {
                             👁️
                           </button>
                           <a
-                            href={`${import.meta.env.VITE_API_URL  }${file.url}`}
+                            href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${file.url}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="bg-green-600 text-white p-1 rounded text-xs hover:bg-green-700 transition-colors"
@@ -910,7 +1096,7 @@ const Production = () => {
               {previewFile.mimetype?.startsWith('image/') ? (
                 <div className="text-center">
                   <img
-                    src={`${import.meta.env.VITE_API_URL  }${previewFile.url}`}
+                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${previewFile.url}`}
                     alt={previewFile.originalName}
                     className="max-w-full max-h-80 object-contain mx-auto rounded-lg shadow-lg"
                   />
@@ -918,7 +1104,7 @@ const Production = () => {
               ) : previewFile.mimetype?.includes('pdf') ? (
                 <div className="text-center">
                   <iframe
-                    src={`${import.meta.env.VITE_API_URL  }${previewFile.url}`}
+                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${previewFile.url}`}
                     className="w-full h-96 border rounded-lg"
                     title={previewFile.originalName}
                   />
@@ -927,7 +1113,7 @@ const Production = () => {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 mb-2">Text files cannot be previewed directly.</p>
                   <a
-                    href={`${import.meta.env.VITE_API_URL  }${previewFile.url}`}
+                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${previewFile.url}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -942,7 +1128,7 @@ const Production = () => {
                   <p className="text-gray-600 mb-4">This file type cannot be previewed directly.</p>
                   <div className="flex gap-3 justify-center">
                     <a
-                      href={`${import.meta.env.VITE_API_URL  }${previewFile.url}`}
+                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${previewFile.url}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -950,7 +1136,7 @@ const Production = () => {
                       📄 Open in New Tab
                     </a>
                     <a
-                      href={`${import.meta.env.VITE_API_URL  }${previewFile.url}`}
+                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${previewFile.url}`}
                       download={previewFile.originalName}
                       className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
@@ -971,7 +1157,7 @@ const Production = () => {
                 Close
               </Button>
               <a
-                href={`${import.meta.env.VITE_API_URL  }${previewFile.url}`}
+                href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${previewFile.url}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -979,7 +1165,7 @@ const Production = () => {
                 📄 Open in New Tab
               </a>
               <a
-                href={`${import.meta.env.VITE_API_URL  }${previewFile.url}`}
+                href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${previewFile.url}`}
                 download={previewFile.originalName}
                 className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >

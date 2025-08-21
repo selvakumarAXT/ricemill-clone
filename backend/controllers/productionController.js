@@ -32,6 +32,11 @@ exports.getAllProduction = async (req, res) => {
       _id: item._id,
       id: item._id,
       name: item.name,
+      category: item.category,
+      productionType: item.productionType,
+      riceVariety: item.riceVariety,
+      paddyVariety: item.paddyVariety,
+      byproductType: item.byproductType,
       description: item.description,
       quantity: item.quantity,
       unit: item.unit,
@@ -40,6 +45,8 @@ exports.getAllProduction = async (req, res) => {
       status: item.status,
       batchNumber: item.batchNumber,
       operator: item.operator,
+      efficiency: item.efficiency,
+      machineUsed: item.machineUsed,
       notes: item.notes,
       documents: item.documents || [],
       branch_id: item.branch_id?._id || item.branch_id || null,
@@ -189,6 +196,11 @@ exports.createProduction = async (req, res) => {
 
     const production = await Production.create({
       name,
+      category: category || 'rice',
+      productionType: productionType || 'milling',
+      riceVariety: category === 'rice' ? riceVariety : undefined,
+      paddyVariety: category === 'paddy' ? paddyVariety : undefined,
+      byproductType: category === 'byproduct' ? byproductType : undefined,
       description,
       quantity,
       unit,
@@ -197,6 +209,8 @@ exports.createProduction = async (req, res) => {
       status: status || 'Completed',
       batchNumber,
       operator,
+      efficiency: efficiency || 85,
+      machineUsed,
       notes,
       documents: processedDocuments,
       branch_id: branchId,
@@ -251,6 +265,11 @@ exports.updateProduction = async (req, res) => {
 
     // Update fields
     if (name !== undefined) production.name = name;
+    if (category !== undefined) production.category = category;
+    if (productionType !== undefined) production.productionType = productionType;
+    if (riceVariety !== undefined) production.riceVariety = riceVariety;
+    if (paddyVariety !== undefined) production.paddyVariety = paddyVariety;
+    if (byproductType !== undefined) production.byproductType = byproductType;
     if (description !== undefined) production.description = description;
     if (quantity !== undefined) production.quantity = quantity;
     if (unit !== undefined) production.unit = unit;
@@ -259,6 +278,8 @@ exports.updateProduction = async (req, res) => {
     if (status !== undefined) production.status = status;
     if (batchNumber !== undefined) production.batchNumber = batchNumber;
     if (operator !== undefined) production.operator = operator;
+    if (efficiency !== undefined) production.efficiency = efficiency;
+    if (machineUsed !== undefined) production.machineUsed = machineUsed;
     if (notes !== undefined) production.notes = notes;
 
     // Process documents if provided

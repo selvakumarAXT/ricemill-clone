@@ -22,7 +22,7 @@ const getAllInventory = asyncHandler(async (req, res) => {
     .populate('branch_id', 'name')
     .populate('created_by', 'name')
     .populate('updated_by', 'name')
-    .select('name quantity description branch_id created_by updated_by files createdAt updatedAt')
+    .select('name category quantity unit gunnyType paddyVariety moisture riceVariety quality description branch_id created_by updated_by files createdAt updatedAt')
     .sort({ createdAt: -1 });
 
   res.status(200).json({
@@ -40,7 +40,7 @@ const getInventoryById = asyncHandler(async (req, res) => {
     .populate('branch_id', 'name')
     .populate('created_by', 'name')
     .populate('updated_by', 'name')
-    .select('name quantity description branch_id created_by updated_by files createdAt updatedAt');
+    .select('name category quantity unit gunnyType paddyVariety moisture riceVariety quality description branch_id created_by updated_by files createdAt updatedAt');
 
   if (!inventory) {
     return res.status(404).json({
@@ -68,7 +68,21 @@ const getInventoryById = asyncHandler(async (req, res) => {
 // @route   POST /api/inventory
 // @access  Private
 const createInventory = asyncHandler(async (req, res) => {
-  const { name, quantity, description, branch_id, files } = req.body;
+  const { 
+    name, 
+    category, 
+    quantity, 
+    unit, 
+    gunnyType, 
+    paddyVariety, 
+    moisture, 
+    riceVariety, 
+    quality, 
+    description, 
+    branch_id, 
+    files 
+  } = req.body;
+  
   const { role, branch_id: userBranchId, isSuperAdmin } = req.user;
 
   // Validate branch access
@@ -79,9 +93,38 @@ const createInventory = asyncHandler(async (req, res) => {
     });
   }
 
+  // Validate category-specific fields
+  if (category === 'gunny' && !gunnyType) {
+    return res.status(400).json({
+      success: false,
+      message: 'Gunny type is required for gunny category'
+    });
+  }
+
+  if (category === 'paddy' && (!paddyVariety || moisture === undefined || moisture === '')) {
+    return res.status(400).json({
+      success: false,
+      message: 'Paddy variety and moisture are required for paddy category'
+    });
+  }
+
+  if (category === 'rice' && (!riceVariety || !quality)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Rice variety and quality are required for rice category'
+    });
+  }
+
   const inventory = await Inventory.create({
     name,
+    category,
     quantity,
+    unit,
+    gunnyType: category === 'gunny' ? gunnyType : undefined,
+    paddyVariety: category === 'paddy' ? paddyVariety : undefined,
+    moisture: category === 'paddy' ? moisture : undefined,
+    riceVariety: category === 'rice' ? riceVariety : undefined,
+    quality: category === 'rice' ? quality : undefined,
     description,
     branch_id: isSuperAdmin ? branch_id : userBranchId,
     created_by: req.user.id,
@@ -117,6 +160,37 @@ const updateInventory = asyncHandler(async (req, res) => {
     return res.status(403).json({
       success: false,
       message: 'Access denied'
+    });
+  }
+
+  const { 
+    category, 
+    gunnyType, 
+    paddyVariety, 
+    moisture, 
+    riceVariety, 
+    quality 
+  } = req.body;
+
+  // Validate category-specific fields
+  if (category === 'gunny' && !gunnyType) {
+    return res.status(400).json({
+      success: false,
+      message: 'Gunny type is required for gunny category'
+    });
+  }
+
+  if (category === 'paddy' && (!paddyVariety || moisture === undefined || moisture === '')) {
+    return res.status(400).json({
+      success: false,
+      message: 'Paddy variety and moisture are required for paddy category'
+    });
+  }
+
+  if (category === 'rice' && (!riceVariety || !quality)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Rice variety and quality are required for rice category'
     });
   }
 

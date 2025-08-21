@@ -9,14 +9,18 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ResponsiveFilters from '../components/common/ResponsiveFilters';
 import DialogBox from '../components/common/DialogBox';
 import FormInput from '../components/common/FormInput';
+import FormSelect from '../components/common/FormSelect';
 import FileUpload from '../components/common/FileUpload';
 import FileDisplay from '../components/common/FileDisplay';
 import DateRangeFilter from '../components/common/DateRangeFilter';
+import InventoryDashboard from '../components/common/InventoryDashboard';
 
 const Inventory = () => {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [inventoryFilter, setInventoryFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
   const [dateRange, setDateRange] = useState({
@@ -28,7 +32,14 @@ const Inventory = () => {
   const [editingInventory, setEditingInventory] = useState(null);
   const [inventoryForm, setInventoryForm] = useState({
     name: '',
+    category: 'other',
     quantity: '',
+    unit: 'units',
+    gunnyType: '',
+    paddyVariety: '',
+    moisture: '',
+    riceVariety: '',
+    quality: '',
     description: '',
     branch_id: ''
   });
@@ -68,22 +79,82 @@ const Inventory = () => {
   // Modal functions
   const openInventoryModal = (item = null) => {
     setEditingInventory(item);
-    setInventoryForm(
-      item
-        ? { name: item.name, quantity: item.quantity, description: item.description, branch_id: item.branch_id }
-        : { name: '', quantity: '', description: '', branch_id: currentBranchId }
-    );
+    setError('');
+    setSuccess('');
+    if (item) {
+      setInventoryForm({
+        name: item.name || '',
+        category: item.category || 'other',
+        quantity: item.quantity || '',
+        unit: item.unit || 'units',
+        gunnyType: item.gunnyType || '',
+        paddyVariety: item.paddyVariety || '',
+        moisture: item.moisture || '',
+        riceVariety: item.riceVariety || '',
+        quality: item.quality || '',
+        description: item.description || '',
+        branch_id: item.branch_id || currentBranchId
+      });
+      setUploadedFiles(item.files || []);
+    } else {
+      setInventoryForm({
+        name: '',
+        category: 'other',
+        quantity: '',
+        unit: 'units',
+        gunnyType: '',
+        paddyVariety: '',
+        moisture: '',
+        riceVariety: '',
+        quality: '',
+        description: '',
+        branch_id: currentBranchId
+      });
+      setUploadedFiles([]);
+    }
+    setSelectedFiles([]);
     setShowInventoryModal(true);
   };
 
   const closeInventoryModal = () => {
     setShowInventoryModal(false);
     setEditingInventory(null);
-    setInventoryForm({ name: '', quantity: '', description: '', branch_id: '' });
+    setInventoryForm({ 
+      name: '', 
+      category: 'other', 
+      quantity: '', 
+      unit: 'units',
+      gunnyType: '',
+      paddyVariety: '',
+      moisture: '',
+      riceVariety: '',
+      quality: '',
+      description: '', 
+      branch_id: '' 
+    });
+    setSelectedFiles([]);
+    setUploadedFiles([]);
+    setError('');
+    setSuccess('');
   };
 
   const handleInventoryFormChange = (e) => {
-    setInventoryForm({ ...inventoryForm, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setInventoryForm(prev => ({ ...prev, [name]: value }));
+    
+    // Reset category-specific fields when category changes
+    if (name === 'category') {
+      setInventoryForm(prev => ({
+        ...prev,
+        [name]: value,
+        gunnyType: '',
+        paddyVariety: '',
+        moisture: '',
+        riceVariety: '',
+        quality: '',
+        unit: value === 'gunny' ? 'bags' : value === 'paddy' || value === 'rice' ? 'kg' : 'units'
+      }));
+    }
   };
 
   const handleFilesChange = (files) => {
@@ -105,13 +176,14 @@ const Inventory = () => {
     console.log('Selected files:', selectedFiles);
     console.log('Uploaded files:', uploadedFiles);
     
-    setLoading(true);
+    setSaving(true);
+    setError('');
     try {
       // If there are selected files but no uploaded files, upload them first
       if (selectedFiles.length > 0 && uploadedFiles.length === 0) {
         console.log('Files need to be uploaded first. Please upload files before saving.');
         setError('Please upload files before saving inventory. Click the "Upload Files" button first.');
-        setLoading(false);
+        setSaving(false);
         return;
       }
       
@@ -135,13 +207,17 @@ const Inventory = () => {
       }
       
       console.log('Operation successful, refreshing inventory...');
+      setSuccess(editingInventory ? 'Inventory updated successfully!' : 'Inventory created successfully!');
       fetchInventory();
       closeInventoryModal();
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('Error saving inventory:', err);
       setError(err.message || 'Failed to save inventory');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -161,15 +237,23 @@ const Inventory = () => {
 
   // Define columns for the table
   const columns = [
-    { key: "name", label: "Name" },
-    { key: "quantity", label: "Quantity", render: (quantity) => (
-      <span className="font-semibold text-indigo-600">{quantity}</span>
+    { key: "name", label: "Name", render: (name) => name || "N/A" },
+    { key: "category", label: "Category", render: (category) => (
+      <span className="capitalize font-medium text-gray-700">{category || "N/A"}</span>
     )},
-    { key: "description", label: "Description" },
+    { key: "quantity", label: "Quantity", render: (quantity, item) => (
+      <span className="font-semibold text-indigo-600">
+        {item.unit === 'kg' && quantity >= 1000 
+          ? `${(quantity / 1000).toFixed(2)} Tons (${quantity.toLocaleString()} KG)`
+          : `${quantity || 0} ${item.unit || 'units'}`
+        }
+      </span>
+    )},
+    { key: "description", label: "Description", render: (description) => description || "No description" },
     { key: "branch_id", label: "Branch", render: (branch) => branch?.name || "N/A" },
     { key: "files", label: "Files", render: (files) => (
       <FileDisplay 
-        files={files} 
+        files={files || []} 
         title="" 
         showTitle={false}
         className="text-xs"
@@ -178,23 +262,32 @@ const Inventory = () => {
   ];
 
   const filteredInventory = inventory.filter(item => {
+    // Safety check - ensure item is valid
+    if (!item || typeof item !== 'object') {
+      return false;
+    }
+    
     // Text search filter
-    // Branch filtering is now handled automatically by the API
     const q = inventoryFilter.toLowerCase();
     const matchesText = !inventoryFilter || (
-      item.name?.toLowerCase().includes(q) ||
-      item.description?.toLowerCase().includes(q)
+      (item.name && item.name.toLowerCase().includes(q)) ||
+      (item.description && item.description.toLowerCase().includes(q)) ||
+      (item.category && item.category.toLowerCase().includes(q))
     );
 
     // Date range filter
     let matchesDate = true;
     if (dateRange.startDate || dateRange.endDate) {
-      const itemDate = new Date(item.createdAt);
-      if (dateRange.startDate) {
-        matchesDate = matchesDate && itemDate >= new Date(dateRange.startDate);
-      }
-      if (dateRange.endDate) {
-        matchesDate = matchesDate && itemDate <= new Date(dateRange.endDate + 'T23:59:59.999Z');
+      if (item.createdAt) {
+        const itemDate = new Date(item.createdAt);
+        if (dateRange.startDate) {
+          matchesDate = matchesDate && itemDate >= new Date(dateRange.startDate + 'T00:00:00.000Z');
+        }
+        if (dateRange.endDate) {
+          matchesDate = matchesDate && itemDate <= new Date(dateRange.endDate + 'T23:59:59.999Z');
+        }
+      } else {
+        matchesDate = false; // If no creation date, don't show in filtered results
       }
     }
 
@@ -236,6 +329,18 @@ const Inventory = () => {
 
       {/* Main Content */}
       <div className="px-4 py-6 sm:px-6">
+        {/* Success Message */}
+        {success && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-green-700 font-medium">{success}</span>
+            </div>
+          </div>
+        )}
+
         {/* Error Message */}
         {error && (
           <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg">
@@ -248,6 +353,11 @@ const Inventory = () => {
           </div>
         )}
 
+        {/* Inventory Dashboard */}
+        <div className="mb-8">
+          <InventoryDashboard inventoryData={inventory} loading={loading} />
+        </div>
+
         <ResponsiveFilters title="Filters & Search" className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <TableFilters
@@ -257,8 +367,9 @@ const Inventory = () => {
               showSelect={false}
             />
             <BranchFilter
-              value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
+              value={currentBranchId}
               onChange={(e) => setBranchFilter(e.target.value)}
+              disabled={!user?.isSuperAdmin}
             />
           </div>
           <div className="mt-4">
@@ -309,18 +420,41 @@ const Inventory = () => {
                       <span className="text-gray-900 font-medium">{item.name}</span>
                     </div>
                     <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Category:</span>
+                      <span className="text-gray-900 font-medium capitalize">{item.category}</span>
+                    </div>
+                    <div className="flex items-center">
                       <span className="w-24 text-sm font-medium text-gray-600">Quantity:</span>
-                      <span className="text-gray-900 font-medium text-indigo-600">{item.quantity}</span>
+                      <span className="text-gray-900 font-medium text-indigo-600">
+                        {item.unit === 'kg' && item.quantity >= 1000 
+                          ? `${(item.quantity / 1000).toFixed(2)} Tons (${item.quantity.toLocaleString()} KG)`
+                          : `${item.quantity || 0} ${item.unit || 'units'}`
+                        }
+                      </span>
                     </div>
                     <div className="flex items-center">
                       <span className="w-24 text-sm font-medium text-gray-600">Branch:</span>
                       <span className="text-gray-900 font-medium">{item.branch_id?.name || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-24 text-sm font-medium text-gray-600">Created:</span>
+                      <span className="text-gray-900 font-medium">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                      </span>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                       <h4 className="text-sm font-semibold text-gray-800 mb-3">Description</h4>
                       <p className="text-gray-700">{item.description}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">Files</h4>
+                      <FileDisplay 
+                        files={item.files || []} 
+                        title="" 
+                        showTitle={false}
+                      />
                     </div>
                   </div>
                 </div>
@@ -357,12 +491,38 @@ const Inventory = () => {
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
                           <div className="font-medium text-gray-900">{item.name}</div>
-                          <div className="text-sm text-gray-600">{item.description}</div>
+                          <div className="text-sm text-gray-600 capitalize">{item.category}</div>
                           <div className="text-xs text-gray-500">
-                            Quantity: {item.quantity} • {item.branch_id?.name || 'N/A'}
+                            {item.unit === 'kg' && item.quantity >= 1000 
+                              ? `${(item.quantity / 1000).toFixed(2)} Tons (${item.quantity.toLocaleString()} KG)`
+                              : `${item.quantity || 0} ${item.unit || 'units'}`
+                            } • {item.branch_id?.name || 'N/A'}
                           </div>
                         </div>
-                       
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openInventoryModal(item);
+                            }}
+                            variant="info"
+                            icon="edit"
+                            className="px-2 py-1 text-xs"
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteInventory(item._id);
+                            }}
+                            variant="danger"
+                            icon="delete"
+                            className="px-2 py-1 text-xs"
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
@@ -376,12 +536,27 @@ const Inventory = () => {
                             <span className="ml-1 font-medium text-gray-900">{item.name}</span>
                           </div>
                           <div>
+                            <span className="text-gray-600">Category:</span>
+                            <span className="ml-1 font-medium text-gray-900 capitalize">{item.category}</span>
+                          </div>
+                          <div>
                             <span className="text-gray-600">Quantity:</span>
-                            <span className="ml-1 font-medium text-indigo-600">{item.quantity}</span>
+                            <span className="ml-1 font-medium text-indigo-600">
+                              {item.unit === 'kg' && item.quantity >= 1000 
+                                ? `${(item.quantity / 1000).toFixed(2)} Tons (${item.quantity.toLocaleString()} KG)`
+                                : `${item.quantity || 0} ${item.unit || 'units'}`
+                              }
+                            </span>
                           </div>
                           <div>
                             <span className="text-gray-600">Branch:</span>
                             <span className="ml-1 font-medium text-gray-900">{item.branch_id?.name || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Created:</span>
+                            <span className="ml-1 font-medium text-gray-900">
+                              {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                            </span>
                           </div>
                         </div>
 
@@ -394,7 +569,7 @@ const Inventory = () => {
                         {/* Files */}
                         <div className="p-3 bg-white rounded-lg border border-gray-200 w-full mt-3">
                           <FileDisplay 
-                            files={item.files} 
+                            files={item.files || []} 
                             title="Attached Files"
                             showTitle={true}
                           />
@@ -416,27 +591,128 @@ const Inventory = () => {
           onClose={closeInventoryModal}
           onSubmit={saveInventory}
           show={showInventoryModal}
-          loading={loading}
+          loading={saving}
           size="2xl"
         >
           <form onSubmit={saveInventory} className="space-y-6">
-            <FormInput
-              label="Name"
-              name="name"
-              value={inventoryForm.name}
-              onChange={handleInventoryFormChange}
-              required
-              icon="inventory"
-            />
-            <FormInput
-              label="Quantity"
-              name="quantity"
-              type="number"
-              value={inventoryForm.quantity}
-              onChange={handleInventoryFormChange}
-              required
-              icon="weight"
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormInput
+                label="Name"
+                name="name"
+                value={inventoryForm.name}
+                onChange={handleInventoryFormChange}
+                required
+                icon="inventory"
+              />
+              <FormSelect
+                label="Category"
+                name="category"
+                value={inventoryForm.category}
+                onChange={handleInventoryFormChange}
+                required
+                options={[
+                  { value: 'gunny', label: 'Gunny' },
+                  { value: 'paddy', label: 'Paddy' },
+                  { value: 'rice', label: 'Rice' },
+                  { value: 'other', label: 'Other' }
+                ]}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormInput
+                label="Quantity"
+                name="quantity"
+                type="number"
+                value={inventoryForm.quantity}
+                onChange={handleInventoryFormChange}
+                required
+                icon="weight"
+              />
+              <FormSelect
+                label="Unit"
+                name="unit"
+                value={inventoryForm.unit}
+                onChange={handleInventoryFormChange}
+                required
+                options={[
+                  { value: 'bags', label: 'Bags' },
+                  { value: 'kg', label: 'Kilograms' },
+                  { value: 'tons', label: 'Tons' },
+                  { value: 'pieces', label: 'Pieces' },
+                  { value: 'units', label: 'Units' }
+                ]}
+              />
+            </div>
+
+            {/* Category-specific fields */}
+            {inventoryForm.category === 'gunny' && (
+              <FormSelect
+                label="Gunny Type"
+                name="gunnyType"
+                value={inventoryForm.gunnyType}
+                onChange={handleInventoryFormChange}
+                required
+                options={[
+                  { value: 'NB', label: 'NB (New Bags)' },
+                  { value: 'ONB', label: 'ONB (Old New Bags)' },
+                  { value: 'SS', label: 'SS (Second Sale)' },
+                  { value: 'SWP', label: 'SWP (Second Sale with Price)' }
+                ]}
+              />
+            )}
+
+            {inventoryForm.category === 'paddy' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormInput
+                  label="Paddy Variety"
+                  name="paddyVariety"
+                  value={inventoryForm.paddyVariety}
+                  onChange={handleInventoryFormChange}
+                  required
+                  icon="wheat"
+                />
+                <FormInput
+                  label="Moisture (%)"
+                  name="moisture"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={inventoryForm.moisture}
+                  onChange={handleInventoryFormChange}
+                  required
+                  icon="droplet"
+                />
+              </div>
+            )}
+
+            {inventoryForm.category === 'rice' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormInput
+                  label="Rice Variety"
+                  name="riceVariety"
+                  value={inventoryForm.riceVariety}
+                  onChange={handleInventoryFormChange}
+                  required
+                  icon="rice"
+                />
+                <FormSelect
+                  label="Quality"
+                  name="quality"
+                  value={inventoryForm.quality}
+                  onChange={handleInventoryFormChange}
+                  required
+                  options={[
+                    { value: 'Grade A', label: 'Grade A' },
+                    { value: 'Grade B', label: 'Grade B' },
+                    { value: 'Grade C', label: 'Grade C' },
+                    { value: 'Standard', label: 'Standard' }
+                  ]}
+                />
+              </div>
+            )}
+
             <FormInput
               label="Description"
               name="description"
@@ -463,7 +739,7 @@ const Inventory = () => {
                 module="inventory"
                 onFilesChange={handleFilesChange}
                 onUploadSuccess={handleFileUploadSuccess}
-                files={selectedFiles} // Only show selected files for now
+                files={selectedFiles}
                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
                 maxFiles={10}
                 maxSize={10}
@@ -471,8 +747,6 @@ const Inventory = () => {
                 disableAutoUpload={false}
               />
             </div>
-            
-
             
             {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
@@ -488,9 +762,9 @@ const Inventory = () => {
                 type="submit"
                 variant="primary"
                 className="px-6 py-2"
-                disabled={loading}
+                disabled={saving}
               >
-                {loading ? (
+                {saving ? (
                   <span className="flex items-center">
                     <LoadingSpinner size="sm" className="mr-2" />
                     Saving...

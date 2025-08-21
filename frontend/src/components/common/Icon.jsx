@@ -297,6 +297,55 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
       </span>
     ),
     
+    // Additional icons for inventory
+    wheat: (
+      <span className={className} {...props}>
+        🌾
+      </span>
+    ),
+    
+    droplet: (
+      <span className={className} {...props}>
+        💧
+      </span>
+    ),
+    
+    package: (
+      <span className={className} {...props}>
+        📦
+      </span>
+    ),
+    
+    box: (
+      <span className={className} {...props}>
+        📦
+      </span>
+    ),
+    
+    scale: (
+      <span className={className} {...props}>
+        ⚖️
+      </span>
+    ),
+    
+    barChart: (
+      <span className={className} {...props}>
+        📊
+      </span>
+    ),
+    
+    trendingUp: (
+      <span className={className} {...props}>
+        📈
+      </span>
+    ),
+    
+    trendingDown: (
+      <span className={className} {...props}>
+        📉
+      </span>
+    ),
+    
     payment: (
       <span className={className} {...props}>
         💵
@@ -307,12 +356,6 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
     calendar: (
       <span className={className} {...props}>
         📅
-      </span>
-    ),
-    
-    trendingUp: (
-      <span className={className} {...props}>
-        📈
       </span>
     ),
     

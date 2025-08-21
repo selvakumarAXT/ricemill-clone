@@ -12,6 +12,7 @@ import FileUpload from '../components/common/FileUpload';
 import { formatDate, formatCurrency } from '../utils/calculations';
 import InvoiceTemplate from '../components/common/InvoiceTemplate';
 import PreviewInvoice from '../components/common/PreviewInvoice';
+import VendorSelector from '../components/common/VendorSelector'; // Added import for VendorSelector
 
 const ByproductsSales = () => {
   const { user } = useSelector((state) => state.auth);
@@ -34,6 +35,7 @@ const ByproductsSales = () => {
   const [selectedByproductForInvoice, setSelectedByproductForInvoice] = useState(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewInvoiceData, setPreviewInvoiceData] = useState(null);
+  const [vendors, setVendors] = useState([]); // Added state for vendors
 
   // Byproduct types
   const BYPRODUCT_TYPES = [
@@ -95,13 +97,15 @@ const ByproductsSales = () => {
     branch_id: currentBranchId,
     createdBy: user?.id,
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    vendor_id: '' // Added vendor_id to initialByproductForm
   };
 
   const [byproductForm, setByproductForm] = useState(initialByproductForm);
 
   useEffect(() => {
     fetchByproductsData();
+    fetchVendors(); // Fetch vendors on component mount
   }, [currentBranchId]);
 
   const fetchByproductsData = async () => {
@@ -166,6 +170,91 @@ const ByproductsSales = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchVendors = async () => {
+    setLoading(true);
+    try {
+      // TODO: Replace with actual API call to fetch vendors
+      const mockVendors = [
+        { 
+          _id: 'vendor1', 
+          vendorName: 'ABC Traders', 
+          vendorCode: 'ABC001',
+          phone: '+91 9876543210', 
+          email: 'abc@example.com', 
+          address: '123 Main St', 
+          city: 'Chennai', 
+          state: 'TN', 
+          pincode: '600001', 
+          gstNumber: '33AAAAA0000A1Z5', 
+          companyGstin: '33AAAAA0000A1Z5',
+          vendorGstin: '33AAAAA0000A1Z5',
+          gstinPan: '33AAAAA0000A1Z5',
+          panNumber: 'ABCD1234EFGH',
+          vendorType: 'supplier',
+          contactPerson: 'John Doe'
+        },
+        { 
+          _id: 'vendor2', 
+          vendorName: 'XYZ Foods', 
+          vendorCode: 'XYZ002',
+          phone: '+91 8765432109', 
+          email: 'xyz@example.com', 
+          address: '456 Market Rd', 
+          city: 'Madurai', 
+          state: 'TN', 
+          pincode: '625001', 
+          gstNumber: '33BBBBB0000B2Z6', 
+          companyGstin: '33BBBBB0000B2Z6',
+          vendorGstin: '33BBBBB0000B2Z6',
+          gstinPan: '33BBBBB0000B2Z6',
+          panNumber: 'EFGH5678IJKL',
+          vendorType: 'supplier',
+          contactPerson: 'Jane Smith'
+        },
+        { 
+          _id: 'vendor3', 
+          vendorName: 'PQR Suppliers', 
+          vendorCode: 'PQR003',
+          phone: '+91 7654321098', 
+          email: 'pqr@example.com', 
+          address: '789 Oak Ave', 
+          city: 'Coimbatore', 
+          state: 'TN', 
+          pincode: '641001', 
+          gstNumber: '33CCCCC0000C3Z7', 
+          companyGstin: '33CCCCC0000C3Z7',
+          vendorGstin: '33CCCCC0000C3Z7',
+          gstinPan: '33CCCCC0000C3Z7',
+          panNumber: 'IJKL1234MNOP',
+          vendorType: 'supplier',
+          contactPerson: 'Bob Johnson'
+        }
+      ];
+      setVendors(mockVendors);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch vendors');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearVendorSelection = () => {
+    setByproductForm(prev => ({
+      ...prev,
+      vendor_id: '',
+      vendorName: '',
+      vendorPhone: '',
+      vendorEmail: '',
+      vendorAddress: '',
+      vendorGstin: '',
+      vendorPan: ''
+    }));
+  };
+
+  const getSelectedVendor = () => {
+    return vendors.find(v => v._id === byproductForm.vendor_id);
   };
 
   const openModal = (byproduct = null) => {
@@ -630,6 +719,92 @@ const ByproductsSales = () => {
               <legend className="text-sm font-semibold text-gray-700 px-2">
                 Vendor Details
               </legend>
+              
+              {/* Vendor Selection Dropdown */}
+              <div className="mb-4">
+                <VendorSelector
+                  value={byproductForm.vendor_id}
+                  onChange={(vendorId) => {
+                    setByproductForm(prev => ({
+                      ...prev,
+                      vendor_id: vendorId
+                    }));
+                  }}
+                  onVendorSelect={(vendor) => {
+                    if (vendor) {
+                      setByproductForm(prev => ({
+                        ...prev,
+                        vendorName: vendor.vendorName,
+                        vendorPhone: vendor.phone,
+                        vendorEmail: vendor.email,
+                        vendorAddress: `${vendor.address}, ${vendor.city}, ${vendor.state} - ${vendor.pincode}`,
+                        vendorGstin: vendor.gstNumber || vendor.companyGstin || vendor.vendorGstin,
+                        vendorPan: vendor.panNumber || vendor.gstinPan
+                      }));
+                    } else {
+                      setByproductForm(prev => ({
+                        ...prev,
+                        vendorName: '',
+                        vendorPhone: '',
+                        vendorEmail: '',
+                        vendorAddress: '',
+                        vendorGstin: '',
+                        vendorPan: ''
+                      }));
+                    }
+                  }}
+                  placeholder="Select a vendor to auto-fill details"
+                  label="Select Vendor"
+                  required={false}
+                  showVendorType={true}
+                />
+                
+                {/* Help text */}
+                <div className="mt-1 text-xs text-gray-600">
+                  💡 Select a vendor from the dropdown to automatically populate vendor details. You can still edit the fields manually if needed.
+                </div>
+                
+                {/* Clear Vendor Button */}
+                {byproductForm.vendor_id && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={clearVendorSelection}
+                      className="text-sm text-red-600 hover:text-red-800 underline flex items-center"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Clear Vendor Selection
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Selected Vendor Info Display */}
+              {byproductForm.vendor_id && getSelectedVendor() && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span className="font-medium text-blue-800">
+                        Selected Vendor: {getSelectedVendor()?.vendorName}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearVendorSelection}
+                      className="text-sm text-red-600 hover:text-red-800 underline"
+                    >
+                      Change Vendor
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Vendor Information Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormInput
                   label="Vendor Name"
@@ -639,6 +814,7 @@ const ByproductsSales = () => {
                   required
                   placeholder="Enter vendor name"
                   icon="user"
+                  className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
                 />
                 <FormInput
                   label="Vendor Phone"
@@ -648,6 +824,7 @@ const ByproductsSales = () => {
                   required
                   placeholder="+91 9876543210"
                   icon="phone"
+                  className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
                 />
                 <FormInput
                   label="Vendor Email"
@@ -657,6 +834,7 @@ const ByproductsSales = () => {
                   onChange={handleFormChange}
                   placeholder="vendor@example.com"
                   icon="mail"
+                  className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
                 />
                 <FormInput
                   label="Vendor GSTIN"
@@ -665,6 +843,7 @@ const ByproductsSales = () => {
                   onChange={handleFormChange}
                   placeholder="22AAAAA0000A1Z5"
                   icon="file-text"
+                  className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
                 />
                 <FormInput
                   label="Vendor PAN"
@@ -673,6 +852,7 @@ const ByproductsSales = () => {
                   onChange={handleFormChange}
                   placeholder="ABCD1234EFGH"
                   icon="credit-card"
+                  className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
                 />
                 <FormInput
                   label="Vendor Address"
@@ -681,8 +861,21 @@ const ByproductsSales = () => {
                   onChange={handleFormChange}
                   placeholder="Enter vendor address"
                   icon="map-pin"
+                  className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
                 />
               </div>
+              
+              {/* Auto-populated indicator */}
+              {byproductForm.vendor_id && (
+                <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
+                  <div className="flex items-center text-sm text-green-700">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Vendor details have been auto-populated. You can still edit these fields if needed.
+                  </div>
+                </div>
+              )}
             </fieldset>
 
             {/* Payment Details */}

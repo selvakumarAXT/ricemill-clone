@@ -14,36 +14,31 @@ import DateRangeFilter from '../components/common/DateRangeFilter';
 import InvoiceTemplate from '../components/common/InvoiceTemplate';
 import PreviewInvoice from '../components/common/PreviewInvoice';
 import { formatDate, formatCurrency } from '../utils/calculations';
+import { vendorService } from '../services/vendorService';
 import { salesInvoiceService } from '../services/salesInvoiceService';
 
 const SalesDispatch = () => {
-  const [sales, setSales] = useState([]);
-  const [byproducts, setByproducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [salesFilter, setSalesFilter] = useState('');
+  const [activeTab, setActiveTab] = useState('byproducts'); // Only byproducts now
+  const [byproducts, setByproducts] = useState([]); // Byproducts data
+  const [byproductData, setByproductData] = useState([]);
+  const [sales, setSales] = useState([]); // Sales data
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(''); // Added error state
+  const [showAddByproductDialog, setShowAddByproductDialog] = useState(false);
+  const [expandedByproduct, setExpandedByproduct] = useState(null);
+  const [vendors, setVendors] = useState([]); // Added vendors state
+  const [vendorsLoading, setVendorsLoading] = useState(false); // Added vendors loading state
+  const [vendorSearchTerm, setVendorSearchTerm] = useState(''); // Added vendor search term
+  const [showVendorDropdown, setShowVendorDropdown] = useState(false); // Added vendor dropdown visibility
   const [byproductsFilter, setByproductsFilter] = useState('');
   const [dateRange, setDateRange] = useState({
     startDate: '',
     endDate: ''
   });
-  const [activeTab, setActiveTab] = useState('rice'); // 'rice' or 'byproducts'
-  
-  // NEW: Enhanced filter states
-  const [productTypeFilter, setProductTypeFilter] = useState('');
-  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState('');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
-
-  
-  const [showSalesModal, setShowSalesModal] = useState(false);
-  const [showByproductsModal, setShowByproductsModal] = useState(false);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [showInvoiceGenerator, setShowInvoiceGenerator] = useState(false);
-  const [editingSale, setEditingSale] = useState(null);
   const [editingByproduct, setEditingByproduct] = useState(null);
+  const [editingSale, setEditingSale] = useState(null);
+  const [showInvoiceGenerator, setShowInvoiceGenerator] = useState(false);
   const [selectedSaleForInvoice, setSelectedSaleForInvoice] = useState(null);
-  const [expandedSale, setExpandedSale] = useState(null);
-  const [expandedByproduct, setExpandedByproduct] = useState(null);
   const { currentBranchId } = useSelector((state) => state.branch);
   const { user } = useSelector((state) => state.auth);
 
@@ -75,6 +70,7 @@ const SalesDispatch = () => {
     unit: 'kg',
     rate: '',
     totalAmount: 0,
+    vendor_id: '',
     vendorName: '',
     vendorPhone: '',
     vendorEmail: '',
@@ -127,6 +123,9 @@ const SalesDispatch = () => {
   const [previewFile, setPreviewFile] = useState(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showInvoicePreviewModal, setShowInvoicePreviewModal] = useState(false);
+  const [showSalesModal, setShowSalesModal] = useState(false);
+  const [showByproductsModal, setShowByproductsModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [previewInvoiceData, setPreviewInvoiceData] = useState(null);
 
   // Byproducts constants
@@ -152,100 +151,107 @@ const SalesDispatch = () => {
   };
 
   useEffect(() => {
-    fetchSalesData();
     fetchByproductsData();
+    fetchVendors(); // Added fetchVendors call
   }, [currentBranchId]);
 
-  // NEW: Refetch data when filters change
+  // Fetch byproducts data when filters change
   useEffect(() => {
-    if (activeTab === 'rice') {
-      fetchSalesData();
-    } else {
-      fetchByproductsData();
-    }
-  }, [deliveryStatusFilter, paymentStatusFilter, dateRange.startDate, dateRange.endDate]);
+    fetchByproductsData();
+  }, [dateRange.startDate, dateRange.endDate]);
 
-  // NEW: Handle filter changes
-  const handleFilterChange = (filterType, value) => {
-    switch (filterType) {
-      case 'deliveryStatus':
-        setDeliveryStatusFilter(value);
-        break;
-      case 'paymentStatus':
-        setPaymentStatusFilter(value);
-        break;
-      case 'dateRange':
-        setDateRange(value);
-        break;
 
-      default:
-        break;
-    }
-  };
 
-  // NEW: Clear all filters
-  const clearFilters = () => {
-    setDeliveryStatusFilter('');
-    setPaymentStatusFilter('');
-    setDateRange({ startDate: '', endDate: '' });
-
-    setSalesFilter('');
-    setByproductsFilter('');
-  };
-
-  const fetchSalesData = async () => {
-    setLoading(true);
-    setError('');
+  const fetchVendors = async () => {
+    setVendorsLoading(true);
     try {
-      // Build filter parameters
-      const filterParams = {
-        productType: 'rice',
-        limit: 100
-      };
+      // Fetch vendors from Vendor Management API
+      const response = await vendorService.getAllVendors({
+        branch_id: currentBranchId,
+        status: 'active',
+        limit: 1000 // Get all vendors
+      });
       
-      // Add optional filters
-      if (deliveryStatusFilter) filterParams.deliveryStatus = deliveryStatusFilter;
-      if (paymentStatusFilter) filterParams.paymentStatus = paymentStatusFilter;
-      if (dateRange.startDate) filterParams.startDate = dateRange.startDate;
-      if (dateRange.endDate) filterParams.endDate = dateRange.endDate;
-      
-      // Fetch rice sales from SalesInvoice API
-      const response = await salesInvoiceService.getSalesInvoices(filterParams);
-      
-      // Transform data to match existing frontend structure
-      const riceSales = response.data.map(invoice => ({
-        _id: invoice._id,
-        orderNumber: invoice.invoiceNumber, // Use invoiceNumber as orderNumber
-        customerName: invoice.customer.name,
-        customerPhone: invoice.customer.phoneNo,
-        customerEmail: invoice.customer.email || '',
-        customerAddress: invoice.customer.address,
-        customerGstin: invoice.customer.gstinPan,
-        customerPan: invoice.customer.gstinPan,
-        riceVariety: invoice.items[0]?.productName || '',
-        quantity: invoice.items[0]?.quantity || 0,
-        unitPrice: invoice.items[0]?.price || 0,
-        totalAmount: invoice.totals?.grandTotal || 0,
-        orderDate: invoice.orderDate,
-        deliveryDate: invoice.deliveryDate,
-        paymentStatus: invoice.paymentStatus,
-        deliveryStatus: invoice.deliveryStatus,
-        paymentMethod: mapPaymentType(invoice.payment?.paymentType),
-        notes: invoice.notes || '',
-        placeOfSupply: invoice.customer.placeOfSupply,
-        invoiceNumber: invoice.formattedInvoiceNumber || invoice.invoiceNumber,
-        createdAt: invoice.createdAt,
-        updatedAt: invoice.updatedAt
-      }));
-      
-      setSales(riceSales);
-    } catch (error) {
-      setError('Error fetching sales data: ' + error.message);
-      console.error('Error fetching sales:', error);
+      if (response.success) {
+        setVendors(response.data);
+      } else {
+        console.error('Failed to fetch vendors:', response.message);
+        setVendors([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch vendors:', err);
+      setVendors([]);
     } finally {
-      setLoading(false);
+      setVendorsLoading(false);
     }
   };
+
+  // Helper function to get selected vendor details
+  const getSelectedVendor = () => {
+    return vendors.find(v => v._id === byproductForm.vendor_id);
+  };
+
+  // Helper function to clear vendor selection
+  const clearVendorSelection = () => {
+    setByproductForm(prev => ({
+      ...prev,
+      vendor_id: '',
+      vendorName: '',
+      vendorPhone: '',
+      vendorEmail: '',
+      vendorAddress: '',
+      vendorGstin: '',
+      vendorPan: ''
+    }));
+    setVendorSearchTerm('');
+    setShowVendorDropdown(false);
+  };
+
+  // Helper function to select a vendor
+  const selectVendor = (vendor) => {
+    setByproductForm(prev => ({
+      ...prev,
+      vendor_id: vendor._id,
+      vendorName: vendor.vendorName,
+      vendorPhone: vendor.phone,
+      vendorEmail: vendor.email,
+      vendorAddress: `${vendor.address}, ${vendor.city}, ${vendor.state} - ${vendor.pincode}`,
+      vendorGstin: vendor.gstNumber || vendor.companyGstin || vendor.vendorGstin,
+      vendorPan: vendor.panNumber || vendor.gstinPan
+    }));
+    setVendorSearchTerm(`${vendor.vendorCode} - ${vendor.vendorName}`);
+    setShowVendorDropdown(false);
+  };
+
+  // Filtered vendors based on search term
+  const filteredVendors = vendors.filter(vendor => {
+    if (!vendorSearchTerm) return true;
+    const searchLower = vendorSearchTerm.toLowerCase();
+    return (
+      vendor.vendorName.toLowerCase().includes(searchLower) ||
+      vendor.vendorCode.toLowerCase().includes(searchLower) ||
+      (vendor.contactPerson && vendor.contactPerson.toLowerCase().includes(searchLower)) ||
+      (vendor.phone && vendor.phone.includes(vendorSearchTerm)) ||
+      (vendor.city && vendor.city.toLowerCase().includes(searchLower)) ||
+      (vendor.state && vendor.state.toLowerCase().includes(searchLower))
+    );
+  });
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showVendorDropdown && !event.target.closest('.vendor-dropdown-container')) {
+        setShowVendorDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showVendorDropdown]);
+
+
 
   // Helper function to convert frontend payment values to backend enum values
   const convertPaymentValues = (paymentMethod, paymentStatus) => {
@@ -318,60 +324,43 @@ const SalesDispatch = () => {
     return transformed;
   };
 
+  // Fetch byproducts data
   const fetchByproductsData = async () => {
     setLoading(true);
     setError('');
     try {
-      // Build filter parameters
-      const filterParams = {
-        productType: 'byproduct',
-        limit: 100
-      };
-      
-      // Add optional filters
-      if (deliveryStatusFilter) filterParams.deliveryStatus = deliveryStatusFilter;
-      if (paymentStatusFilter) filterParams.paymentStatus = paymentStatusFilter;
-      if (dateRange.startDate) filterParams.startDate = dateRange.startDate;
-      if (dateRange.endDate) filterParams.endDate = dateRange.endDate;
-      
-      // Fetch byproduct sales from SalesInvoice API
-      const response = await salesInvoiceService.getSalesInvoices(filterParams);
-      
-      // Transform data to match existing frontend structure
-      const byproductSales = response.data.map(invoice => transformBackendToFrontend(invoice));
-      
-      setByproducts(byproductSales);
-    } catch (error) {
-      setError('Error fetching byproducts data: ' + error.message);
-      console.error('Error fetching byproducts:', error);
+      // TODO: Replace with actual API call to fetch byproducts
+      const mockByproducts = [
+        { 
+          _id: 'byproduct1', 
+          date: '2024-01-15',
+          vehicleNumber: 'TN-01-AB-1234', 
+          material: 'Rice Bran', 
+          weight: 500, 
+          unit: 'kg', 
+          rate: 25, 
+          totalAmount: 12500, 
+          vendorName: 'ABC Traders', 
+          vendorPhone: '+91 9876543210', 
+          vendorEmail: 'abc@example.com', 
+          vendorAddress: '123 Main St, Chennai, TN - 600001', 
+          vendorGstin: '33AAAAA0000A1Z5', 
+          vendorPan: 'ABCD1234EFGH',
+          paymentMethod: 'Cash',
+          paymentStatus: 'paid',
+          notes: 'Monthly byproduct sale'
+        }
+      ];
+      setByproducts(mockByproducts);
+    } catch (err) {
+      setError('Error fetching byproducts data: ' + err.message);
+      console.error('Error fetching byproducts:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const openSalesModal = (sale = null) => {
-  
-    setEditingSale(sale);
-    if (sale) {
-      // Format dates for HTML date inputs (YYYY-MM-DD)
-      const formattedOrderDate = new Date(sale.orderDate).toISOString().split('T')[0];
-      const formattedDeliveryDate = new Date(sale.deliveryDate).toISOString().split('T')[0];
-      const formData = {
-        ...initialSalesForm,
-        ...sale,
-        orderDate: formattedOrderDate,
-        deliveryDate: formattedDeliveryDate
-      };
-      setSalesForm(formData);
-    } else {
-      setSalesForm(initialSalesForm);
-    }
-    
-    // Debug: Log form state when modal opens
 
-    
-    setShowSalesModal(true);
-  };
 
   const openByproductsModal = (byproduct = null) => {
     setEditingByproduct(byproduct);
@@ -387,11 +376,7 @@ const SalesDispatch = () => {
     setShowByproductsModal(true);
   };
 
-  const closeSalesModal = () => {
-    setShowSalesModal(false);
-    setEditingSale(null);
-    setSalesForm(initialSalesForm);
-  };
+
 
   const closeByproductsModal = () => {
     setShowByproductsModal(false);
@@ -399,17 +384,7 @@ const SalesDispatch = () => {
     setByproductForm(initialByproductForm);
   };
 
-  const handleSalesFormChange = (e) => {
-    const { name, value } = e.target;
-    setSalesForm(prev => {
-      const updated = { ...prev, [name]: value };
-      // Auto-calculate total amount
-      if (name === 'quantity' || name === 'unitPrice') {
-        updated.totalAmount = updated.quantity * updated.unitPrice;
-      }
-      return updated;
-    });
-  };
+
 
   const handleByproductFormChange = (e) => {
     const { name, value } = e.target;
@@ -456,26 +431,63 @@ const SalesDispatch = () => {
     return numberToWords(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 ? ' ' + numberToWords(num % 10000000) : '');
   };
 
-  const previewInvoice = (sale) => {
-    const invoiceNumber = sale.invoiceNumber || generateInvoiceNumber();
-    const taxableAmount = sale.totalAmount;
-    const igstAmount = (taxableAmount * 18) / 100;
-    const grandTotal = taxableAmount + igstAmount;
-    
-    setPreviewInvoiceData({
-      ...sale,
-      invoiceNumber,
-      taxableAmount,
-      igstAmount,
-      grandTotal,
-      amountInWords: numberToWords(Math.round(grandTotal))
-    });
-    setShowInvoicePreviewModal(true);
-  };
+
 
   const closeInvoicePreview = () => {
     setShowInvoicePreviewModal(false);
     setPreviewInvoiceData(null);
+  };
+
+  // Sales Modal Functions
+  const openSalesModal = (sale = null) => {
+    setEditingSale(sale);
+    if (sale) {
+      setSalesForm({ ...initialSalesForm, ...sale });
+    } else {
+      setSalesForm(initialSalesForm);
+    }
+    setShowSalesModal(true);
+  };
+
+  const closeSalesModal = () => {
+    setShowSalesModal(false);
+    setEditingSale(null);
+    setSalesForm(initialSalesForm);
+  };
+
+  const handleSalesFormChange = (e) => {
+    const { name, value } = e.target;
+    setSalesForm(prev => {
+      const updated = { ...prev, [name]: value };
+      // Auto-calculate total amount
+      if (name === 'quantity' || name === 'unitPrice') {
+        updated.totalAmount = updated.quantity * updated.unitPrice;
+      }
+      return updated;
+    });
+  };
+
+  const saveSales = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      
+      if (editingSale) {
+        // Update existing sale
+        // TODO: Implement update logic
+        alert('Update functionality not implemented yet');
+      } else {
+        // Create new sale
+        // TODO: Implement create logic
+        alert('Create functionality not implemented yet');
+      }
+      
+      closeSalesModal();
+    } catch (error) {
+      setError('Error saving sales record: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getFileIcon = (file) => {
@@ -494,210 +506,18 @@ const SalesDispatch = () => {
     }
   };
 
-  const saveSales = async (e) => {
-    e.preventDefault();
-    
-
-    
-    try {
-      setLoading(true);
-      
-      if (editingSale) {
-        // Update existing sale
-        await updateSale(editingSale._id);
-      } else {
-        // Create new sale with SalesInvoice integration
-        const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(salesForm.paymentMethod, salesForm.paymentStatus);
-        
-
-        
-        const salesInvoiceData = {
-          productType: 'rice',
-          orderDate: salesForm.orderDate,
-          deliveryDate: salesForm.deliveryDate,
-          deliveryStatus: salesForm.deliveryStatus,
-          vehicleNumber: salesForm.vehicleNumber || '',
-          paymentStatus: backendPaymentStatus,
-          customer: {
-            name: salesForm.customerName,
-            phoneNo: salesForm.customerPhone,
-            email: salesForm.customerEmail,
-            address: salesForm.customerAddress,
-            gstinPan: salesForm.customerGstin,
-            placeOfSupply: salesForm.placeOfSupply
-          },
-          items: [{
-            productName: salesForm.riceVariety,
-            quantity: salesForm.quantity,
-            uom: 'kg',
-            price: salesForm.unitPrice,
-            hsnSacCode: '10063090'
-          }],
-          payment: {
-            paymentType: backendPaymentType,
-            tcsType: 'Rs',
-            tcsValue: 0,
-            discountType: 'Rs',
-            discountValue: 0,
-            roundOff: 'Yes',
-            smartSuggestion: ''
-          },
-          notes: salesForm.notes || ''
-        };
 
 
 
-        // Call actual SalesInvoice API
-        const response = await salesInvoiceService.createSalesInvoice(salesInvoiceData);
-        
-        // Add to local state for immediate display
-        const newSale = {
-          ...salesForm,
-          _id: response.data._id,
-          invoiceNumber: response.data.invoiceNumber,
-          createdAt: response.data.createdAt,
-          updatedAt: response.data.updatedAt
-        };
-        
-        setSales(prev => [newSale, ...prev]);
-        closeSalesModal();
-      }
-    } catch (error) {
-      setError('Error saving sales record: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // NEW: Edit sale function
-  const editSale = (sale) => {
-    setEditingSale(sale);
-    setSalesForm({
-      customerName: sale.customer?.name || sale.customerName || '',
-      customerPhone: sale.customer?.phoneNo || sale.customerPhone || '',
-      customerEmail: sale.customer?.email || sale.customerEmail || '',
-      customerAddress: sale.customer?.address || sale.customerAddress || '',
-      customerGstin: sale.customer?.gstinPan || sale.customerGstin || '',
-      customerPan: sale.customer?.gstinPan || sale.customerPan || '',
-      placeOfSupply: sale.customer?.placeOfSupply || sale.placeOfSupply || '',
-      riceVariety: sale.items?.[0]?.productName || sale.riceVariety || '',
-      quantity: sale.items?.[0]?.quantity || sale.quantity || 0,
-      unitPrice: sale.items?.[0]?.price || sale.unitPrice || 0,
-      totalAmount: sale.totals?.grandTotal || sale.totalAmount || 0,
-      orderDate: sale.orderDate ? sale.orderDate.split('T')[0] : sale.orderDate || '',
-      deliveryDate: sale.deliveryDate ? sale.deliveryDate.split('T')[0] : sale.deliveryDate || '',
-      deliveryStatus: sale.deliveryStatus || 'pending',
-      vehicleNumber: sale.vehicleNumber || '',
-      paymentStatus: sale.paymentStatus || 'pending',
-      paymentMethod: mapPaymentType(sale.payment?.paymentType),
-      notes: sale.documentNotes || sale.notes || ''
-    });
-    setShowSalesModal(true);
-  };
 
-  // NEW: Update sale function
-  const updateSale = async (saleId) => {
-    try {
-      setLoading(true);
-      
-      // Prepare update data
       const { backendPaymentType, backendPaymentStatus } = convertPaymentValues(salesForm.paymentMethod, salesForm.paymentStatus);
       
-      const updateData = {
-        productType: 'rice',
-        orderDate: salesForm.orderDate,
-        deliveryDate: salesForm.deliveryDate,
-        deliveryStatus: salesForm.deliveryStatus,
-        vehicleNumber: salesForm.vehicleNumber || '',
-        paymentStatus: backendPaymentStatus,
-        customer: {
-          name: salesForm.customerName,
-          phoneNo: salesForm.customerPhone,
-          email: salesForm.customerEmail,
-          address: salesForm.customerAddress,
-          gstinPan: salesForm.customerGstin,
-          placeOfSupply: salesForm.placeOfSupply
-        },
-        items: [{
-          productName: salesForm.riceVariety,
-          quantity: salesForm.quantity,
-          uom: 'kg',
-          price: salesForm.unitPrice,
-          hsnSacCode: '10063090'
-        }],
-        payment: {
-          paymentType: backendPaymentType,
-          tcsType: 'Rs',
-          tcsValue: 0,
-          discountType: 'Rs',
-          discountValue: 0,
-          roundOff: 'Yes',
-          smartSuggestion: ''
-        },
-        notes: salesForm.notes 
-      };
 
-      // Call update API
-      const response = await salesInvoiceService.updateSalesInvoice(saleId, updateData);
-      
-      // Update local state with the response data
-      setSales(prev => prev.map(sale => 
-        sale._id === saleId 
-          ? { 
-              ...sale, 
-              customerName: salesForm.customerName,
-              customerPhone: salesForm.customerPhone,
-              customerEmail: salesForm.customerEmail,
-              customerAddress: salesForm.customerAddress,
-              customerGstin: salesForm.customerGstin,
-              customerPan: salesForm.customerPan,
-              placeOfSupply: salesForm.placeOfSupply,
-              riceVariety: salesForm.riceVariety,
-              quantity: salesForm.quantity,
-              unitPrice: salesForm.unitPrice,
-              totalAmount: salesForm.quantity * salesForm.unitPrice,
-              orderDate: salesForm.orderDate,
-              deliveryDate: salesForm.deliveryDate,
-              deliveryStatus: salesForm.deliveryStatus,
-              vehicleNumber: salesForm.vehicleNumber,
-              paymentStatus: salesForm.paymentStatus,
-              paymentMethod: salesForm.paymentMethod,
-              notes: salesForm.notes,
-              updatedAt: response.data.updatedAt
-            }
-          : sale
-      ));
-      
-      closeSalesModal();
-      
-    } catch (error) {
-      setError('Error updating sale: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // NEW: Delete sale function
-  const deleteSale = async (saleId) => {
-    if (!window.confirm('Are you sure you want to delete this sale record? This action cannot be undone.')) {
-      return;
-    }
 
-    try {
-      setLoading(true);
-      
-      // Call delete API
-      await salesInvoiceService.deleteSalesInvoice(saleId);
-      
-      // Remove from local state
-      setSales(prev => prev.filter(sale => sale._id !== saleId));
-      
-    } catch (error) {
-      setError('Error deleting sale: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+
 
   const saveByproduct = async (e) => {
     e.preventDefault();
@@ -794,8 +614,6 @@ const SalesDispatch = () => {
       notes: byproduct.notes || ''
     });
     
-
-    
     setShowByproductsModal(true);
   };
 
@@ -879,21 +697,23 @@ const SalesDispatch = () => {
     }
   };
 
+  // Helper function to get status color
   const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'completed':
-      case 'delivered':
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
+    switch (status.toLowerCase()) {
       case 'paid':
-        return 'text-green-600 bg-green-100';
+      case 'delivered':
+      case 'completed':
+        return 'bg-green-100 text-green-800';
       case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'in_transit':
-        return 'text-blue-600 bg-blue-100';
+      case 'unpaid':
+        return 'bg-yellow-100 text-yellow-800';
       case 'cancelled':
-      case 'partial':
-        return 'text-red-600 bg-red-100';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -944,96 +764,28 @@ const SalesDispatch = () => {
     return `INV-BP-${year}${month}${day}-${random}`;
   };
 
-  const openInvoiceModal = (sale) => {
-    setSelectedSaleForInvoice(sale);
-    setShowInvoiceGenerator(true);
-  };
+
 
   const openByproductInvoiceModal = (byproduct) => {
     setSelectedSaleForInvoice(byproduct);
     setShowInvoiceGenerator(true);
   };
 
-  const closeInvoiceModal = () => {
-    setShowInvoiceModal(false);
-    setSelectedSaleForInvoice(null);
-    setInvoiceForm(initialInvoiceForm);
-  };
+
 
   const closeInvoiceGenerator = () => {
     setShowInvoiceGenerator(false);
     setSelectedSaleForInvoice(null);
   };
 
-  const handleGenerateInvoice = (invoiceData) => {
-    try {
-      setLoading(true);
-      
-      // Handle invoice generation
-      if (selectedSaleForInvoice) {
-        if (selectedSaleForInvoice.material) {
-          // It's a byproduct
-          setByproducts(prev => prev.map(byproduct => 
-            byproduct._id === selectedSaleForInvoice._id 
-              ? { ...byproduct, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
-              : byproduct
-          ));
-        } else {
-          // It's a rice sale
-          setSales(prev => prev.map(sale => 
-            sale._id === selectedSaleForInvoice._id 
-              ? { ...sale, invoiceNumber: invoiceData.invoiceNumber, invoiceGenerated: true }
-              : sale
-          ));
-        }
-      }
-      
-      closeInvoiceGenerator();
-      
-    } catch (error) {
-      setError('Error generating invoice: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
+  const closeInvoiceModal = () => {
+    setShowInvoiceModal(false);
+    setSelectedSaleForInvoice(null);
   };
 
-  const generateInvoiceFromSale = async (sale) => {
-    try {
-      setLoading(true);
-      
-      // Get next invoice number for the branch
-      const invoiceNumberResponse = await salesInvoiceService.generateInvoiceNumber({
-        branch_id: currentBranchId,
-        productType: sale.material ? 'byproduct' : 'rice'
-      });
-      
-      const invoiceNumber = invoiceNumberResponse.data.invoiceNumber;
-      
-      // Update the sale with invoice number
-      if (sale.material) {
-        // It's a byproduct
-        setByproducts(prev => prev.map(byproduct => 
-          byproduct._id === sale._id 
-            ? { ...byproduct, invoiceNumber, invoiceGenerated: true }
-            : byproduct
-        ));
-      } else {
-        // It's a rice sale
-        setSales(prev => prev.map(saleItem => 
-          saleItem._id === sale._id 
-            ? { ...saleItem, invoiceNumber, invoiceGenerated: true }
-            : saleItem
-        ));
-      }
-      
-      alert('Invoice generated successfully! Invoice Number: ' + invoiceNumber);
-      
-    } catch (error) {
-      setError('Error generating invoice: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+
+
 
   const handleInvoiceFormChange = (e) => {
     const { name, value } = e.target;
@@ -1132,6 +884,28 @@ const SalesDispatch = () => {
       
     } catch (error) {
       setError('Error generating byproduct invoice: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle invoice generation based on type
+  const handleGenerateInvoice = async (invoiceData) => {
+    try {
+      setLoading(true);
+      
+      if (selectedSaleForInvoice?.material) {
+        // It's a byproduct invoice
+        await generateByproductInvoice();
+      } else {
+        // It's a sales invoice
+        await generateInvoice();
+      }
+      
+      closeInvoiceGenerator();
+      
+    } catch (error) {
+      setError('Error generating invoice: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -1670,24 +1444,18 @@ const SalesDispatch = () => {
     }
   ];
 
-  const filteredSales = sales.filter(sale => {
-    const q = salesFilter.toLowerCase();
-    return (
-      sale.invoiceNumber?.toLowerCase().includes(q) ||
-      sale.customerName?.toLowerCase().includes(q) ||
-      sale.riceVariety?.toLowerCase().includes(q) ||
-      sale.paymentStatus?.toLowerCase().includes(q) ||
-      sale.deliveryStatus?.toLowerCase().includes(q)
-    );
-  });
 
+
+  // Filtered byproducts based on search term
   const filteredByproducts = byproducts.filter(byproduct => {
+    if (!byproductsFilter) return true;
     const q = byproductsFilter.toLowerCase();
     return (
       byproduct.vehicleNumber?.toLowerCase().includes(q) ||
       byproduct.material?.toLowerCase().includes(q) ||
       byproduct.vendorName?.toLowerCase().includes(q) ||
-      byproduct.paymentStatus?.toLowerCase().includes(q)
+      byproduct.vendorPhone?.includes(byproductsFilter) ||
+      byproduct.notes?.toLowerCase().includes(q)
     );
   });
 
@@ -1700,20 +1468,20 @@ const SalesDispatch = () => {
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Sales & Dispatch
+              Byproducts Sales & Dispatch
             </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage rice sales, orders, and delivery tracking</p>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage byproduct sales and dispatch operations</p>
           </div>
           <div className="flex justify-center sm:justify-start space-x-2">
             {/* Only show Add button when a specific branch is selected (not "All Branches") */}
             {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
               (!user?.isSuperAdmin && user?.branch?.id)) && (
             <Button
-                onClick={() => activeTab === 'rice' ? openSalesModal() : openByproductsModal()}
+                onClick={() => openByproductsModal()}
               variant="success"
               className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             >
-                {activeTab === 'rice' ? '🛒 Add New Sale' : '📦 Add New Byproduct Sale'}
+                📦 Add New Byproduct Sale
             </Button>
             )}
           </div>
@@ -1743,10 +1511,10 @@ const SalesDispatch = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">
-                  {activeTab === 'rice' ? 'Total Orders' : 'Total Sales'}
+                  Total Byproduct Sales
                 </p>
                 <p className="text-xl font-bold text-gray-900">
-                  {activeTab === 'rice' ? sales.length : byproducts.length}
+                  {byproducts.length}
                 </p>
               </div>
             </div>
@@ -1759,10 +1527,7 @@ const SalesDispatch = () => {
               <div>
                 <p className="text-sm text-gray-600">Total Revenue</p>
                 <p className="text-xl font-bold text-gray-900">
-                  ₹{activeTab === 'rice' 
-                    ? sales.reduce((sum, sale) => sum + sale.totalAmount, 0).toLocaleString()
-                    : byproducts.reduce((sum, byproduct) => sum + byproduct.totalAmount, 0).toLocaleString()
-                  }
+                  ₹{byproducts.reduce((sum, byproduct) => sum + byproduct.totalAmount, 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -1774,13 +1539,10 @@ const SalesDispatch = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">
-                  {activeTab === 'rice' ? 'Pending Delivery' : 'Pending Payment'}
+                  Pending Payment
                 </p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {activeTab === 'rice' 
-                    ? sales.filter(sale => sale.deliveryStatus === 'pending').length
-                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'pending').length
-                  }
+                  {byproducts.filter(byproduct => byproduct.paymentStatus === 'pending').length}
                 </p>
               </div>
             </div>
@@ -1792,102 +1554,53 @@ const SalesDispatch = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">
-                  {activeTab === 'rice' ? 'completed' : 'completed'}
+                  Completed
                 </p>
                 <p className="text-2xl font-bold text-green-600">
-                  {activeTab === 'rice' 
-                    ? sales.filter(sale => sale.deliveryStatus === 'delivered').length
-                    : byproducts.filter(byproduct => byproduct.paymentStatus === 'completed').length
-                  }
+                  {byproducts.filter(byproduct => byproduct.paymentStatus === 'completed').length}
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tab Switch */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab('rice')}
-              className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 ${
-                activeTab === 'rice'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              🍚 Rice Sales
-            </button>
-            <button
-              onClick={() => setActiveTab('byproducts')}
-              className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 ${
-                activeTab === 'byproducts'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              📦 Byproducts Sales
-            </button>
-          </div>
-        </div>
+     
 
-        <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <TableFilters
-              searchValue={activeTab === 'rice' ? salesFilter : byproductsFilter}
-              searchPlaceholder={activeTab === 'rice' 
-                ? "Search by invoice number..." 
-                : "Search by vehicle number, material, vendor..."
-              }
-              onSearchChange={(e) => activeTab === 'rice' 
-                ? setSalesFilter(e.target.value) 
-                : setByproductsFilter(e.target.value)
-              }
-              showSelect={false}
-            />
-
-            <BranchFilter
-              value={currentBranchId || ''}
-              onChange={(value) => {
-                // Branch filter change handled by Redux store
-              }}
-            />
-          </div>
-          <div className="mt-4 flex items-center justify-between">
+        {/* Filters */}
+        <div className="mb-6">
+          <ResponsiveFilters>
+            <BranchFilter />
             <DateRangeFilter
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
-              onStartDateChange={(e) => handleFilterChange('dateRange', { ...dateRange, startDate: e.target.value })}
-              onEndDateChange={(e) => handleFilterChange('dateRange', { ...dateRange, endDate: e.target.value })}
-              startDateLabel={activeTab === 'rice' ? "Order Date From" : "Sale Date From"}
-              endDateLabel={activeTab === 'rice' ? "Order Date To" : "Sale Date To"}
+              onStartDateChange={(date) => setDateRange(prev => ({ ...prev, startDate: date }))}
+              onEndDateChange={(date) => setDateRange(prev => ({ ...prev, endDate: date }))}
             />
-            {/* NEW: Clear Filters Button */}
-            <Button
-              onClick={clearFilters}
-              variant="secondary"
-              icon="refresh"
-              className="ml-4 px-3 mt-4 text-md"
-            >
-              Clear
-            </Button>
-          </div>
-        </ResponsiveFilters>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                placeholder="Search byproduct sales..."
+                value={byproductsFilter}
+                onChange={(e) => setByproductsFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </ResponsiveFilters>
+        </div>
 
-        {/* Desktop Table View */}
-        {activeTab === 'rice' && (
+        {/* Desktop Table View - Byproducts Only */}
         <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-              <h3 className="text-lg font-semibold text-gray-800">Rice Sales Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredSales.length} records</p>
+            <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
+            <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
           </div>
           <TableList
-            data={filteredSales}
-            columns={columns}
-            actions={(sale) => [
+            data={filteredByproducts}
+            columns={byproductColumns}
+            actions={(byproduct) => [
               <Button
                 key="edit"
-                onClick={() => openSalesModal(sale)}
+                onClick={() => editByproduct(byproduct)}
                 variant="info"
                 icon="edit"
                 className="text-xs px-2 py-1"
@@ -1896,158 +1609,54 @@ const SalesDispatch = () => {
               </Button>,
               <Button
                 key="delete"
-                onClick={() => deleteSale(sale._id)}
+                onClick={() => deleteByproduct(byproduct._id)}
                 variant="danger"
                 icon="delete"
                 className="text-xs px-2 py-1"
               >
                 Delete
-              </Button>,
-              sale.invoiceNumber ? (
-                <>
-                  <Button
-                    key="preview-invoice"
-                    onClick={() => previewInvoice(sale)}
-                    variant="secondary"
-                    icon="eye"
-                    className="text-xs px-2 py-1"
-                  >
-                    Preview
-                  </Button>
-                  <Button
-                    key="download-invoice"
-                    onClick={() => downloadInvoice(sale)}
-                    variant="success"
-                    icon="download"
-                    className="text-xs px-2 py-1"
-                  >
-                    Download
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  key="generate-invoice"
-                  onClick={() => generateInvoiceFromSale(sale)}
-                  variant="primary"
-                  icon="document-text"
-                  className="text-xs px-2 py-1"
-                >
-                  Generate Invoice
-                </Button>
-              )
+              </Button>
             ]}
-            renderDetail={(sale) => (
-              <div className="p-6 bg-gradient-to-br from-green-50 to-blue-50 border-l-4 border-green-500">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Order #:</span>
-                      <span className="text-gray-900 font-medium">{sale.orderNumber}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Customer:</span>
-                      <span className="text-gray-900 font-medium">{sale.customerName}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Phone:</span>
-                      <span className="text-gray-900 font-medium">{sale.customerPhone}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Email:</span>
-                      <span className="text-gray-900 font-medium">{sale.customerEmail}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Address:</span>
-                      <span className="text-gray-900 font-medium">{sale.customerAddress}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Rice Variety:</span>
-                      <span className="text-green-600 font-medium">{sale.riceVariety}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Quantity:</span>
-                      <span className="text-gray-900 font-medium">{sale.quantity} kg</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Unit Price:</span>
-                      <span className="text-gray-900 font-medium">₹{sale.unitPrice}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Total:</span>
-                      <span className="text-green-600 font-bold">₹{sale.totalAmount.toLocaleString()}</span>
-                    </div>
-
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center">
-                      <span className="w-20 text-sm font-medium text-gray-600">Order Date:</span>
-                      <span className="text-gray-900">{new Date(sale.orderDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-20 text-sm font-medium text-gray-600">Delivery Date:</span>
-                      <span className="text-gray-900">{new Date(sale.deliveryDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-20 text-sm font-medium text-gray-600">Payment:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(sale.paymentStatus)}`}>
-                        {sale.paymentStatus.replace('_', ' ')}
-                      </span>
-                    </div>
-                  </div>
-                  {sale.notes && (
-                    <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
-                      <h4 className="text-sm font-semibold text-gray-800 mb-1">Notes</h4>
-                      <p className="text-gray-700 text-sm">{sale.notes}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           />
         </div>
-        )}
 
-        {/* Mobile Table View */}
+        {/* Mobile Table View - Byproducts Only */}
         <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Sales Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredSales.length} records</p>
+            <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
+            <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
           </div>
           
           <div className="p-4">
-            {filteredSales.length === 0 ? (
+            {filteredByproducts.length === 0 ? (
               <div className="text-center py-8">
                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No sales records</h3>
-                <p className="mt-1 text-sm text-gray-500">Get started by creating a new sales record.</p>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No byproduct sales records</h3>
+                <p className="mt-1 text-sm text-gray-500">Get started by creating a new byproduct sale record.</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredSales.map((sale) => (
-                  <div key={sale._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                {filteredByproducts.map((byproduct) => (
+                  <div key={byproduct._id} className="border border-gray-200 rounded-lg overflow-hidden">
                     <div 
                       className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => setExpandedSale(expandedSale === sale._id ? null : sale._id)}
+                      onClick={() => setExpandedByproduct(expandedByproduct === byproduct._id ? null : byproduct._id)}
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="font-medium text-blue-600">{sale.orderNumber}</div>
-                          <div className="text-sm text-gray-600">{sale.customerName}</div>
+                          <div className="font-medium text-blue-600">{byproduct.vehicleNumber}</div>
+                          <div className="text-sm text-gray-600">{byproduct.vendorName}</div>
                           <div className="text-xs text-gray-500">
-                            {sale.riceVariety} • {sale.quantity} kg • ₹{sale.totalAmount.toLocaleString()}
+                            {byproduct.material} • {byproduct.weight} {byproduct.unit} • ₹{byproduct.totalAmount}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              openSalesModal(sale);
+                              editByproduct(byproduct);
                             }}
                             variant="info"
                             icon="edit"
@@ -2058,7 +1667,7 @@ const SalesDispatch = () => {
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteSale(sale._id);
+                              deleteByproduct(byproduct._id);
                             }}
                             variant="danger"
                             icon="delete"
@@ -2066,47 +1675,9 @@ const SalesDispatch = () => {
                           >
                             Delete
                           </Button>
-                          {sale.invoiceNumber ? (
-                            <>
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  previewInvoice(sale);
-                                }}
-                                variant="secondary"
-                                icon="eye"
-                                className="text-xs px-2 py-1"
-                              >
-                                Preview
-                              </Button>
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  downloadInvoice(sale);
-                                }}
-                                variant="success"
-                                icon="download"
-                                className="text-xs px-2 py-1"
-                              >
-                                Download
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openInvoiceModal(sale);
-                              }}
-                              variant="primary"
-                              icon="document-text"
-                              className="text-xs px-2 py-1"
-                            >
-                              Generate Invoice
-                            </Button>
-                          )}
                           <svg 
                             className={`w-4 h-4 text-gray-400 transition-transform ${
-                              expandedSale === sale._id ? 'rotate-180' : ''
+                              expandedByproduct === byproduct._id ? 'rotate-180' : ''
                             }`}
                             fill="none" 
                             stroke="currentColor" 
@@ -2118,44 +1689,58 @@ const SalesDispatch = () => {
                       </div>
                     </div>
 
-                    {expandedSale === sale._id && (
-                      <div className="bg-gradient-to-br from-green-50 to-blue-50 p-4 border-t border-gray-200">
+                    {expandedByproduct === byproduct._id && (
+                      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 border-t border-gray-200">
                         <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                           <div>
-                            <span className="text-gray-600">Customer:</span>
-                            <span className="ml-1 font-medium text-gray-900">{sale.customerName}</span>
+                            <span className="text-gray-600">Date:</span>
+                            <span className="ml-1 font-medium text-gray-900">{formatDate(byproduct.date)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Vehicle:</span>
+                            <span className="ml-1 font-medium text-gray-900">{byproduct.vehicleNumber}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Material:</span>
+                            <span className="ml-1 font-medium text-green-600">{byproduct.material}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Weight:</span>
+                            <span className="ml-1 font-medium text-gray-900">{byproduct.weight} {byproduct.unit}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Rate:</span>
+                            <span className="ml-1 font-medium text-gray-900">₹{byproduct.rate}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Total:</span>
+                            <span className="ml-1 font-medium text-green-600">{formatCurrency(byproduct.totalAmount)}</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                          <div>
+                            <span className="text-gray-600">Vendor:</span>
+                            <span className="ml-1 font-medium text-gray-900">{byproduct.vendorName}</span>
                           </div>
                           <div>
                             <span className="text-gray-600">Phone:</span>
-                            <span className="ml-1 font-medium text-gray-900">{sale.customerPhone}</span>
+                            <span className="ml-1 font-medium text-gray-900">{byproduct.vendorPhone}</span>
                           </div>
                           <div>
                             <span className="text-gray-600">Email:</span>
-                            <span className="ml-1 font-medium text-gray-900">{sale.customerEmail}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Rice Variety:</span>
-                            <span className="ml-1 font-medium text-green-600">{sale.riceVariety}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Quantity:</span>
-                            <span className="ml-1 font-medium text-gray-900">{sale.quantity} kg</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Total Amount:</span>
-                            <span className="ml-1 font-medium text-green-600">₹{sale.totalAmount.toLocaleString()}</span>
+                            <span className="ml-1 font-medium text-gray-900">{byproduct.vendorEmail}</span>
                           </div>
                           <div>
                             <span className="text-gray-600">Payment:</span>
-                            <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(sale.paymentStatus)}`}>
-                              {sale.paymentStatus.replace('_', ' ')}
+                            <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(byproduct.paymentStatus)}`}>
+                              {byproduct.paymentStatus?.charAt(0).toUpperCase() + byproduct.paymentStatus?.slice(1)}
                             </span>
                           </div>
                         </div>
-                        {sale.notes && (
+                        {byproduct.notes && (
                           <div className="p-3 bg-white rounded-lg border border-gray-200">
-                            <h5 className="text-sm font-semibold text-gray-800 mb-1">Notes</h5>
-                            <p className="text-gray-700 text-sm">{sale.notes}</p>
+                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Notes</h4>
+                            <p className="text-gray-700 text-sm">{byproduct.notes}</p>
                           </div>
                         )}
                       </div>
@@ -2166,271 +1751,6 @@ const SalesDispatch = () => {
             )}
           </div>
         </div>
-
-        {/* Byproducts Table View */}
-        {activeTab === 'byproducts' && (
-          <>
-            {/* Desktop Byproducts Table */}
-            <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
-                <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
-              </div>
-              <TableList
-                data={filteredByproducts}
-                columns={byproductColumns}
-                actions={(byproduct) => [
-                  <Button
-                    key="edit"
-                    onClick={() => editByproduct(byproduct)}
-                    variant="info"
-                    icon="edit"
-                    className="text-xs px-2 py-1"
-                  >
-                    Edit
-                  </Button>,
-                  <Button
-                    key="delete"
-                    onClick={() => deleteByproduct(byproduct._id)}
-                    variant="danger"
-                    icon="delete"
-                    className="text-xs px-2 py-1"
-                  >
-                    Delete
-                  </Button>,
-                  byproduct.invoiceNumber ? (
-                    <>
-                      <Button
-                        key="download-invoice"
-                        onClick={() => downloadByproductInvoice(byproduct)}
-                        variant="success"
-                        icon="download"
-                        className="text-xs px-2 py-1"
-                      >
-                        Download
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      key="generate-invoice"
-                      onClick={() => generateInvoiceFromSale(byproduct)}
-                      variant="primary"
-                      icon="document-text"
-                      className="text-xs px-2 py-1"
-                    >
-                      Generate Invoice
-                    </Button>
-                  )
-                ]}
-                renderDetail={(byproduct) => (
-                  <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border-l-4 border-purple-500">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Date:</span>
-                          <span className="text-gray-900 font-medium">{formatDate(byproduct.date)}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Vehicle:</span>
-                          <span className="text-gray-900 font-medium">{byproduct.vehicleNumber}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Material:</span>
-                          <span className="text-green-600 font-medium">{byproduct.material}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Weight:</span>
-                          <span className="text-gray-900 font-medium">{byproduct.weight} {byproduct.unit}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Rate:</span>
-                          <span className="text-gray-900 font-medium">₹{byproduct.rate}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Vendor:</span>
-                          <span className="text-gray-900 font-medium">{byproduct.vendorName}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Phone:</span>
-                          <span className="text-gray-900 font-medium">{byproduct.vendorPhone}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Email:</span>
-                          <span className="text-gray-900 font-medium">{byproduct.vendorEmail}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Payment:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(byproduct.paymentStatus)}`}>
-                            {byproduct.paymentStatus?.charAt(0).toUpperCase() + byproduct.paymentStatus?.slice(1)}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Total:</span>
-                          <span className="text-green-600 font-medium">{formatCurrency(byproduct.totalAmount)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              />
-            </div>
-
-            {/* Mobile Byproducts Table */}
-            <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6">
-              <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
-                <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
-              </div>
-              
-              <div className="p-4">
-                {filteredByproducts.length === 0 ? (
-                  <div className="text-center py-8">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No byproduct sales records</h3>
-                    <p className="mt-1 text-sm text-gray-500">Get started by creating a new byproduct sale record.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {filteredByproducts.map((byproduct) => (
-                      <div key={byproduct._id} className="border border-gray-200 rounded-lg overflow-hidden">
-                        <div 
-                          className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => setExpandedByproduct(expandedByproduct === byproduct._id ? null : byproduct._id)}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div className="flex-1">
-                              <div className="font-medium text-blue-600">{byproduct.vehicleNumber}</div>
-                              <div className="text-sm text-gray-600">{byproduct.vendorName}</div>
-                              <div className="text-xs text-gray-500">
-                                {byproduct.material} • {byproduct.weight} {byproduct.unit} • {formatCurrency(byproduct.totalAmount)}
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openByproductsModal(byproduct);
-                                }}
-                                variant="info"
-                                icon="edit"
-                                className="text-xs px-2 py-1"
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteByproduct(byproduct._id);
-                                }}
-                                variant="danger"
-                                icon="delete"
-                                className="text-xs px-2 py-1"
-                              >
-                                Delete
-                              </Button>
-                              {byproduct.invoiceNumber ? (
-                                <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    downloadByproductInvoice(byproduct);
-                                  }}
-                                  variant="success"
-                                  icon="download"
-                                  className="text-xs px-2 py-1"
-                                >
-                                  Download
-                                </Button>
-                              ) : (
-                                <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openByproductInvoiceModal(byproduct);
-                                  }}
-                                  variant="primary"
-                                  icon="document-text"
-                                  className="text-xs px-2 py-1"
-                                >
-                                  Generate
-                                </Button>
-                              )}
-                              <svg 
-                                className={`w-4 h-4 text-gray-400 transition-transform ${
-                                  expandedByproduct === byproduct._id ? 'rotate-180' : ''
-                                }`}
-                                fill="none" 
-                                stroke="currentColor" 
-                                viewBox="0 0 24 24"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-
-                        {expandedByproduct === byproduct._id && (
-                          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 border-t border-gray-200">
-                            <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                              <div>
-                                <span className="text-gray-600">Date:</span>
-                                <span className="ml-1 font-medium text-gray-900">{formatDate(byproduct.date)}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Material:</span>
-                                <span className="ml-1 font-medium text-green-600">{byproduct.material}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Weight:</span>
-                                <span className="ml-1 font-medium text-gray-900">{byproduct.weight} {byproduct.unit}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Rate:</span>
-                                <span className="ml-1 font-medium text-gray-900">₹{byproduct.rate}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Vendor:</span>
-                                <span className="ml-1 font-medium text-gray-900">{byproduct.vendorName}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Phone:</span>
-                                <span className="ml-1 font-medium text-gray-900">{byproduct.vendorPhone}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Payment:</span>
-                                <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(byproduct.paymentStatus)}`}>
-                                  {byproduct.paymentStatus?.charAt(0).toUpperCase() + byproduct.paymentStatus?.slice(1)}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Total:</span>
-                                <span className="ml-1 font-medium text-green-600">{formatCurrency(byproduct.totalAmount)}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Invoice:</span>
-                                <span className={`ml-1 font-medium ${byproduct.invoiceNumber ? 'text-green-600' : 'text-gray-400'}`}>
-                                  {byproduct.invoiceNumber || 'Not Generated'}
-                                </span>
-                              </div>
-                            </div>
-                            {byproduct.notes && (
-                              <div className="p-3 bg-white rounded-lg border border-gray-200">
-                                <h5 className="text-sm font-semibold text-gray-800 mb-1">Notes</h5>
-                                <p className="text-gray-700 text-sm">{byproduct.notes}</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
       </div>
 
       {/* Sales Modal */}
@@ -2626,7 +1946,7 @@ const SalesDispatch = () => {
                       <div className="relative mb-2">
                         {file.mimetype?.startsWith('image/') ? (
                           <img
-                            src={`${import.meta.env.VITE_API_URL  }${file.url}`}
+                            src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${file.url}`}
                             alt={file.originalName}
                             className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => openPreview(file)}
@@ -2671,7 +1991,7 @@ const SalesDispatch = () => {
                           👁️
                         </button>
                         <a
-                                                      href={`${import.meta.env.VITE_API_URL  }${file.url}`}
+                                                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${file.url}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="bg-green-600 text-white p-1 rounded text-xs hover:bg-green-700 transition-colors"
@@ -2971,14 +2291,8 @@ const SalesDispatch = () => {
                 onChange={handleByproductFormChange}
                 required
                 icon="package"
-              >
-                <option value="">Select Material</option>
-                {BYPRODUCT_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </FormSelect>
+                options={BYPRODUCT_TYPES.map(type => ({ value: type, label: type }))}
+              />
               </div>
           </fieldset>
 
@@ -3007,14 +2321,8 @@ const SalesDispatch = () => {
                 onChange={handleByproductFormChange}
                 required
                 icon="ruler"
-              >
-                <option value="">Select Unit</option>
-                {UNITS.map((unit) => (
-                  <option key={unit} value={unit}>
-                    {unit}
-                  </option>
-                ))}
-              </FormSelect>
+                options={UNITS.map(unit => ({ value: unit, label: unit }))}
+              />
               <FormInput
                 label="Rate per Unit"
                 name="rate"
@@ -3043,6 +2351,143 @@ const SalesDispatch = () => {
             <legend className="text-sm font-semibold text-gray-700 px-2">
               Vendor Details
             </legend>
+            
+            {/* Vendor Selection Dropdown */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Vendor
+              </label>
+              {vendorsLoading ? (
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 flex items-center justify-center">
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  <span className="text-sm text-gray-500">Loading vendors...</span>
+                </div>
+              ) : (
+                <div className="relative vendor-dropdown-container">
+                  <input
+                    type="text"
+                    placeholder="Type to search vendors..."
+                    value={vendorSearchTerm}
+                    onChange={(e) => setVendorSearchTerm(e.target.value)}
+                    onFocus={() => setShowVendorDropdown(true)}
+                    onBlur={() => {
+                      // Small delay to allow click events on dropdown items
+                      setTimeout(() => {
+                        if (!byproductForm.vendor_id) {
+                          setShowVendorDropdown(false);
+                        }
+                      }, 200);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setShowVendorDropdown(false);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  
+                  {/* Search Icon */}
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  
+                  {/* Dropdown */}
+                  {showVendorDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                      {filteredVendors.length > 0 ? (
+                        filteredVendors.map((vendor) => (
+                          <div
+                            key={vendor._id}
+                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            onClick={() => selectVendor(vendor)}
+                          >
+                            <div className="font-medium text-gray-900">
+                              {vendor.vendorCode} - {vendor.vendorName}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {vendor.phone} • {vendor.city}, {vendor.state}
+                            </div>
+                          </div>
+                        ))
+                      ) : vendorSearchTerm ? (
+                        <div className="px-3 py-2 text-gray-500 text-sm">
+                          No vendors found matching "{vendorSearchTerm}"
+                        </div>
+                      ) : (
+                        <div className="px-3 py-2 text-gray-500 text-sm">
+                          Start typing to search vendors...
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Selected Vendor Display */}
+                  {byproductForm.vendor_id && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-blue-900">
+                            {getSelectedVendor()?.vendorName}
+                          </div>
+                          <div className="text-sm text-blue-700">
+                            {getSelectedVendor()?.phone} • {getSelectedVendor()?.city}, {getSelectedVendor()?.state}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={clearVendorSelection}
+                          className="text-blue-600 hover:text-blue-800 text-sm underline"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Help text */}
+              <div className="mt-1 text-xs text-gray-600">
+                💡 Type to search vendors by name, code, or contact person. Select a vendor to auto-populate details.
+              </div>
+              
+              {/* Vendor count */}
+              {vendors.length > 0 && (
+                <div className="mt-1 text-xs text-gray-500">
+                  {vendors.length} vendor{vendors.length !== 1 ? 's' : ''} available
+                </div>
+              )}
+            </div>
+
+            {/* Selected Vendor Info Display */}
+            {byproductForm.vendor_id && getSelectedVendor() && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="font-medium text-blue-800">
+                      Selected Vendor: {getSelectedVendor()?.vendorName}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearVendorSelection}
+                    className="text-sm text-red-600 hover:text-red-800 underline"
+                  >
+                    Change Vendor
+                  </button>
+                </div>
+                <div className="mt-2 text-xs text-blue-700">
+                  ℹ️ Vendor details are now auto-populated. You can still edit these fields if needed.
+                </div>
+              </div>
+            )}
+
+            {/* Vendor Information Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormInput
                 label="Vendor Name"
@@ -3052,6 +2497,7 @@ const SalesDispatch = () => {
                 required
                 placeholder="Enter vendor name"
                 icon="user"
+                className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
               />
               <FormInput
                 label="Vendor Phone"
@@ -3061,6 +2507,7 @@ const SalesDispatch = () => {
                 required
                 placeholder="+91 9876543210"
                 icon="phone"
+                className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
               />
               <FormInput
                 label="Vendor Email"
@@ -3070,6 +2517,7 @@ const SalesDispatch = () => {
                 onChange={handleByproductFormChange}
                 placeholder="vendor@example.com"
                 icon="envelope"
+                className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
               />
               <FormInput
                 label="Vendor GSTIN"
@@ -3078,6 +2526,7 @@ const SalesDispatch = () => {
                 onChange={handleByproductFormChange}
                 placeholder="22AAAAA0000A1Z5"
                 icon="id-card"
+                className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
               />
               <FormInput
                 label="Vendor PAN"
@@ -3086,6 +2535,7 @@ const SalesDispatch = () => {
                 onChange={handleByproductFormChange}
                 placeholder="ABCD1234EFGH"
                 icon="id-card"
+                className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
               />
               <div className="md:col-span-2">
                 <FormInput
@@ -3096,9 +2546,22 @@ const SalesDispatch = () => {
                   required
                   placeholder="Enter complete vendor address"
                   icon="location"
+                  className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
                 />
-                  </div>
-                  </div>
+              </div>
+            </div>
+            
+            {/* Auto-populated indicator */}
+            {byproductForm.vendor_id && (
+              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
+                <div className="flex items-center text-sm text-green-700">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Vendor details have been auto-populated. You can still edit these fields if needed.
+                </div>
+              </div>
+            )}
           </fieldset>
 
           {/* Payment Details */}
@@ -3114,14 +2577,8 @@ const SalesDispatch = () => {
                 onChange={handleByproductFormChange}
                 required
                 icon="credit-card"
-              >
-                <option value="">Select Payment Method</option>
-                {PAYMENT_METHODS.map((method) => (
-                  <option key={method} value={method}>
-                    {method}
-                  </option>
-                ))}
-              </FormSelect>
+                options={PAYMENT_METHODS.map(method => ({ value: method, label: method }))}
+              />
               <FormSelect
                 label="Payment Status"
                 name="paymentStatus"
@@ -3129,14 +2586,8 @@ const SalesDispatch = () => {
                 onChange={handleByproductFormChange}
                 required
                 icon="check-circle"
-              >
-                <option value="">Select Payment Status</option>
-                {PAYMENT_STATUS.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </FormSelect>
+                options={PAYMENT_STATUS.map(status => ({ value: status, label: status }))}
+              />
               <FormInput
                 label="Notes"
                 name="notes"
