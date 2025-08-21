@@ -2357,7 +2357,50 @@ const SalesDispatch = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Vendor
               </label>
-              {vendorsLoading ? (
+             
+              
+              {/* Help text */}
+              <div className="mt-1 text-xs text-gray-600">
+                💡 Type to search vendors by name, code, or contact person. Select a vendor to auto-populate details.
+              </div>
+              
+              {/* Vendor count */}
+              {vendors.length > 0 && (
+                <div className="mt-1 text-xs text-gray-500">
+                  {vendors.length} vendor{vendors.length !== 1 ? 's' : ''} available
+                </div>
+              )}
+            </div>
+
+            {/* Selected Vendor Info Display */}
+            {byproductForm.vendor_id && getSelectedVendor() && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="font-medium text-blue-800">
+                      Selected Vendor: {getSelectedVendor()?.vendorName}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearVendorSelection}
+                    className="text-sm text-red-600 hover:text-red-800 underline"
+                  >
+                    Change Vendor
+                  </button>
+                </div>
+                <div className="mt-2 text-xs text-blue-700">
+                  ℹ️ Vendor details are now auto-populated. You can still edit these fields if needed.
+                </div>
+              </div>
+            )}
+
+            {/* Vendor Information Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {vendorsLoading ? (
                 <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 flex items-center justify-center">
                   <LoadingSpinner size="sm" className="mr-2" />
                   <span className="text-sm text-gray-500">Loading vendors...</span>
@@ -2424,81 +2467,10 @@ const SalesDispatch = () => {
                   )}
                   
                   {/* Selected Vendor Display */}
-                  {byproductForm.vendor_id && (
-                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-blue-900">
-                            {getSelectedVendor()?.vendorName}
-                          </div>
-                          <div className="text-sm text-blue-700">
-                            {getSelectedVendor()?.phone} • {getSelectedVendor()?.city}, {getSelectedVendor()?.state}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={clearVendorSelection}
-                          className="text-blue-600 hover:text-blue-800 text-sm underline"
-                        >
-                          Change
-                        </button>
-                      </div>
-                    </div>
-                  )}
+               
                 </div>
               )}
-              
-              {/* Help text */}
-              <div className="mt-1 text-xs text-gray-600">
-                💡 Type to search vendors by name, code, or contact person. Select a vendor to auto-populate details.
-              </div>
-              
-              {/* Vendor count */}
-              {vendors.length > 0 && (
-                <div className="mt-1 text-xs text-gray-500">
-                  {vendors.length} vendor{vendors.length !== 1 ? 's' : ''} available
-                </div>
-              )}
-            </div>
-
-            {/* Selected Vendor Info Display */}
-            {byproductForm.vendor_id && getSelectedVendor() && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span className="font-medium text-blue-800">
-                      Selected Vendor: {getSelectedVendor()?.vendorName}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={clearVendorSelection}
-                    className="text-sm text-red-600 hover:text-red-800 underline"
-                  >
-                    Change Vendor
-                  </button>
-                </div>
-                <div className="mt-2 text-xs text-blue-700">
-                  ℹ️ Vendor details are now auto-populated. You can still edit these fields if needed.
-                </div>
-              </div>
-            )}
-
-            {/* Vendor Information Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput
-                label="Vendor Name"
-                name="vendorName"
-                value={byproductForm.vendorName}
-                onChange={handleByproductFormChange}
-                required
-                placeholder="Enter vendor name"
-                icon="user"
-                className={byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""}
-              />
+            
               <FormInput
                 label="Vendor Phone"
                 name="vendorPhone"

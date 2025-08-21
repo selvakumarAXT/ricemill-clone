@@ -81,12 +81,12 @@ const Sidebar = ({ isOpen, toggleSidebar, branches = [], selectedBranchId, onBra
       icon: <Icon name="gunny" />,
       roles: ['admin', 'manager', 'superadmin']
     },
-    {
-      name: 'QC Data Entry',
-      path: '/qc-data-entry',
-      icon: <Icon name="qc" />,
-      roles: ['admin', 'manager', 'superadmin']
-    },
+    // {
+    //   name: 'QC Data Entry',
+    //   path: '/qc-data-entry',
+    //   icon: <Icon name="qc" />,
+    //   roles: ['admin', 'manager', 'superadmin']
+    // },
     {
       name: 'Vendor Management',
       path: '/vendor-management',

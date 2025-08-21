@@ -170,7 +170,7 @@ function AppContent() {
           }
         />
 
-        <Route
+        {/* <Route
           path="/qc-data-entry"
           element={
             <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
@@ -179,7 +179,7 @@ function AppContent() {
               </LayoutWrapper>
             </ProtectedRoute>
           }
-        />
+        /> */}
 
         <Route
           path="/vendor-management"

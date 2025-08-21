@@ -22,16 +22,13 @@ const EBMeterCalculation = () => {
   const { currentBranchId } = useSelector((state) => state.branch);
 
   const initialMeterForm = {
-    readingDate: '',
-    meterNumber: '',
-    previousReading: 0,
-    currentReading: 0,
-    unitsConsumed: 0,
-    ratePerUnit: 0,
-    totalAmount: 0,
+    readingDate: new Date().toISOString().split('T')[0], // Always set to today
+    meterNumber: 'EB001',
+    pf: 1.0, // Power Factor
+    startKWH: 0,
+    endKWH: 0,
+    consumption: 0,
     billNumber: '',
-    paymentStatus: 'pending',
-    dueDate: '',
     remarks: ''
   };
 
@@ -48,41 +45,7 @@ const EBMeterCalculation = () => {
     setError('');
     try {
       // Simulate API call - replace with actual service
-      const mockMeterReadings = [
-        {
-          _id: '1',
-          readingDate: '2024-01-15',
-          meterNumber: 'EB001',
-          previousReading: 1250,
-          currentReading: 1350,
-          unitsConsumed: 100,
-          ratePerUnit: 8.5,
-          totalAmount: 850,
-          billNumber: 'EB-2024-001',
-          paymentStatus: 'paid',
-          dueDate: '2024-02-15',
-          remarks: 'Normal consumption',
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:30:00Z'
-        },
-        {
-          _id: '2',
-          readingDate: '2024-01-16',
-          meterNumber: 'EB002',
-          previousReading: 2100,
-          currentReading: 2250,
-          unitsConsumed: 150,
-          ratePerUnit: 8.5,
-          totalAmount: 1275,
-          billNumber: 'EB-2024-002',
-          paymentStatus: 'pending',
-          dueDate: '2024-02-16',
-          remarks: 'High consumption due to peak season',
-          createdAt: '2024-01-16T11:00:00Z',
-          updatedAt: '2024-01-16T11:15:00Z'
-        }
-      ];
-      setMeterReadings(mockMeterReadings);
+     
     } catch (err) {
       setError(err.message || 'Failed to fetch meter data');
     } finally {
@@ -95,16 +58,34 @@ const EBMeterCalculation = () => {
     if (meter) {
       // Format dates for HTML date inputs (YYYY-MM-DD)
       const formattedReadingDate = new Date(meter.readingDate).toISOString().split('T')[0];
-      const formattedDueDate = new Date(meter.dueDate).toISOString().split('T')[0];
       const formData = {
         ...initialMeterForm,
         ...meter,
-        readingDate: formattedReadingDate,
-        dueDate: formattedDueDate
+        readingDate: formattedReadingDate
       };
       setMeterForm(formData);
     } else {
-      setMeterForm(initialMeterForm);
+      // For new meter reading, always set today's date and check for next day's start KWH
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      // Check if there's a reading for tomorrow to get start KWH
+      const tomorrowReading = meterReadings.find(r => r.readingDate === tomorrow);
+      const startKWH = tomorrowReading ? tomorrowReading.startKWH : 0;
+      
+      // Automatically set end KWH if next day's start KWH is available
+      let endKWH = 0;
+      if (tomorrowReading && tomorrowReading.startKWH > 0) {
+        endKWH = tomorrowReading.startKWH;
+      }
+      
+      setMeterForm({
+        ...initialMeterForm,
+        readingDate: today, // Always set to today (read-only)
+        startKWH: startKWH,
+        endKWH: endKWH,
+        consumption: Math.max(0, endKWH - startKWH)
+      });
     }
     setShowMeterModal(true);
   };
@@ -120,22 +101,87 @@ const EBMeterCalculation = () => {
     setMeterForm(prev => {
       const updated = { ...prev, [name]: value };
       
-      // Auto-calculate units consumed and total amount
-      if (name === 'currentReading' || name === 'previousReading') {
-        const current = parseFloat(updated.currentReading || 0);
-        const previous = parseFloat(updated.previousReading || 0);
-        updated.unitsConsumed = Math.max(0, current - previous);
-        updated.totalAmount = updated.unitsConsumed * parseFloat(updated.ratePerUnit || 0);
+      // Auto-calculate consumption and auto-fill end KWH if needed
+      if (name === 'startKWH') {
+        const start = parseFloat(value || 0);
+        const end = parseFloat(updated.endKWH || 0);
+        updated.consumption = Math.max(0, end - start);
+        
+        // Auto-fill end KWH from next day's start KWH if available and end KWH is empty
+        if (end === 0 && updated.readingDate) {
+          const selectedDate = new Date(updated.readingDate);
+          const nextDay = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+          const nextDayStr = nextDay.toISOString().split('T')[0];
+          const nextDayReading = meterReadings.find(r => r.readingDate === nextDayStr);
+          if (nextDayReading && nextDayReading.startKWH > 0) {
+            updated.endKWH = nextDayReading.startKWH;
+            updated.consumption = Math.max(0, nextDayReading.startKWH - start);
+          }
+        }
+      } else if (name === 'endKWH') {
+        const start = parseFloat(updated.startKWH || 0);
+        const end = parseFloat(value || 0);
+        updated.consumption = Math.max(0, end - start);
       }
       
-      if (name === 'ratePerUnit') {
-        const units = parseFloat(updated.unitsConsumed || 0);
-        const rate = parseFloat(value || 0);
-        updated.totalAmount = units * rate;
-      }
+      // If end KWH is empty, consumption will be 0 (which is fine for optional field)
       
       return updated;
     });
+  };
+
+  // Function to automatically add next date's start KWH if selected date's end KWH are missing
+  const autoFillNextDayStartKWH = () => {
+    if (!meterForm.readingDate) return false;
+    
+    const selectedDate = new Date(meterForm.readingDate);
+    const nextDay = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+    const nextDayStr = nextDay.toISOString().split('T')[0];
+    
+    // Check if there's a reading for the next day
+    const nextDayReading = meterReadings.find(r => r.readingDate === nextDayStr);
+    
+    if (nextDayReading && nextDayReading.startKWH > 0) {
+      // Auto-fill selected date's end KWH with next day's start KWH
+      setMeterForm(prev => ({
+        ...prev,
+        endKWH: nextDayReading.startKWH,
+        consumption: Math.max(0, nextDayReading.startKWH - prev.startKWH)
+      }));
+      
+      return true;
+    }
+    return false;
+  };
+
+  // Function to check if auto-fill is available and show notification
+  const checkAutoFillAvailability = () => {
+    if (!meterForm.readingDate) {
+      return {
+        available: false,
+        message: 'Please select a date first to check auto-fill availability.',
+        nextDayKWH: 0
+      };
+    }
+    
+    const selectedDate = new Date(meterForm.readingDate);
+    const nextDay = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+    const nextDayStr = nextDay.toISOString().split('T')[0];
+    const nextDayReading = meterReadings.find(r => r.readingDate === nextDayStr);
+    
+    if (nextDayReading && nextDayReading.startKWH > 0) {
+      return {
+        available: true,
+        message: `Auto-fill available: Next day's start KWH (${formatKWH(nextDayReading.startKWH)}) can be used for ${new Date(meterForm.readingDate).toLocaleDateString()}'s end KWH.`,
+        nextDayKWH: nextDayReading.startKWH
+      };
+    }
+    
+    return {
+      available: false,
+      message: `No next day data available for auto-fill from ${new Date(meterForm.readingDate).toLocaleDateString()}.`,
+      nextDayKWH: 0
+    };
   };
 
   const handleFilesChange = (files) => {
@@ -144,6 +190,14 @@ const EBMeterCalculation = () => {
 
   const saveMeter = async (e) => {
     e.preventDefault();
+    
+    // Check if End KWH is empty and show warning
+    if (!meterForm.endKWH || meterForm.endKWH === 0) {
+      if (!window.confirm('End KWH is empty. This will set consumption to 0. Do you want to continue?')) {
+        return;
+      }
+    }
+    
     try {
       setLoading(true);
       // Simulate API call - replace with actual service
@@ -184,63 +238,82 @@ const EBMeterCalculation = () => {
     }
   };
 
-  const getPaymentStatusColor = (status) => {
-    switch (status) {
-      case 'paid':
-        return 'text-green-600 bg-green-100';
-      case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'overdue':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
+
+
+  // Helper function to safely format KWH values
+  const formatKWH = (value, fallback = '0.00') => {
+    if (value === null || value === undefined || value === '' || value === 0) {
+      return fallback;
     }
+    const num = parseFloat(value);
+    if (isNaN(num) || num < 0) {
+      return fallback;
+    }
+    return num.toFixed(2);
+  };
+
+  // Helper function to safely format KWH values with custom fallback
+  const formatKWHWithFallback = (value, fallback = 'Not set') => {
+    if (value === null || value === undefined || value === '' || value === 0) {
+      return fallback;
+    }
+    const num = parseFloat(value);
+    if (isNaN(num) || num < 0) {
+      return fallback;
+    }
+    return num.toFixed(2);
   };
 
   // Calculate summary statistics
-  const totalUnits = meterReadings.reduce((sum, meter) => sum + meter.unitsConsumed, 0);
-  const totalAmount = meterReadings.reduce((sum, meter) => sum + meter.totalAmount, 0);
+  const totalUnits = meterReadings.reduce((sum, meter) => sum + meter.consumption, 0);
   const averageConsumption = meterReadings.length > 0 ? totalUnits / meterReadings.length : 0;
-  const pendingBills = meterReadings.filter(meter => meter.paymentStatus === 'pending').length;
 
-  // Define columns for the table
+
+  // Define columns for the table - matching your checklist format
   const columns = [
     { 
       key: "readingDate", 
-      label: "Reading Date",
-      renderCell: (value) => new Date(value).toLocaleDateString()
+      label: "DATE",
+      renderCell: (value) => {
+        const today = new Date().toISOString().split('T')[0];
+        const isToday = value === today;
+        const date = new Date(value);
+        const day = date.getDate();
+        const month = date.toLocaleDateString('en-US', { month: 'long' });
+        const year = date.getFullYear();
+        
+        return (
+          <span className={`font-semibold ${isToday ? 'text-green-600' : 'text-gray-600'}`}>
+            {day} {month} {year}
+          </span>
+        );
+      }
     },
     { 
-      key: "meterNumber", 
-      label: "Meter Number",
+      key: "pf", 
+      label: "PF",
       renderCell: (value) => <span className="font-semibold text-blue-600">{value}</span>
     },
     { 
-      key: "currentReading", 
-      label: "Current Reading",
-      renderCell: (value) => <span className="font-semibold text-indigo-600">{value.toLocaleString()}</span>
+      key: "startKWH", 
+      label: "START KWH",
+      renderCell: (value) => <span className="font-semibold text-indigo-600">{formatKWH(value)}</span>
     },
     { 
-      key: "unitsConsumed", 
-      label: "Units Consumed",
-      renderCell: (value) => <span className="font-semibold text-green-600">{value.toLocaleString()}</span>
-    },
-    { 
-      key: "ratePerUnit", 
-      label: "Rate/Unit",
-      renderCell: (value) => <span className="text-gray-700">₹{value}</span>
-    },
-    { 
-      key: "totalAmount", 
-      label: "Total Amount",
-      renderCell: (value) => <span className="font-semibold text-purple-600">₹{value.toLocaleString()}</span>
-    },
-    { 
-      key: "paymentStatus", 
-      label: "Payment Status",
+      key: "endKWH", 
+      label: "END KWH",
       renderCell: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(value)}`}>
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+        <span className={`font-semibold ${value && value > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+          {formatKWHWithFallback(value)}
+        </span>
+      )
+    },
+    { 
+      key: "consumption", 
+      label: "CONSUMPTION",
+      renderCell: (value) => (
+        <span className={`font-semibold ${value && value > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+          {formatKWH(value)}
         </span>
       )
     }
@@ -250,8 +323,7 @@ const EBMeterCalculation = () => {
     const q = meterFilter.toLowerCase();
     return (
       meter.meterNumber?.toLowerCase().includes(q) ||
-      meter.billNumber?.toLowerCase().includes(q) ||
-      meter.paymentStatus?.toLowerCase().includes(q)
+      meter.billNumber?.toLowerCase().includes(q)
     );
   });
 
@@ -263,10 +335,13 @@ const EBMeterCalculation = () => {
       <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              EB Meter Calculation
-            </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">Electricity billing and power consumption tracking</p>
+           
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mt-2">
+              EB Reading Checklist
+            </h2>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">
+              MONTH: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} 
+            </p>
           </div>
           <div className="flex justify-center sm:justify-start space-x-2">
             <Button
@@ -295,52 +370,50 @@ const EBMeterCalculation = () => {
           </div>
         )}
 
+        {/* Monthly Summary */}
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Summary - {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{meterReadings.length}</div>
+              <div className="text-sm text-gray-600">Days Recorded</div>
+            </div>
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{totalUnits.toFixed(2)}</div>
+              <div className="text-sm text-gray-600">Total KWH</div>
+            </div>
+            <div className="text-center p-3 bg-yellow-50 rounded-lg">
+              <div className="text-2xl font-bold text-yellow-600">{(totalUnits / Math.max(meterReadings.length, 1)).toFixed(2)}</div>
+              <div className="text-sm text-gray-600">Avg KWH/Day</div>
+            </div>
+          </div>
+        </div>
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-blue-600 text-lg">⚡</span>
+                <span className="text-blue-600 text-lg">📅</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Units</p>
-                <p className="text-xl font-bold text-blue-600">{totalUnits.toLocaleString()}</p>
+                <p className="text-sm text-gray-600">Today's Date</p>
+                <p className="text-xl font-bold text-blue-600">{new Date().toLocaleDateString()}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-green-600 text-lg">💰</span>
+                <span className="text-green-600 text-lg">⚡</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Amount</p>
-                <p className="text-xl font-bold text-green-600">₹{totalAmount.toLocaleString()}</p>
+                <p className="text-sm text-gray-600">Today's KWH</p>
+                <p className="text-xl font-bold text-green-600">{totalUnits.toFixed(2)}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-purple-600 text-lg">📊</span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Avg Consumption</p>
-                <p className="text-xl font-bold text-purple-600">{averageConsumption.toFixed(1)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-yellow-600 text-lg">⏳</span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Pending Bills</p>
-                <p className="text-xl font-bold text-yellow-600">{pendingBills}</p>
-              </div>
-            </div>
-          </div>
+
         </div>
 
         <ResponsiveFilters title="Filters & Search" className="mb-6">
@@ -403,27 +476,23 @@ const EBMeterCalculation = () => {
                       <span className="w-24 text-sm font-medium text-gray-600">Bill Number:</span>
                       <span className="text-gray-900 font-medium">{meter.billNumber}</span>
                     </div>
-                    <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Due Date:</span>
-                      <span className="text-gray-900 font-medium">{new Date(meter.dueDate).toLocaleDateString()}</span>
-                    </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Previous Reading:</span>
-                      <span className="text-gray-900 font-medium">{meter.previousReading.toLocaleString()}</span>
+                      <span className="w-24 text-sm font-medium text-gray-600">Power Factor:</span>
+                      <span className="text-gray-900 font-medium">{meter.pf}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Current Reading:</span>
-                      <span className="text-indigo-600 font-medium">{meter.currentReading.toLocaleString()}</span>
+                      <span className="w-24 text-sm font-medium text-gray-600">Start KWH:</span>
+                      <span className="text-indigo-600 font-medium">{formatKWH(meter.startKWH)}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Units Consumed:</span>
-                      <span className="text-green-600 font-bold">{meter.unitsConsumed.toLocaleString()}</span>
+                      <span className="w-24 text-sm font-medium text-gray-600">End KWH:</span>
+                      <span className="text-gray-900 font-medium">{formatKWHWithFallback(meter.endKWH)}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Rate per Unit:</span>
-                      <span className="text-gray-900 font-medium">₹{meter.ratePerUnit}</span>
+                      <span className="text-gray-600">Consumption:</span>
+                      <span className="ml-1 font-medium text-indigo-600">{formatKWH(meter.consumption)} KWH</span>
                     </div>
                   </div>
                 </div>
@@ -431,24 +500,18 @@ const EBMeterCalculation = () => {
                 {/* Calculation Details */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <h4 className="text-sm font-semibold text-gray-800 mb-3">Calculation Details</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="text-center">
-                      <div className="text-lg font-bold text-indigo-600">{meter.unitsConsumed.toLocaleString()}</div>
-                      <div className="text-xs text-gray-600">Units Consumed</div>
+                      <div className="text-lg font-bold text-indigo-600">{formatKWH(meter.startKWH)}</div>
+                      <div className="text-xs text-gray-600">Start KWH</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-gray-600">₹{meter.ratePerUnit}</div>
-                      <div className="text-xs text-gray-600">Rate per Unit</div>
+                      <div className="text-lg font-bold text-green-600">{formatKWHWithFallback(meter.endKWH)}</div>
+                      <div className="text-xs text-gray-600">End KWH</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-purple-600">₹{meter.totalAmount.toLocaleString()}</div>
-                      <div className="text-xs text-gray-600">Total Amount</div>
-                    </div>
-                    <div className="text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(meter.paymentStatus)}`}>
-                        {meter.paymentStatus.charAt(0).toUpperCase() + meter.paymentStatus.slice(1)}
-                      </span>
-                      <div className="text-xs text-gray-600 mt-1">Payment Status</div>
+                      <div className="text-lg font-bold text-purple-600">{formatKWH(meter.consumption)}</div>
+                      <div className="text-xs text-gray-600">Consumption KWH</div>
                     </div>
                   </div>
                   
@@ -493,13 +556,10 @@ const EBMeterCalculation = () => {
                           <div className="font-medium text-blue-600">{meter.meterNumber}</div>
                           <div className="text-sm text-gray-600">{new Date(meter.readingDate).toLocaleDateString()}</div>
                           <div className="text-xs text-gray-500">
-                            {meter.unitsConsumed.toLocaleString()} units • ₹{meter.totalAmount.toLocaleString()}
+                            PF: {meter.pf} • {formatKWH(meter.startKWH)} → {formatKWHWithFallback(meter.endKWH)} • {formatKWH(meter.consumption)} KWH
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(meter.paymentStatus)}`}>
-                            {meter.paymentStatus.charAt(0).toUpperCase() + meter.paymentStatus.slice(1)}
-                          </span>
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -544,24 +604,20 @@ const EBMeterCalculation = () => {
                             <span className="ml-1 font-medium text-gray-900">{meter.billNumber}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Due Date:</span>
-                            <span className="ml-1 font-medium text-gray-900">{new Date(meter.dueDate).toLocaleDateString()}</span>
+                            <span className="text-gray-600">Power Factor:</span>
+                            <span className="ml-1 font-medium text-gray-900">{meter.pf}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Previous Reading:</span>
-                            <span className="ml-1 font-medium text-gray-900">{meter.previousReading.toLocaleString()}</span>
+                            <span className="text-gray-600">Start KWH:</span>
+                            <span className="ml-1 font-medium text-indigo-600">{formatKWH(meter.startKWH)}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Current Reading:</span>
-                            <span className="ml-1 font-medium text-indigo-600">{meter.currentReading.toLocaleString()}</span>
+                            <span className="text-gray-600">End KWH:</span>
+                            <span className="ml-1 font-medium text-gray-900">{formatKWHWithFallback(meter.endKWH)}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Units Consumed:</span>
-                            <span className="ml-1 font-medium text-green-600">{meter.unitsConsumed.toLocaleString()}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Rate per Unit:</span>
-                            <span className="ml-1 font-medium text-gray-900">₹{meter.ratePerUnit}</span>
+                            <span className="text-gray-600">Consumption:</span>
+                            <span className="ml-1 font-medium text-indigo-600">{formatKWH(meter.consumption)} KWH</span>
                           </div>
                         </div>
                         {meter.remarks && (
@@ -593,13 +649,16 @@ const EBMeterCalculation = () => {
             <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormInput
-                label="Reading Date"
+                label="Reading Date (Auto-set)"
                 name="readingDate"
                 type="date"
                 value={meterForm.readingDate}
                 onChange={handleMeterFormChange}
                 required
                 icon="calendar"
+                placeholder="Automatically set to today"
+                readOnly
+                className="bg-gray-50 cursor-not-allowed"
               />
               <FormInput
                 label="Meter Number"
@@ -617,87 +676,75 @@ const EBMeterCalculation = () => {
                 required
                 icon="file-text"
               />
-              <FormInput
-                label="Due Date"
-                name="dueDate"
-                type="date"
-                value={meterForm.dueDate}
-                onChange={handleMeterFormChange}
-                required
-                icon="calendar"
-              />
             </div>
           </div>
+
+          {/* Auto-fill Notification - Only show when auto-fill was applied */}
+          {(() => {
+            const autoFillInfo = checkAutoFillAvailability();
+            const hasAutoFilled = meterForm.endKWH > 0 && autoFillInfo.available;
+            return hasAutoFilled ? (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-green-700 text-sm">
+                    ✓ Auto-filled End KWH from next day's start reading ({autoFillInfo.nextDayKWH.toFixed(2)})
+                  </span>
+                </div>
+              </div>
+            ) : null;
+          })()}
 
           {/* Meter Readings Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Meter Readings</h3>
+            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Today's Meter Readings</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormInput
-                label="Previous Reading"
-                name="previousReading"
+                label="Power Factor (PF)"
+                name="pf"
                 type="number"
-                value={meterForm.previousReading}
+                step="0.001"
+                min="0"
+                max="1"
+                value={meterForm.pf}
                 onChange={handleMeterFormChange}
                 required
-                icon="gauge"
+                icon="zap"
               />
               <FormInput
-                label="Current Reading"
-                name="currentReading"
-                type="number"
-                value={meterForm.currentReading}
-                onChange={handleMeterFormChange}
-                required
-                icon="gauge"
-              />
-              <FormInput
-                label="Units Consumed"
-                name="unitsConsumed"
-                type="number"
-                value={meterForm.unitsConsumed}
-                readOnly
-                icon="calculator"
-              />
-              <FormInput
-                label="Rate per Unit (₹)"
-                name="ratePerUnit"
+                label="Start KWH"
+                name="startKWH"
                 type="number"
                 step="0.01"
-                value={meterForm.ratePerUnit}
+                value={meterForm.startKWH}
                 onChange={handleMeterFormChange}
                 required
-                icon="dollar-sign"
+                icon="gauge"
+              />
+              <FormInput
+                label="End KWH"
+                name="endKWH"
+                type="number"
+                step="0.01"
+                value={meterForm.endKWH}
+                onChange={handleMeterFormChange}
+                icon="gauge"
+                placeholder="Leave empty if not available"
+              />
+              <FormInput
+                label="Consumption (KWH)"
+                name="consumption"
+                type="number"
+                value={meterForm.consumption}
+                readOnly
+                icon="calculator"
               />
             </div>
           </div>
 
-          {/* Financial Information Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Financial Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormInput
-                label="Total Amount (₹)"
-                name="totalAmount"
-                type="number"
-                value={meterForm.totalAmount}
-                readOnly
-                icon="calculator"
-              />
-              <FormSelect
-                label="Payment Status"
-                name="paymentStatus"
-                value={meterForm.paymentStatus}
-                onChange={handleMeterFormChange}
-                options={[
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'paid', label: 'Paid' },
-                  { value: 'overdue', label: 'Overdue' }
-                ]}
-                icon="credit-card"
-              />
-            </div>
-          </div>
+
 
           {/* Additional Information Section */}
           <div className="space-y-4">
