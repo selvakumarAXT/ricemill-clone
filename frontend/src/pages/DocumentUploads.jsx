@@ -638,53 +638,57 @@ const DocumentUploads = () => {
             </p>
             {/* Filters moved inside table header */}
             <div className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 ">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-              <TableFilters
-                searchValue={filters.search}
-                searchPlaceholder="Search documents..."
-                onSearchChange={(e) =>
-                  handleFilterChange("search", e.target.value)
-                }
-                showSelect={false}
-              />
-            </div>
-         
-            <FormSelect
-              label="Category"
-              name="category"
-              value={filters.category}
-              onChange={(e) => handleFilterChange("category", e.target.value)}
-              options={[
-                { value: "", label: "All Categories" },
-                ...documentService.getCategoryOptions(),
-              ]}
-            />
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
-              <BranchFilter
-                value={currentBranchId || ""}
-                onChange={(value) => {
-                  console.log("Branch changed in Documents:", value);
-                }}
-              />
-            </div>
-               <FormInput
-              label="Start Date"
-              name="startDate"
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange("startDate", e.target.value)}
-            />
-            <FormInput
-              label="End Date"
-              name="endDate"
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange("endDate", e.target.value)}
-            />
-          </div>
+              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <TableFilters
+                    searchValue={filters.search}
+                    searchPlaceholder="Search documents..."
+                    onSearchChange={(e) =>
+                      handleFilterChange("search", e.target.value)
+                    }
+                    showSelect={false}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <FormSelect
+                    name="category"
+                    value={filters.category}
+                    onChange={(e) => handleFilterChange("category", e.target.value)}
+                    options={[
+                      { value: "", label: "All Categories" },
+                      ...documentService.getCategoryOptions(),
+                    ]}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                  <BranchFilter
+                    value={currentBranchId || ""}
+                    onChange={(value) => {
+                      console.log("Branch changed in Documents:", value);
+                    }}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormInput
+                      name="startDate"
+                      type="date"
+                      value={filters.startDate}
+                      onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                    />
+                    <FormInput
+                      name="endDate"
+                      type="date"
+                      value={filters.endDate}
+                      onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
        
          
             </div>

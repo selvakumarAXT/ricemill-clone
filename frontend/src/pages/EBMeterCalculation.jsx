@@ -11,17 +11,22 @@ import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
 import FileUpload from '../components/common/FileUpload';
+import { meterNumberService } from '../services/meterNumberService';
 
 const EBMeterCalculation = () => {
   const [meterReadings, setMeterReadings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [meterFilter, setMeterFilter] = useState('');
+  const [meterNumberFilter, setMeterNumberFilter] = useState('');
   const [dateRange, setDateRange] = useState({
     startDate: '',
     endDate: ''
   });
+  const [meterNumbers, setMeterNumbers] = useState([]);
+  const [availableMeterNumbers, setAvailableMeterNumbers] = useState([]);
   const [showMeterModal, setShowMeterModal] = useState(false);
+  const [showMeterNumberModal, setShowMeterNumberModal] = useState(false);
   const [editingMeter, setEditingMeter] = useState(null);
   const [expandedMeter, setExpandedMeter] = useState(null);
   const { currentBranchId } = useSelector((state) => state.branch);
@@ -38,12 +43,22 @@ const EBMeterCalculation = () => {
   };
 
   const [meterForm, setMeterForm] = useState(initialMeterForm);
+  const [meterNumberForm, setMeterNumberForm] = useState({
+    meterNumber: '',
+    description: '',
+    branch_id: currentBranchId || '',
+    status: 'active'
+  });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
   useEffect(() => {
     fetchMeterData();
-  }, [currentBranchId, meterFilter, dateRange]);
+  }, [currentBranchId, meterFilter, meterNumberFilter, dateRange]);
+
+  useEffect(() => {
+    fetchMeterNumbers();
+  }, [currentBranchId]);
 
   const handleDateRangeChange = (field, value) => {
     setDateRange(prev => ({ ...prev, [field]: value }));
@@ -59,6 +74,30 @@ const EBMeterCalculation = () => {
       setError(err.message || 'Failed to fetch meter data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMeterNumbers = async () => {
+    try {
+      const response = await meterNumberService.getActiveMeterNumbers(currentBranchId);
+      if (response.success) {
+        setAvailableMeterNumbers(response.data);
+        // Also set meterNumbers for the filter dropdown
+        setMeterNumbers(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch meter numbers:', err);
+      // Set some default meter numbers for demo
+      setAvailableMeterNumbers([
+        { meterNumber: 'EB001', description: 'Main Building' },
+        { meterNumber: 'EB002', description: 'Production Unit' },
+        { meterNumber: 'EB003', description: 'Warehouse' }
+      ]);
+      setMeterNumbers([
+        { meterNumber: 'EB001', description: 'Main Building' },
+        { meterNumber: 'EB002', description: 'Production Unit' },
+        { meterNumber: 'EB003', description: 'Warehouse' }
+      ]);
     }
   };
 
@@ -103,6 +142,49 @@ const EBMeterCalculation = () => {
     setShowMeterModal(false);
     setEditingMeter(null);
     setMeterForm(initialMeterForm);
+  };
+
+  const closeMeterNumberModal = () => {
+    setShowMeterNumberModal(false);
+    setMeterNumberForm({
+      meterNumber: '',
+      description: '',
+      branch_id: currentBranchId || '',
+      status: 'active'
+    });
+  };
+
+  const handleMeterNumberFormChange = (e) => {
+    const { name, value } = e.target;
+    setMeterNumberForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const saveMeterNumber = async () => {
+    try {
+      if (!meterNumberForm.meterNumber.trim()) {
+        alert('Please enter a meter number');
+        return;
+      }
+
+      const response = await meterNumberService.createMeterNumber(meterNumberForm);
+      if (response.success) {
+        // Refresh meter numbers list
+        await fetchMeterNumbers();
+        // Set the new meter number in the form
+        setMeterForm(prev => ({
+          ...prev,
+          meterNumber: response.data.meterNumber
+        }));
+        closeMeterNumberModal();
+        alert('Meter number created successfully!');
+      }
+    } catch (error) {
+      console.error('Error creating meter number:', error);
+      alert('Failed to create meter number: ' + (error.response?.data?.message || error.message));
+    }
   };
 
   const handleMeterFormChange = (e) => {
@@ -330,10 +412,15 @@ const EBMeterCalculation = () => {
 
   const filteredMeterReadings = meterReadings.filter(meter => {
     const q = meterFilter.toLowerCase();
-    return (
+    const meterNumberMatch = !meterNumberFilter || meter.meterNumber === meterNumberFilter;
+    const searchMatch = (
       meter.meterNumber?.toLowerCase().includes(q) ||
       meter.billNumber?.toLowerCase().includes(q)
     );
+    const dateMatch = !dateRange.startDate || new Date(meter.readingDate) >= new Date(dateRange.startDate);
+    const endDateMatch = !dateRange.endDate || new Date(meter.readingDate) <= new Date(dateRange.endDate);
+    
+    return meterNumberMatch && searchMatch && dateMatch && endDateMatch;
   });
 
   if (loading) return <LoadingSpinner fullPage />;
@@ -431,9 +518,9 @@ const EBMeterCalculation = () => {
             <h3 className="text-lg font-semibold text-gray-800">Meter Readings</h3>
             <p className="text-sm text-gray-600 mt-1">Total: {filteredMeterReadings.length} records</p>
             {/* Filters moved inside table header */}
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
+            <div className="mt-4">
+              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
+                <div className="flex-1 min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                   <TableFilters
                     searchValue={meterFilter}
@@ -442,7 +529,21 @@ const EBMeterCalculation = () => {
                     showSelect={false}
                   />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Meter Number</label>
+                  <FormSelect
+                    value={meterNumberFilter}
+                    onChange={(e) => setMeterNumberFilter(e.target.value)}
+                    options={[
+                      { value: '', label: 'All Meters' },
+                      ...meterNumbers.map(meter => ({
+                        value: meter.meterNumber,
+                        label: `${meter.meterNumber} - ${meter.description}`
+                      }))
+                    ]}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
                   <BranchFilter
                     value={currentBranchId || ''}
@@ -451,8 +552,8 @@ const EBMeterCalculation = () => {
                     }}
                   />
                 </div>
-                <div>
-                  <label className="block text-gray-700 mb-2">Date Range</label>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
                   <DateRangeFilter
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
@@ -688,14 +789,37 @@ const EBMeterCalculation = () => {
                 readOnly
                 className="bg-gray-50 cursor-not-allowed"
               />
-              <FormInput
-                label="Meter Number"
-                name="meterNumber"
-                value={meterForm.meterNumber}
-                onChange={handleMeterFormChange}
-                required
-                icon="hash"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Meter Number <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <FormSelect
+                    name="meterNumber"
+                    value={meterForm.meterNumber}
+                    onChange={handleMeterFormChange}
+                    required
+                    options={[
+                      { value: '', label: 'Select Meter Number' },
+                      ...availableMeterNumbers.map(meter => ({
+                        value: meter.meterNumber,
+                        label: `${meter.meterNumber} - ${meter.description}`
+                      }))
+                    ]}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowMeterNumberModal(true)}
+                    className="px-3 py-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </Button>
+                </div>
+              </div>
               <FormInput
                 label="Bill Number"
                 name="billNumber"
@@ -806,6 +930,64 @@ const EBMeterCalculation = () => {
             </Button>
             <Button type="submit" variant="primary">
               {editingMeter ? 'Update Meter Reading' : 'Create Meter Reading'}
+            </Button>
+          </div>
+        </form>
+      </DialogBox>
+
+      {/* Meter Number Modal */}
+      <DialogBox
+        show={showMeterNumberModal}
+        onClose={closeMeterNumberModal}
+        title="Add New Meter Number"
+        size="lg"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); saveMeterNumber(); }} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormInput
+              label="Meter Number"
+              name="meterNumber"
+              value={meterNumberForm.meterNumber}
+              onChange={handleMeterNumberFormChange}
+              required
+              icon="hash"
+              placeholder="e.g., EB001"
+            />
+            <FormInput
+              label="Description"
+              name="description"
+              value={meterNumberForm.description}
+              onChange={handleMeterNumberFormChange}
+              icon="info"
+              placeholder="e.g., Main Building"
+            />
+            <FormSelect
+              label="Status"
+              name="status"
+              value={meterNumberForm.status}
+              onChange={handleMeterNumberFormChange}
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+                { value: 'maintenance', label: 'Under Maintenance' }
+              ]}
+            />
+            <FormInput
+              label="Installation Date"
+              name="installationDate"
+              type="date"
+              value={meterNumberForm.installationDate || new Date().toISOString().split('T')[0]}
+              onChange={handleMeterNumberFormChange}
+              icon="calendar"
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+            <Button type="button" onClick={closeMeterNumberModal} variant="secondary">
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary">
+              Create Meter Number
             </Button>
           </div>
         </form>

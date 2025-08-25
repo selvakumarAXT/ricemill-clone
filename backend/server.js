@@ -70,6 +70,7 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/financial-transactions', require('./routes/financialTransactions'));
 app.use('/api/vendors', require('./routes/vendors'));
+app.use('/api/meter-numbers', require('./routes/meterNumbers'));
 
 // Upload routes
 console.log('🔧 Registering upload routes at /api/uploads');

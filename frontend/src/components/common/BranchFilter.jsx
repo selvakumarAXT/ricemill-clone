@@ -11,7 +11,7 @@ const BranchFilter = ({
   placeholder = 'All Branches',
   className = '',
   showLabel = true,
-  label = 'Branch'
+  label = ''
 }) => {
   const { user } = useSelector((state) => state.auth);
   const { currentBranchId } = useSelector((state) => state.branch);

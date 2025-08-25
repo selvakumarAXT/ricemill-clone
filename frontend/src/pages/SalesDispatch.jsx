@@ -1572,13 +1572,13 @@ const SalesDispatch = () => {
             <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
             <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
             {/* Filters moved inside table header */}
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
+            <div className="mt-4">
+              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
+                <div className="flex-1 min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
                   <BranchFilter />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
                   <DateRangeFilter
                     startDate={dateRange.startDate}
@@ -1587,7 +1587,7 @@ const SalesDispatch = () => {
                     onEndDateChange={(date) => setDateRange(prev => ({ ...prev, endDate: date }))}
                   />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                   <input
                     type="text"

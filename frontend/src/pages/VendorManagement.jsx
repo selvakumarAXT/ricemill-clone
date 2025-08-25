@@ -434,20 +434,7 @@ const VendorManagement = () => {
                     </select>
                   </div>
                   
-                  {/* Status Filter */}
-                  <div className="min-w-[160px] flex-shrink-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white shadow-sm"
-                    >
-                      <option value="">All Status</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="suspended">Suspended</option>
-                    </select>
-                  </div>
+                 
                   
                   {/* Balance Status Filter */}
                   <div className="min-w-[200px] flex-shrink-0">
@@ -464,15 +451,7 @@ const VendorManagement = () => {
                     </select>
                   </div>
 
-                  {/* Date Range Filter */}
-                  <DateRangeFilter
-                    startDate={dateRange.startDate}
-                    endDate={dateRange.endDate}
-                    onStartDateChange={(e) => handleDateRangeChange("startDate", e.target.value)}
-                    onEndDateChange={(e) => handleDateRangeChange("endDate", e.target.value)}
-                    startDateLabel="Created From"
-                    endDateLabel="Created To"
-                  />
+                 
                 </div>
               }
               renderDetail={renderVendorDetail}
