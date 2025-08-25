@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -13,7 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import UserManagement from "./pages/UserManagement";
 import Production from "./pages/Production";
 import Inventory from "./pages/Inventory";
-import Reports from "./pages/Reports";
+
 import Settings from "./pages/Settings";
 import BranchManagement from "./pages/BranchManagement";
 import Layout from "./components/Layout/Layout";
@@ -28,7 +28,6 @@ import FinancialLedger from "./pages/FinancialLedger";
 import EBMeterCalculation from "./pages/EBMeterCalculation";
 import DocumentUploads from "./pages/DocumentUploads";
 import ByproductsSales from "./pages/ByproductsSales";
-
 
 // ✅ Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -146,8 +145,6 @@ function AppContent() {
           }
         />
 
-
-
         <Route
           path="/sales-dispatch"
           element={
@@ -253,17 +250,6 @@ function AppContent() {
             <ProtectedRoute>
               <LayoutWrapper>
                 <Inventory />
-              </LayoutWrapper>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
-              <LayoutWrapper>
-                <Reports />
               </LayoutWrapper>
             </ProtectedRoute>
           }

@@ -80,6 +80,12 @@ const createRiceDeposit = async (req, res) => {
     }
     
     const newRiceDeposit = new RiceDeposit(riceDepositData);
+    
+    // Calculate bill amount if rate is provided
+    if (req.body.billRate && req.body.billRate > 0) {
+      newRiceDeposit.calculateBillAmount(req.body.billRate);
+    }
+    
     const savedRiceDeposit = await newRiceDeposit.save();
     
     const populatedRiceDeposit = await RiceDeposit.findById(savedRiceDeposit._id)
@@ -184,7 +190,7 @@ const deleteRiceDeposit = async (req, res) => {
 const getRiceDepositStats = async (req, res) => {
   try {
     const { branch_id, isSuperAdmin } = req.user;
-    const { branch_id: queryBranchId } = req.query;
+    const { branch_id: queryBranchId, startDate, endDate } = req.query;
     
     // Build match query
     let matchQuery = {};
@@ -195,6 +201,14 @@ const getRiceDepositStats = async (req, res) => {
       }
     } else {
       matchQuery.branch_id = new mongoose.Types.ObjectId(branch_id);
+    }
+    
+    // Add date range filter if provided
+    if (startDate && endDate) {
+      matchQuery.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
     }
     
     const stats = await RiceDeposit.aggregate([
@@ -209,12 +223,26 @@ const getRiceDepositStats = async (req, res) => {
           totalRiceDeposit: { $sum: '$totalRiceDeposit' },
           totalGunnyBags: { $sum: '$gunnyBags' },
           totalGunnyWeight: { $sum: '$gunnyWeight' },
-          count: { $sum: 1 }
+          count: { $sum: 1 },
+          // Rice output calculation stats
+          totalRiceOutputBags: { $sum: '$riceOutputCalculation.totalRiceBags' },
+          totalRiceOutputWeight: { $sum: '$riceOutputCalculation.totalRiceWeight' },
+          totalBillAmount: { $sum: '$riceOutputCalculation.billAmount' },
+          totalBillRate: { $sum: '$riceOutputCalculation.billRate' },
+          depositsWithRate: {
+            $sum: {
+              $cond: [
+                { $gt: ['$riceOutputCalculation.billRate', 0] },
+                1,
+                0
+              ]
+            }
+          }
         }
       }
     ]);
     
-    res.json(stats[0] || {
+    const result = stats[0] || {
       totalONB: 0,
       totalSS: 0,
       totalRiceBags: 0,
@@ -222,10 +250,90 @@ const getRiceDepositStats = async (req, res) => {
       totalRiceDeposit: 0,
       totalGunnyBags: 0,
       totalGunnyWeight: 0,
-      count: 0
-    });
+      count: 0,
+      totalRiceOutputBags: 0,
+      totalRiceOutputWeight: 0,
+      totalBillAmount: 0,
+      totalBillRate: 0,
+      depositsWithRate: 0
+    };
+    
+    // Calculate average bill rate
+    result.averageBillRate = result.depositsWithRate > 0 ? result.totalBillRate / result.depositsWithRate : 0;
+    
+    res.json(result);
   } catch (error) {
     console.error('Error fetching rice deposit stats:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Calculate bill amount for rice deposit
+const calculateBillAmount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { billRate } = req.body;
+    const { branch_id, isSuperAdmin } = req.user;
+    
+    if (!billRate || billRate <= 0) {
+      return res.status(400).json({ message: 'Valid bill rate is required' });
+    }
+    
+    // Build query - handle superadmin case
+    let query = { _id: id };
+    
+    if (!isSuperAdmin) {
+      // Regular users can only update from their assigned branch
+      query.branch_id = branch_id;
+    }
+    
+    const riceDeposit = await RiceDeposit.findOne(query);
+    
+    if (!riceDeposit) {
+      return res.status(404).json({ message: 'Rice deposit record not found' });
+    }
+    
+    // Calculate bill amount
+    const billAmount = riceDeposit.calculateBillAmount(billRate);
+    await riceDeposit.save();
+    
+    const populatedRiceDeposit = await RiceDeposit.findById(riceDeposit._id)
+      .populate('createdBy', 'name email')
+      .populate('branch_id', 'name')
+      .populate('paddyReference', 'issueMemo lorryNumber paddyFrom paddyVariety gunny');
+    
+    res.json({
+      message: 'Bill amount calculated successfully',
+      riceDeposit: populatedRiceDeposit,
+      billAmount: billAmount
+    });
+  } catch (error) {
+    console.error('Error calculating bill amount:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get total bill amount for all rice deposits
+const getTotalBillAmount = async (req, res) => {
+  try {
+    const { branch_id, isSuperAdmin } = req.user;
+    const { branch_id: queryBranchId, startDate, endDate } = req.query;
+    
+    let branchId = null;
+    
+    if (isSuperAdmin) {
+      if (queryBranchId && queryBranchId !== 'all') {
+        branchId = queryBranchId;
+      }
+    } else {
+      branchId = branch_id;
+    }
+    
+    const result = await RiceDeposit.getTotalBillAmount(branchId, startDate, endDate);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error getting total bill amount:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -236,5 +344,7 @@ module.exports = {
   createRiceDeposit,
   updateRiceDeposit,
   deleteRiceDeposit,
-  getRiceDepositStats
+  getRiceDepositStats,
+  calculateBillAmount,
+  getTotalBillAmount
 }; 

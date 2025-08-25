@@ -53,9 +53,29 @@ const riceDepositService = {
   },
 
   // Get rice deposit statistics
-  getRiceDepositStats: async () => {
+  getRiceDepositStats: async (params = {}) => {
     try {
-      const response = await createAxiosInstance().get('/rice-deposits/stats');
+      const response = await createAxiosInstance().get('/rice-deposits/stats', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Calculate bill amount for rice deposit
+  calculateBillAmount: async (id, billRate) => {
+    try {
+      const response = await createAxiosInstance().post(`/rice-deposits/${id}/calculate-bill`, { billRate });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get total bill amount for all rice deposits
+  getTotalBillAmount: async (params = {}) => {
+    try {
+      const response = await createAxiosInstance().get('/rice-deposits/total-bill', { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

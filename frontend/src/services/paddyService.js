@@ -100,6 +100,8 @@ export const createPaddy = async (paddyData, files = []) => {
             console.log(`Adding field: ${fieldName} = ${fieldValue}`);
             formData.append(fieldName, fieldValue);
           });
+        } else if (key === 'distribution') {
+          // Reverted: do not send distribution fields
         } else {
           console.log(`Adding field: ${key} = ${paddyData[key]}`);
           formData.append(key, paddyData[key]);
@@ -148,6 +150,8 @@ export const updatePaddy = async (id, paddyData, files = []) => {
           Object.keys(paddyData[key]).forEach(nestedKey => {
             formData.append(`${key}[${nestedKey}]`, paddyData[key][nestedKey]);
           });
+        } else if (key === 'distribution') {
+          // Reverted: do not send distribution fields
         } else {
           formData.append(key, paddyData[key]);
         }

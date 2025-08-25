@@ -54,6 +54,14 @@ const riceDepositSchema = new mongoose.Schema({
     default: 0, 
     min: 0 
   },
+  // Rice output calculation fields
+  riceOutputCalculation: {
+    totalRiceBags: { type: Number, default: 0, min: 0 }, // Total rice bags (riceBag + riceBagFrk)
+    totalRiceWeight: { type: Number, default: 0, min: 0 }, // Total rice weight (depositWeight + depositWeightFrk)
+    billAmount: { type: Number, default: 0, min: 0 }, // Calculated bill amount based on rice output
+    billRate: { type: Number, default: 0, min: 0 }, // Rate per kg for bill calculation
+    calculationDate: { type: Date, default: Date.now }
+  },
   moisture: { 
     type: Number, 
     default: 0, 
@@ -99,9 +107,67 @@ const riceDepositSchema = new mongoose.Schema({
 // Index for efficient querying by date and branch
 riceDepositSchema.index({ date: 1, branch_id: 1 });
 
+// Method to calculate bill amount based on rice output
+riceDepositSchema.methods.calculateBillAmount = function(ratePerKg = 0) {
+  const totalRiceWeight = (this.depositWeight || 0) + (this.depositWeightFrk || 0);
+  const billAmount = totalRiceWeight * ratePerKg;
+  
+  this.riceOutputCalculation = {
+    ...this.riceOutputCalculation,
+    totalRiceBags: (this.riceBag || 0) + (this.riceBagFrk || 0),
+    totalRiceWeight: totalRiceWeight,
+    billAmount: billAmount,
+    billRate: ratePerKg,
+    calculationDate: new Date()
+  };
+  
+  return billAmount;
+};
+
+// Static method to get total bill amount for all rice deposits
+riceDepositSchema.statics.getTotalBillAmount = async function(branchId = null, startDate = null, endDate = null) {
+  const query = {};
+  
+  if (branchId) {
+    query.branch_id = branchId;
+  }
+  
+  if (startDate && endDate) {
+    query.date = {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate)
+    };
+  }
+  
+  const riceDeposits = await this.find(query);
+  
+  const totalBillAmount = riceDeposits.reduce((total, deposit) => {
+    return total + (deposit.riceOutputCalculation?.billAmount || 0);
+  }, 0);
+  
+  const totalRiceWeight = riceDeposits.reduce((total, deposit) => {
+    return total + (deposit.riceOutputCalculation?.totalRiceWeight || 0);
+  }, 0);
+  
+  return {
+    totalBillAmount,
+    totalRiceWeight,
+    totalDeposits: riceDeposits.length
+  };
+};
+
 // Custom validation to check gunny count against paddy reference with downgrade logic
 riceDepositSchema.pre('save', async function(next) {
   this.updatedAt = Date.now();
+  
+  // Calculate rice output totals and bill amount
+  this.riceOutputCalculation = {
+    totalRiceBags: (this.riceBag || 0) + (this.riceBagFrk || 0),
+    totalRiceWeight: (this.depositWeight || 0) + (this.depositWeightFrk || 0),
+    billAmount: 0, // Will be calculated based on business logic
+    billRate: this.riceOutputCalculation?.billRate || 0,
+    calculationDate: new Date()
+  };
   
   // Only validate if this is a new document or gunny values have changed
   if (this.isNew || this.isModified('gunnyUsedFromPaddy') || this.isModified('gunny.onb') || this.isModified('gunny.ss') || this.isModified('gunny.swp')) {

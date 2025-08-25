@@ -201,7 +201,7 @@ export const documentService = {
     { value: 'sales', label: 'Sales & Dispatch' },
     { value: 'vendor', label: 'Vendor Management' },
     { value: 'eb_meter', label: 'EB Meter Calculation' },
-    { value: 'reports', label: 'Reports' },
+
     { value: 'users', label: 'User Management' },
     { value: 'branches', label: 'Branch Management' },
     { value: 'general', label: 'General' }

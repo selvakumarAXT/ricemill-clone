@@ -412,6 +412,7 @@ const updatePaddy = asyncHandler(async (req, res) => {
   
   // Convert string values to numbers where appropriate
   if (updateData.gunny.nb) updateData.gunny.nb = parseInt(updateData.gunny.nb) || 0;
+  // Remove distribution handling (reverted)
   if (updateData.gunny.onb) updateData.gunny.onb = parseInt(updateData.gunny.onb) || 0;
   if (updateData.gunny.ss) updateData.gunny.ss = parseInt(updateData.gunny.ss) || 0;
   if (updateData.gunny.swp) updateData.gunny.swp = parseInt(updateData.gunny.swp) || 0;
@@ -625,6 +626,11 @@ const removeInventoryFromPaddy = async (paddy) => {
       });
       
       if (riceInventory) {
+        // Ensure required fields for updated schema exist
+        if (!riceInventory.category) riceInventory.category = 'rice';
+        if (!riceInventory.unit) riceInventory.unit = 'kg';
+        if (!riceInventory.riceVariety) riceInventory.riceVariety = paddy.paddyVariety || 'Unknown';
+        if (!riceInventory.quality) riceInventory.quality = 'Standard';
         riceInventory.quantity = Math.max(0, riceInventory.quantity - riceWeight);
         await riceInventory.save();
         console.log(`Removed ${riceWeight}kg from rice inventory: ${riceName}`);
@@ -649,6 +655,10 @@ const removeInventoryFromPaddy = async (paddy) => {
         });
         
         if (gunnyInventory) {
+          // Ensure required fields for updated schema exist
+          if (!gunnyInventory.category) gunnyInventory.category = 'gunny';
+          if (!gunnyInventory.unit) gunnyInventory.unit = 'bags';
+          if (!gunnyInventory.gunnyType) gunnyInventory.gunnyType = gunnyType.key.toUpperCase();
           gunnyInventory.quantity = Math.max(0, gunnyInventory.quantity - quantity);
           await gunnyInventory.save();
           console.log(`Removed ${quantity} bags from gunny inventory: ${gunnyType.name}`);
@@ -684,6 +694,11 @@ const updateInventoryFromPaddy = async (oldPaddy, newPaddy, updateData) => {
       });
       
       if (riceInventory) {
+        // Ensure required fields exist for updated schema
+        if (!riceInventory.category) riceInventory.category = 'rice';
+        if (!riceInventory.unit) riceInventory.unit = 'kg';
+        if (!riceInventory.riceVariety) riceInventory.riceVariety = updateData.paddyVariety || oldPaddy.paddyVariety || 'Unknown';
+        if (!riceInventory.quality) riceInventory.quality = 'Standard';
         riceInventory.quantity += riceWeightDiff;
         riceInventory.updated_by = createdBy;
         await riceInventory.save();
@@ -711,6 +726,10 @@ const updateInventoryFromPaddy = async (oldPaddy, newPaddy, updateData) => {
         });
         
         if (gunnyInventory) {
+          // Ensure required fields exist for updated schema
+          if (!gunnyInventory.category) gunnyInventory.category = 'gunny';
+          if (!gunnyInventory.unit) gunnyInventory.unit = 'bags';
+          if (!gunnyInventory.gunnyType) gunnyInventory.gunnyType = gunnyType.key.toUpperCase();
           gunnyInventory.quantity += quantityDiff;
           gunnyInventory.updated_by = createdBy;
           await gunnyInventory.save();
@@ -741,6 +760,10 @@ const createInventoryFromPaddy = async (paddy, paddyData) => {
     // Create rice inventory entry
     const riceName = `${paddyVariety} Variety Rice`;
     const riceDescription = `Rice produced from ${paddyVariety} variety paddy. Source: ${paddyData.paddyFrom}, Memo: ${paddyData.issueMemo}`;
+    const riceCategory = 'rice';
+    const riceUnit = 'kg';
+    const riceVariety = paddyVariety;
+    const riceQuality = 'Standard';
     
     // Check if rice inventory already exists for this variety
     let riceInventory = await Inventory.findOne({
@@ -755,9 +778,13 @@ const createInventoryFromPaddy = async (paddy, paddyData) => {
       await riceInventory.save();
       console.log(`Updated rice inventory: ${riceName} - Added ${riceWeight}kg`);
     } else {
-      // Create new rice inventory
+      // Create new rice inventory with required fields per schema
       riceInventory = await Inventory.create({
         name: riceName,
+        category: riceCategory,
+        unit: riceUnit,
+        riceVariety,
+        quality: riceQuality,
         quantity: riceWeight,
         description: riceDescription,
         branch_id: branch_id,
@@ -768,10 +795,10 @@ const createInventoryFromPaddy = async (paddy, paddyData) => {
     
     // Create gunny bags inventory entries
     const gunnyTypes = [
-      { key: 'nb', name: 'New Bags (NB)', quantity: gunny.nb || 0 },
-      { key: 'onb', name: 'Old New Bags (ONB)', quantity: gunny.onb || 0 },
-      { key: 'ss', name: 'Second Sale (SS)', quantity: gunny.ss || 0 },
-      { key: 'swp', name: 'Second Sale with Price (SWP)', quantity: gunny.swp || 0 }
+      { key: 'nb', name: 'New Bags (NB)', gunnyType: 'NB', quantity: gunny.nb || 0 },
+      { key: 'onb', name: 'Old New Bags (ONB)', gunnyType: 'ONB', quantity: gunny.onb || 0 },
+      { key: 'ss', name: 'Second Sale (SS)', gunnyType: 'SS', quantity: gunny.ss || 0 },
+      { key: 'swp', name: 'Second Sale with Price (SWP)', gunnyType: 'SWP', quantity: gunny.swp || 0 }
     ];
     
     for (const gunnyType of gunnyTypes) {
@@ -791,9 +818,12 @@ const createInventoryFromPaddy = async (paddy, paddyData) => {
           await gunnyInventory.save();
           console.log(`Updated gunny inventory: ${gunnyType.name} - Added ${gunnyType.quantity} bags`);
         } else {
-          // Create new gunny inventory
+          // Create new gunny inventory with required fields per schema
           gunnyInventory = await Inventory.create({
             name: gunnyType.name,
+            category: 'gunny',
+            unit: 'bags',
+            gunnyType: gunnyType.gunnyType,
             quantity: gunnyType.quantity,
             description: gunnyDescription,
             branch_id: branch_id,
