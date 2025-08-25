@@ -672,8 +672,7 @@ const DocumentUploads = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-                  <div className="grid grid-cols-2 gap-2">
+                   <div className="grid grid-cols-2 gap-2">
                     <FormInput
                       name="startDate"
                       type="date"

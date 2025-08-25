@@ -553,8 +553,7 @@ const EBMeterCalculation = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-                  <DateRangeFilter
+                   <DateRangeFilter
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
                     onStartDateChange={(e) => handleDateRangeChange("startDate", e.target.value)}
