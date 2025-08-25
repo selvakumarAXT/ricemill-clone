@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import TableFilters from '../components/common/TableFilters';
 import BranchFilter from '../components/common/BranchFilter';
+import DateRangeFilter from '../components/common/DateRangeFilter';
 import TableList from '../components/common/TableList';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import ResponsiveFilters from '../components/common/ResponsiveFilters';
+
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
@@ -16,6 +17,10 @@ const EBMeterCalculation = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [meterFilter, setMeterFilter] = useState('');
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
   const [showMeterModal, setShowMeterModal] = useState(false);
   const [editingMeter, setEditingMeter] = useState(null);
   const [expandedMeter, setExpandedMeter] = useState(null);
@@ -38,7 +43,11 @@ const EBMeterCalculation = () => {
 
   useEffect(() => {
     fetchMeterData();
-  }, [currentBranchId]);
+  }, [currentBranchId, meterFilter, dateRange]);
+
+  const handleDateRangeChange = (field, value) => {
+    setDateRange(prev => ({ ...prev, [field]: value }));
+  };
 
   const fetchMeterData = async () => {
     setLoading(true);
@@ -416,26 +425,45 @@ const EBMeterCalculation = () => {
 
         </div>
 
-        <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <TableFilters
-            searchValue={meterFilter}
-            searchPlaceholder="Search by meter number, bill number..."
-            onSearchChange={(e) => setMeterFilter(e.target.value)}
-            showSelect={false}
-          />
-          <BranchFilter
-            value={currentBranchId || ''}
-            onChange={(value) => {
-              console.log('Branch changed in EB Meter:', value);
-            }}
-          />
-        </ResponsiveFilters>
-
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
             <h3 className="text-lg font-semibold text-gray-800">Meter Readings</h3>
             <p className="text-sm text-gray-600 mt-1">Total: {filteredMeterReadings.length} records</p>
+            {/* Filters moved inside table header */}
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <TableFilters
+                    searchValue={meterFilter}
+                    searchPlaceholder="Search by meter number, bill number..."
+                    onSearchChange={(e) => setMeterFilter(e.target.value)}
+                    showSelect={false}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                  <BranchFilter
+                    value={currentBranchId || ''}
+                    onChange={(value) => {
+                      console.log('Branch changed in EB Meter:', value);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2">Date Range</label>
+                  <DateRangeFilter
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
+                    onStartDateChange={(e) => handleDateRangeChange("startDate", e.target.value)}
+                    onEndDateChange={(e) => handleDateRangeChange("endDate", e.target.value)}
+                    startDateLabel="Reading Date From"
+                    endDateLabel="Reading Date To"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           <TableList
             data={filteredMeterReadings}

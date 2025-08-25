@@ -8,7 +8,7 @@ import TableList from "../components/common/TableList";
 import GroupedTable from "../components/common/GroupedTable";
 import TableFilters from "../components/common/TableFilters";
 import BranchFilter from "../components/common/BranchFilter";
-import ResponsiveFilters from "../components/common/ResponsiveFilters";
+
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import GunnyEntryDetails from "../components/common/GunnyEntryDetails";
 import PaddyEntryDetails from "../components/common/PaddyEntryDetails";
@@ -953,52 +953,6 @@ const PaddyManagement = () => {
           </div>
         </div>
 
-        {/* Responsive Filters */}
-        <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <TableFilters
-              searchValue={paddyFilter}
-              searchPlaceholder="Search paddy records..."
-              onSearchChange={(e) => handleFilterChange(e.target.value)}
-              showSelect={false}
-            />
-            <TableFilters
-              searchValue=""
-              selectValue={paddyVarietyFilter}
-              selectOptions={PADDY_VARIETIES.map((variety) => ({
-                value: variety,
-                label: `Variety ${variety}`,
-              }))}
-              onSelectChange={(e) => handleVarietyFilterChange(e.target.value)}
-              selectPlaceholder="All Varieties"
-              showSearch={false}
-              showSelect={true}
-            />
-            <BranchFilter
-              value={currentBranchId || ""}
-              onChange={(e) => {
-                // The BranchFilter component will handle Redux updates for superadmin users
-                // This will automatically trigger a re-fetch when currentBranchId changes
-                console.log("Branch filter changed:", e.target.value);
-              }}
-            />
-          </div>
-          <div className="mt-4">
-            <DateRangeFilter
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              onStartDateChange={(e) =>
-                handleDateRangeChange("startDate", e.target.value)
-              }
-              onEndDateChange={(e) =>
-                handleDateRangeChange("endDate", e.target.value)
-              }
-              startDateLabel="Issue Date From"
-              endDateLabel="Issue Date To"
-            />
-          </div>
-        </ResponsiveFilters>
-
         {/* Desktop Table View */}
         <div className="hidden lg:block">
           <GroupedTable
@@ -1011,6 +965,48 @@ const PaddyManagement = () => {
             onPageSizeChange={handlePageSizeChange}
             onSort={handleSort}
             sortData={sortData}
+            childFilters={
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <TableFilters
+                  searchValue={paddyFilter}
+                  searchPlaceholder="Search paddy records..."
+                  onSearchChange={(e) => handleFilterChange(e.target.value)}
+                  showSelect={false}
+                />
+                <TableFilters
+                  searchValue=""
+                  selectValue={paddyVarietyFilter}
+                  selectOptions={PADDY_VARIETIES.map((variety) => ({
+                    value: variety,
+                    label: `Variety ${variety}`,
+                  }))}
+                  onSelectChange={(e) => handleVarietyFilterChange(e.target.value)}
+                  selectPlaceholder="All Varieties"
+                  showSearch={false}
+                  showSelect={true}
+                />
+                <BranchFilter
+                  value={currentBranchId || ""}
+                  onChange={(e) => {
+                    // The BranchFilter component will handle Redux updates for superadmin users
+                    // This will automatically trigger a re-fetch when currentBranchId changes
+                    console.log("Branch filter changed:", e.target.value);
+                  }}
+                />
+                <DateRangeFilter
+                  startDate={dateRange.startDate}
+                  endDate={dateRange.endDate}
+                  onStartDateChange={(e) =>
+                    handleDateRangeChange("startDate", e.target.value)
+                  }
+                  onEndDateChange={(e) =>
+                    handleDateRangeChange("endDate", e.target.value)
+                  }
+                  startDateLabel="Issue Date From"
+                  endDateLabel="Issue Date To"
+                />
+              </div>
+            }
             renderDetail={(paddy) => (
               <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

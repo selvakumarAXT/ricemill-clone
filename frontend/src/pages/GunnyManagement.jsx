@@ -7,7 +7,7 @@ import FormSelect from "../components/common/FormSelect";
 import TableList from "../components/common/TableList";
 import TableFilters from "../components/common/TableFilters";
 import BranchFilter from "../components/common/BranchFilter";
-import ResponsiveFilters from "../components/common/ResponsiveFilters";
+
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import GunnyEntryDetails from "../components/common/GunnyEntryDetails";
 import PaddyEntryDetails from "../components/common/PaddyEntryDetails";
@@ -907,51 +907,59 @@ const GunnyManagement = () => {
           </div>
         )} */}
 
-        {/* Mobile Filters */}
-        <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <TableFilters
-              searchValue={gunnyFilter}
-              searchPlaceholder="Search by memo, lorry number, or source..."
-              onSearchChange={(e) => setGunnyFilter(e.target.value)}
-              showSelect={false}
-            />
-            <FormSelect
-              value={selectedSource}
-              onChange={(e) => setSelectedSource(e.target.value)}
-              options={[
-                { value: "all", label: "All Sources" },
-                { value: "paddy", label: "Paddy Management" },
-                { value: "rice", label: "Rice Management" },
-                { value: "gunny", label: "Gunny Management" }
-              ]}
-              className="w-full sm:w-auto"
-            />
-            <BranchFilter
-              value={currentBranchId || ''}
-              onChange={(value) => {
-                console.log('Branch changed in Gunny Management:', value);
-                // The data will be refetched automatically by the useEffect
-              }}
-            />
-          </div>
-          <div className="mt-4">
-            <DateRangeFilter
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-              onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-              startDateLabel="Issue Date From"
-              endDateLabel="Issue Date To"
-            />
-          </div>
-        </ResponsiveFilters>
-
         {/* Desktop Table View - Comprehensive Gunny Data */}
         <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
             <h3 className="text-lg font-semibold text-gray-800">Comprehensive Gunny Records (All Sources)</h3>
             <p className="text-sm text-gray-600 mt-1">Total: {getAllRecords().length} records</p>
+            {/* Filters moved inside table header */}
+            <div className="mt-4">
+              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <TableFilters
+                    searchValue={gunnyFilter}
+                    searchPlaceholder="Search by memo, lorry number, or source..."
+                    onSearchChange={(e) => setGunnyFilter(e.target.value)}
+                    showSelect={false}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                  <select
+                    value={selectedSource}
+                    onChange={(e) => setSelectedSource(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white shadow-sm"
+                  >
+                    <option value="all">All Sources</option>
+                    <option value="paddy">Paddy Management</option>
+                    <option value="rice">Rice Management</option>
+                    <option value="gunny">Gunny Management</option>
+                  </select>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                  <BranchFilter
+                    value={currentBranchId || ''}
+                    onChange={(value) => {
+                      console.log('Branch changed in Gunny Management:', value);
+                      // The data will be refetched automatically by the useEffect
+                    }}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                  <DateRangeFilter
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
+                    onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                    onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                    startDateLabel="Issue Date From"
+                    endDateLabel="Issue Date To"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           {aggregatedLoading ? (
             <div className="flex items-center justify-center py-12">

@@ -4,7 +4,7 @@ import inventoryService from "../services/inventoryService";
 import TableList from "../components/common/TableList";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import ResponsiveFilters from "../components/common/ResponsiveFilters";
+
 import DialogBox from "../components/common/DialogBox";
 import FormInput from "../components/common/FormInput";
 import FormSelect from "../components/common/FormSelect";
@@ -394,34 +394,6 @@ const Inventory = () => {
           <InventoryDashboard inventoryData={inventory} loading={loading} />
         </div>
 
-        <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search inventory items..."
-                value={inventoryFilter}
-                onChange={(e) => setInventoryFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <DateRangeFilter
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              onStartDateChange={(e) =>
-                setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-              }
-              onEndDateChange={(e) =>
-                setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-              }
-              startDateLabel="Created Date From"
-              endDateLabel="Created Date To"
-            />
-          </div>
-        </ResponsiveFilters>
-
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
@@ -431,6 +403,34 @@ const Inventory = () => {
             <p className="text-sm text-gray-600 mt-1">
               Total: {filteredInventory.length} records
             </p>
+            {/* Filters moved inside table header */}
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search inventory items..."
+                    value={inventoryFilter}
+                    onChange={(e) => setInventoryFilter(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <DateRangeFilter
+                  startDate={dateRange.startDate}
+                  endDate={dateRange.endDate}
+                  onStartDateChange={(e) =>
+                    setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                  }
+                  onEndDateChange={(e) =>
+                    setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                  }
+                  startDateLabel="Created Date From"
+                  endDateLabel="Created Date To"
+                />
+              </div>
+            </div>
           </div>
           <TableList
             data={filteredInventory}

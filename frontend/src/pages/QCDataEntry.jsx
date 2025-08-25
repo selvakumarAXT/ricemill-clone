@@ -5,7 +5,7 @@ import BranchFilter from '../components/common/BranchFilter';
 import TableList from '../components/common/TableList';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import ResponsiveFilters from '../components/common/ResponsiveFilters';
+
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
@@ -425,21 +425,6 @@ const QCDataEntry = () => {
             </div>
           )}
 
-          <ResponsiveFilters title="Filters & Search" className="mb-6">
-            <TableFilters
-              searchValue={qcFilter}
-              searchPlaceholder="Search by batch number, variety, grade..."
-              onSearchChange={(e) => setQcFilter(e.target.value)}
-              showSelect={false}
-            />
-            <BranchFilter
-              value={currentBranchId || ''}
-              onChange={(value) => {
-                console.log('Branch changed in QC:', value);
-              }}
-            />
-          </ResponsiveFilters>
-
           {/* Desktop Table View */}
           {!currentBranchId ? (
             <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
@@ -460,6 +445,23 @@ const QCDataEntry = () => {
               <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
                 <h3 className="text-lg font-semibold text-gray-800">QC Records</h3>
                 <p className="text-sm text-gray-600 mt-1">Total: {filteredQcRecords.length} records</p>
+                {/* Filters moved inside table header */}
+                <div className="mt-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <TableFilters
+                      searchValue={qcFilter}
+                      searchPlaceholder="Search by batch number, variety, grade..."
+                      onSearchChange={(e) => setQcFilter(e.target.value)}
+                      showSelect={false}
+                    />
+                    <BranchFilter
+                      value={currentBranchId || ''}
+                      onChange={(value) => {
+                        console.log('Branch changed in QC:', value);
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
               <TableList
                 data={filteredQcRecords}

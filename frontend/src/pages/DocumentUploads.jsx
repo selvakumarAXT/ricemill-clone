@@ -5,7 +5,7 @@ import BranchFilter from "../components/common/BranchFilter";
 import TableList from "../components/common/TableList";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import ResponsiveFilters from "../components/common/ResponsiveFilters";
+
 import FormInput from "../components/common/FormInput";
 import FormSelect from "../components/common/FormSelect";
 import DialogBox from "../components/common/DialogBox";
@@ -488,7 +488,7 @@ const DocumentUploads = () => {
                 >
                   <div className="text-center">
                     <div className="text-lg mb-1">
-                      {module.value === "production" && "🏭"}
+  
                       {module.value === "paddy" && "🌾"}
                       {module.value === "rice" && "🍚"}
                       {module.value === "gunny" && "🛍️"}
@@ -590,7 +590,7 @@ const DocumentUploads = () => {
                     className="text-center p-3 bg-gray-50 rounded-lg"
                   >
                     <div className="text-lg mb-1">
-                      {moduleStat._id === "production" && "🏭"}
+  
                       {moduleStat._id === "paddy" && "🌾"}
                       {moduleStat._id === "rice" && "🍚"}
                       {moduleStat._id === "gunny" && "🛍️"}
@@ -620,74 +620,6 @@ const DocumentUploads = () => {
             </div>
           )}
 
-        {/* Filters */}
-        <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <TableFilters
-              searchValue={filters.search}
-              searchPlaceholder="Search documents..."
-              onSearchChange={(e) =>
-                handleFilterChange("search", e.target.value)
-              }
-              showSelect={false}
-            />
-            {viewMode === "all" && (
-              <FormSelect
-                label="Module"
-                name="module"
-                value={filters.module}
-                onChange={(e) => handleFilterChange("module", e.target.value)}
-                options={[
-                  { value: "", label: "All Modules" },
-                  ...documentService.getModuleOptions(),
-                ]}
-              />
-            )}
-            <FormSelect
-              label="Category"
-              name="category"
-              value={filters.category}
-              onChange={(e) => handleFilterChange("category", e.target.value)}
-              options={[
-                { value: "", label: "All Categories" },
-                ...documentService.getCategoryOptions(),
-              ]}
-            />
-            <FormSelect
-              label="Status"
-              name="status"
-              value={filters.status}
-              onChange={(e) => handleFilterChange("status", e.target.value)}
-              options={[
-                { value: "", label: "All Status" },
-                ...documentService.getStatusOptions(),
-              ]}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <FormInput
-              label="Start Date"
-              name="startDate"
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange("startDate", e.target.value)}
-            />
-            <FormInput
-              label="End Date"
-              name="endDate"
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange("endDate", e.target.value)}
-            />
-          </div>
-          <BranchFilter
-            value={currentBranchId || ""}
-            onChange={(value) => {
-              console.log("Branch changed in Documents:", value);
-            }}
-          />
-        </ResponsiveFilters>
-
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
@@ -704,6 +636,58 @@ const DocumentUploads = () => {
               Total: {pagination.total} records • Page {pagination.page} of{" "}
               {pagination.totalPages}
             </p>
+            {/* Filters moved inside table header */}
+            <div className="mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 ">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+              <TableFilters
+                searchValue={filters.search}
+                searchPlaceholder="Search documents..."
+                onSearchChange={(e) =>
+                  handleFilterChange("search", e.target.value)
+                }
+                showSelect={false}
+              />
+            </div>
+         
+            <FormSelect
+              label="Category"
+              name="category"
+              value={filters.category}
+              onChange={(e) => handleFilterChange("category", e.target.value)}
+              options={[
+                { value: "", label: "All Categories" },
+                ...documentService.getCategoryOptions(),
+              ]}
+            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+              <BranchFilter
+                value={currentBranchId || ""}
+                onChange={(value) => {
+                  console.log("Branch changed in Documents:", value);
+                }}
+              />
+            </div>
+               <FormInput
+              label="Start Date"
+              name="startDate"
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange("startDate", e.target.value)}
+            />
+            <FormInput
+              label="End Date"
+              name="endDate"
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange("endDate", e.target.value)}
+            />
+          </div>
+       
+         
+            </div>
           </div>
           <TableList
             data={documents}

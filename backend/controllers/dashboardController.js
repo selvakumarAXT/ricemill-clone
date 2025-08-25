@@ -1,9 +1,9 @@
 const asyncHandler = require('express-async-handler');
 const Paddy = require('../models/Paddy');
-const Production = require('../models/Production');
+
 const Gunny = require('../models/Gunny');
 const Inventory = require('../models/Inventory');
-const RiceDeposit = require('../models/RiceDeposit');
+const { RiceDeposit } = require('../models/RiceDeposit');
 const Branch = require('../models/Branch');
 const User = require('../models/User');
 const SalesInvoice = require('../models/SalesInvoice');
@@ -336,7 +336,7 @@ const getOverviewData = async (params = {}, branch_id = null) => {
   
   const [
     paddyStats,
-    productionStats,
+    riceStats,
     gunnyStats,
     inventoryStats,
     totalBranches,
@@ -357,18 +357,20 @@ const getOverviewData = async (params = {}, branch_id = null) => {
       },
       { $group: { _id: null, totalWeight: { $sum: '$paddy.weight' }, totalBags: { $sum: '$paddy.bags' } } }
     ]),
-    Production.aggregate([
+    
+    RiceDeposit.aggregate([
       { 
         $match: (() => {
           const matchObj = { ...branchFilter };
           if (startDateObj && endDateObj) {
-            matchObj.productionDate = { $gte: startDateObj, $lte: endDateObj };
+            matchObj.createdAt = { $gte: startDateObj, $lte: endDateObj };
           }
           return matchObj;
         })()
       },
-      { $group: { _id: null, totalQuantity: { $sum: '$quantity' }, totalItems: { $sum: 1 } } }
+      { $group: { _id: null, totalQuantity: { $sum: '$riceWeight' }, totalItems: { $sum: 1 } } }
     ]),
+
     Gunny.aggregate([
       { 
         $match: (() => {
@@ -478,7 +480,7 @@ const getOverviewData = async (params = {}, branch_id = null) => {
   ]);
 
   const totalPaddy = paddyStats[0]?.totalWeight || 0;
-  const totalRice = productionStats[0]?.totalQuantity || 0;
+  const totalRice = riceStats[0]?.totalQuantity || 0;
   const totalGunny = gunnyStats[0]?.totalBags || 0;
   const totalInventory = inventoryStats[0]?.totalItems || 0;
 
@@ -928,28 +930,18 @@ const getProductAnalyticsData = async (params = {}, branch_id = null) => {
   try {
     const { startDate, endDate } = params;
     
-    // Build date filter for Production
-    const productionDateFilter = {};
-    if (startDate && endDate) {
-      productionDateFilter.productionDate = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      };
-    }
-
-    // Get actual product performance data from Production and Inventory models
+    // Get product performance data from Inventory and Sales models
     const [bestSelling, leastSelling, lowStock] = await Promise.all([
-      // Best selling products (based on production quantity) - WITH DATE FILTER
-      Production.aggregate([
+      // Best selling products (based on inventory movement) - WITH DATE FILTER
+      Inventory.aggregate([
         {
           $match: {
-            ...(Object.keys(productionDateFilter).length > 0 ? productionDateFilter : {}),
             ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
           }
         },
         {
           $group: {
-            _id: '$name', // Fixed: Production model uses 'name' field
+            _id: '$name',
             totalQuantity: { $sum: '$quantity' }
           }
         },
@@ -957,17 +949,16 @@ const getProductAnalyticsData = async (params = {}, branch_id = null) => {
         { $limit: 5 }
       ]),
       
-      // Least selling products (based on production quantity) - WITH DATE FILTER
-      Production.aggregate([
+      // Least selling products (based on inventory levels) - WITH DATE FILTER
+      Inventory.aggregate([
         {
           $match: {
-            ...(Object.keys(productionDateFilter).length > 0 ? productionDateFilter : {}),
             ...(branch_id ? { branch_id: new mongoose.Types.ObjectId(branch_id) } : {})
           }
         },
         {
           $group: {
-            _id: '$name', // Fixed: Production model uses 'name' field
+            _id: '$name',
             totalQuantity: { $sum: '$quantity' }
           }
         },
@@ -1304,7 +1295,7 @@ const getGeographicalSalesData = async (params = {}, branch_id = null) => {
 const getFinancialSummaryData = async (params = {}) => {
   try {
     // Get actual financial data from various models
-    const [paddyValue, productionValue, expenses] = await Promise.all([
+    const [paddyValue, salesValue, expenses] = await Promise.all([
       // Paddy value (input cost)
       Paddy.aggregate([
         {
@@ -1315,12 +1306,12 @@ const getFinancialSummaryData = async (params = {}) => {
         }
       ]),
       
-      // Production value (output revenue)
-      Production.aggregate([
+      // Sales value (output revenue) - using SalesInvoice instead of Production
+      SalesInvoice.aggregate([
         {
           $group: {
             _id: null,
-            totalValue: { $sum: { $multiply: ['$quantity', 40] } } // Assuming ₹40 per kg
+            totalValue: { $sum: '$totalAmount' }
           }
         }
       ]),
@@ -1329,7 +1320,7 @@ const getFinancialSummaryData = async (params = {}) => {
       Promise.resolve([{ totalValue: 0 }])
     ]);
 
-    const totalRevenue = productionValue[0]?.totalValue || 0;
+    const totalRevenue = salesValue[0]?.totalValue || 0;
     const totalExpenses = paddyValue[0]?.totalValue || 0;
     const profit = totalRevenue - totalExpenses;
     const gstAmount = Math.round(totalRevenue * 0.18);
@@ -1437,7 +1428,7 @@ const getPurchaseInvoiceDueData = async (params = {}, branch_id = null) => {
 const getBranchOverviewData = async (branchId) => {
   const [
     paddyStats,
-    productionStats,
+    riceStats,
     gunnyStats,
     inventoryStats
   ] = await Promise.all([
@@ -1445,9 +1436,9 @@ const getBranchOverviewData = async (branchId) => {
       { $match: { branch_id: new mongoose.Types.ObjectId(branchId) } },
       { $group: { _id: null, totalWeight: { $sum: '$paddy.weight' }, totalBags: { $sum: '$paddy.bags' } } }
     ]),
-    Production.aggregate([
+    RiceDeposit.aggregate([
       { $match: { branch_id: new mongoose.Types.ObjectId(branchId) } },
-      { $group: { _id: null, totalQuantity: { $sum: '$quantity' }, totalItems: { $sum: 1 } } }
+      { $group: { _id: null, totalQuantity: { $sum: '$riceWeight' }, totalItems: { $sum: 1 } } }
     ]),
     Gunny.aggregate([
       { $match: { branch_id: new mongoose.Types.ObjectId(branchId) } },
@@ -1461,7 +1452,7 @@ const getBranchOverviewData = async (branchId) => {
 
   return {
     totalPaddy: paddyStats[0]?.totalWeight || 0,
-    totalRice: productionStats[0]?.totalQuantity || 0,
+    totalRice: riceStats[0]?.totalQuantity || 0,
     totalGunny: gunnyStats[0]?.totalBags || 0,
     totalInventory: inventoryStats[0]?.totalItems || 0
   };
@@ -1523,15 +1514,15 @@ const getRecentActivities = async (days = 7, branch_id = null) => {
     }
   ]);
 
-  // Get recent production entries
-  const recentProduction = await Production.aggregate([
+  // Get recent rice entries (replacing production)
+  const recentRice = await RiceDeposit.aggregate([
     { $match: matchStage },
     { $sort: { createdAt: -1 } },
     { $limit: 5 },
     {
       $project: {
-        type: { $literal: 'production' },
-        action: 'Rice production completed',
+        type: { $literal: 'rice' },
+        action: 'Rice deposit completed',
         amount: { $concat: [{ $toString: '$riceWeight' }, ' kg'] },
         time: '$createdAt',
         status: { $literal: 'completed' },
@@ -1558,7 +1549,7 @@ const getRecentActivities = async (days = 7, branch_id = null) => {
   ]);
 
   // Combine and sort all activities
-  activities.push(...recentPaddy, ...recentProduction, ...recentInventory);
+  activities.push(...recentPaddy, ...recentRice, ...recentInventory);
   activities.sort((a, b) => new Date(b.time) - new Date(a.time));
 
   // Add branch names
@@ -1599,15 +1590,7 @@ const getSystemAlerts = async () => {
     });
   }
 
-  // Check for pending production
-  const pendingProduction = await Production.countDocuments({ status: 'Pending' });
-  if (pendingProduction > 0) {
-    alerts.push({
-      type: 'info',
-      message: `${pendingProduction} production entries are pending`,
-      count: pendingProduction
-    });
-  }
+
 
   // Check for recent activities (if no recent activity, show alert)
   const oneDayAgo = new Date();
@@ -1615,7 +1598,7 @@ const getSystemAlerts = async () => {
   
   const recentActivity = await Promise.all([
     Paddy.countDocuments({ createdAt: { $gte: oneDayAgo } }),
-    Production.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+    RiceDeposit.countDocuments({ createdAt: { $gte: oneDayAgo } }),
     Inventory.countDocuments({ createdAt: { $gte: oneDayAgo } })
   ]);
   

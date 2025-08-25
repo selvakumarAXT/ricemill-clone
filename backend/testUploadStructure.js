@@ -20,7 +20,7 @@ const testUploadStructure = () => {
   // Test 2: Check module directories
   console.log('\n2. Checking module directories...');
   const expectedModules = [
-    'users', 'branches', 'production', 'inventory', 'paddy', 
+            'users', 'branches', 'inventory', 'paddy', 
     'rice', 'gunny', 'batches', 'reports', 'documents', 
     'images', 'sales', 'financial', 'qc', 'vendor'
   ];

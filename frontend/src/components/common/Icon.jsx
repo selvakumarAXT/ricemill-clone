@@ -16,11 +16,7 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
       </span>
     ),
 
-    production: (
-      <span className={className} {...props}>
-        🏭
-      </span>
-    ),
+
 
     paddy: (
       <span className={className} {...props}>

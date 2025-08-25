@@ -2,7 +2,7 @@ import TableList from './common/TableList';
 import Button from './common/Button';
 import TableFilters from './common/TableFilters';
 import BranchFilter from './common/BranchFilter';
-import ResponsiveFilters from './common/ResponsiveFilters';
+
 import { useSelector } from 'react-redux';
 
 const UserTable = ({
@@ -41,32 +41,37 @@ const UserTable = ({
         )}
       </div>
       
-      {/* Filters */}
-      {(setUserFilter || setUserRoleFilter || setUserBranchFilter) && (
-        <ResponsiveFilters title="Filters & Search" className="mb-6">
-          {setUserFilter && (
-            <TableFilters
-              searchValue={userFilter}
-              searchPlaceholder="Search users..."
-              onSearchChange={e => setUserFilter(e.target.value)}
-              selectValue={userRoleFilter}
-              selectOptions={roles}
-              onSelectChange={e => setUserRoleFilter(e.target.value)}
-              selectPlaceholder="All Roles"
-              showSelect={true}
-            />
-          )}
-          {setUserBranchFilter && (
-            <BranchFilter
-              value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : userBranchFilter}
-              onChange={e => setUserBranchFilter(e.target.value)}
-            />
-          )}
-        </ResponsiveFilters>
-      )}
-      
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800">User Management</h3>
+          <p className="text-sm text-gray-600 mt-1">Total: {filteredUsers.length} users</p>
+          {/* Filters moved inside table header */}
+          {(setUserFilter || setUserRoleFilter || setUserBranchFilter) && (
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {setUserFilter && (
+                  <TableFilters
+                    searchValue={userFilter}
+                    searchPlaceholder="Search users..."
+                    onSearchChange={e => setUserFilter(e.target.value)}
+                    selectValue={userRoleFilter}
+                    selectOptions={roles}
+                    onSelectChange={e => setUserRoleFilter(e.target.value)}
+                    selectPlaceholder="All Roles"
+                    showSelect={true}
+                  />
+                )}
+                {setUserBranchFilter && (
+                  <BranchFilter
+                    value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : userBranchFilter}
+                    onChange={e => setUserBranchFilter(e.target.value)}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         <TableList
           columns={["Name", "Email", "Role", "Branch", "Status"]}
           data={filteredUsers}

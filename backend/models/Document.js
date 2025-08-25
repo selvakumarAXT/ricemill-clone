@@ -16,7 +16,7 @@ const documentSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Module name is required'],
     enum: [
-      'production',
+      
       'paddy',
       'rice',
       'gunny',
@@ -140,7 +140,7 @@ const documentSchema = new mongoose.Schema({
   },
   relatedRecordModel: {
     type: String,
-    enum: ['Production', 'Paddy', 'RiceDeposit', 'Gunny', 'Inventory', 'FinancialTransaction', 'User', 'Branch']
+    enum: ['Paddy', 'RiceDeposit', 'Gunny', 'Inventory', 'FinancialTransaction', 'User', 'Branch']
   }
 }, {
   timestamps: true,

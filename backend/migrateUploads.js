@@ -87,7 +87,7 @@ const createNewStructure = () => {
   const modules = [
     'users',
     'branches', 
-    'production',
+    
     'inventory',
     'paddy',
     'rice',

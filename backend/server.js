@@ -61,7 +61,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/branches', require('./routes/branches'));
 app.use('/api/batches', require('./routes/batches'));
-app.use('/api/production', require('./routes/production'));
+
 app.use('/api/gunny', require('./routes/gunny'));
 app.use('/api/paddy', require('./routes/paddy'));
 app.use('/api/rice-deposits', require('./routes/riceDeposits'));

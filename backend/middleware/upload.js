@@ -8,7 +8,7 @@ const createUploadDirectories = (branchId = null) => {
   const modules = [
     'users',
     'branches',
-    'production',
+    
     'inventory',
     'paddy',
     'rice',
@@ -66,7 +66,7 @@ const storage = multer.diskStorage({
       'user': 'users',
       'branches': 'branches',
       'branch': 'branches',
-      'production': 'production',
+
       'inventory': 'inventory',
       'paddy': 'paddy',
       'rice': 'rice',
@@ -304,7 +304,7 @@ const getFilePath = (module, branchId = null, filename = null) => {
     'user': 'users',
     'branches': 'branches',
     'branch': 'branches',
-    'production': 'production',
+
     'inventory': 'inventory',
     'paddy': 'paddy',
     'rice': 'rice',

@@ -11,7 +11,7 @@ import WarningBox from "../components/common/WarningBox";
 import TableList from "../components/common/TableList";
 import TableFilters from "../components/common/TableFilters";
 import BranchFilter from "../components/common/BranchFilter";
-import ResponsiveFilters from "../components/common/ResponsiveFilters";
+
 import UserTable from "../components/UserTable";
 
 const ROLES = [
@@ -308,18 +308,6 @@ const BranchManagement = () => {
                 New Branch
               </Button>
           </div>
-          <ResponsiveFilters title="Filters & Search" className="mt-4">
-            <TableFilters
-              searchValue={branchSearchFilter}
-              searchPlaceholder="Search branches by name, mill code, region, or email..."
-              onSearchChange={(e) => setBranchSearchFilter(e.target.value)}
-              showSelect={false}
-            />
-            <BranchFilter
-              value={currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-            />
-          </ResponsiveFilters>
           <TableList
             columns={["Name", "Mill Code", "Region", "Type", "Email"]}
             data={filteredBranches}

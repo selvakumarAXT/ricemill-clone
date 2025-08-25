@@ -13,27 +13,31 @@ const DateRangeFilter = ({
   required = false
 }) => {
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${className}`}>
-      <FormInput
-        label={startDateLabel}
-        name="startDate"
-        type="date"
-        value={startDate}
-        onChange={onStartDateChange}
-        disabled={disabled}
-        required={required}
-        icon="calendar"
-      />
-      <FormInput
-        label={endDateLabel}
-        name="endDate"
-        type="date"
-        value={endDate}
-        onChange={onEndDateChange}
-        disabled={disabled}
-        required={required}
-        icon="calendar"
-      />
+    <div className={`flex flex-col lg:flex-row gap-4 ${className}`}>
+      <div className="min-w-[180px] flex-shrink-0">
+        <FormInput
+          label={startDateLabel}
+          name="startDate"
+          type="date"
+          value={startDate}
+          onChange={onStartDateChange}
+          disabled={disabled}
+          required={required}
+          icon="calendar"
+        />
+      </div>
+      <div className="min-w-[180px] flex-shrink-0">
+        <FormInput
+          label={endDateLabel}
+          name="endDate"
+          type="date"
+          value={endDate}
+          onChange={onEndDateChange}
+          disabled={disabled}
+          required={required}
+          icon="calendar"
+        />
+      </div>
     </div>
   );
 };

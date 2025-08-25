@@ -8,6 +8,8 @@ import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
 import FileUpload from '../components/common/FileUpload';
 import FileDisplay from '../components/common/FileDisplay';
+import DateRangeFilter from '../components/common/DateRangeFilter';
+
 import vendorService from '../services/vendorService';
 
 const VendorManagement = () => {
@@ -63,12 +65,16 @@ const VendorManagement = () => {
   const [vendorTypeFilter, setVendorTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [balanceStatusFilter, setBalanceStatusFilter] = useState('');
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
 
   useEffect(() => {
     if (user) {
       fetchVendorData();
     }
-  }, [currentBranchId, user]);
+  }, [currentBranchId, user, searchFilter, vendorTypeFilter, statusFilter, balanceStatusFilter, dateRange]);
 
   // Auto-clear success message after 5 seconds
   useEffect(() => {
@@ -79,6 +85,10 @@ const VendorManagement = () => {
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
+
+  const handleDateRangeChange = (field, value) => {
+    setDateRange(prev => ({ ...prev, [field]: value }));
+  };
 
   const fetchVendorData = async () => {
     // For superadmins, if no branch is selected, we can still fetch vendors
@@ -96,7 +106,9 @@ const VendorManagement = () => {
         search: searchFilter,
         vendorType: vendorTypeFilter,
         status: statusFilter,
-        balanceStatus: balanceStatusFilter
+        balanceStatus: balanceStatusFilter,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
       };
       
       // Only add branch_id if it's set
@@ -340,13 +352,7 @@ const VendorManagement = () => {
         </div>
       ) : (
         <>
-          {filteredVendors.length === 0 && !loading ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 text-lg">
-                {vendors.length === 0 ? 'No vendors found' : 'No vendors match the current filters'}
-              </p>
-            </div>
-          ) : (
+                      {/* Always show the table with filters and headers */}
             <GroupedTable
               tableTitle="Vendor Records"
               data={tableData}
@@ -399,23 +405,26 @@ const VendorManagement = () => {
                 }
               ]}
               childFilters={
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {/* Search Filter */}
+                  <div className="min-w-[200px] flex-shrink-0">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                     <input
                       type="text"
                       placeholder="Search vendors..."
                       value={searchFilter}
                       onChange={(e) => setSearchFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm"
                     />
                   </div>
-                  <div>
+                  
+                  {/* Vendor Type Filter */}
+                  <div className="min-w-[180px] flex-shrink-0">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Vendor Type</label>
                     <select
                       value={vendorTypeFilter}
                       onChange={(e) => setVendorTypeFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white shadow-sm"
                     >
                       <option value="">All Types</option>
                       <option value="supplier">Supplier</option>
@@ -424,12 +433,14 @@ const VendorManagement = () => {
                       <option value="other">Other</option>
                     </select>
                   </div>
-                  <div>
+                  
+                  {/* Status Filter */}
+                  <div className="min-w-[160px] flex-shrink-0">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white shadow-sm"
                     >
                       <option value="">All Status</option>
                       <option value="active">Active</option>
@@ -437,12 +448,14 @@ const VendorManagement = () => {
                       <option value="suspended">Suspended</option>
                     </select>
                   </div>
-                  <div>
+                  
+                  {/* Balance Status Filter */}
+                  <div className="min-w-[200px] flex-shrink-0">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Balance Status</label>
                     <select
                       value={balanceStatusFilter}
                       onChange={(e) => setBalanceStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white shadow-sm"
                     >
                       <option value="">All Balances</option>
                       <option value="settled">Settled</option>
@@ -450,12 +463,30 @@ const VendorManagement = () => {
                       <option value="we_owe_vendor">We Owe Vendor</option>
                     </select>
                   </div>
+
+                  {/* Date Range Filter */}
+                  <DateRangeFilter
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
+                    onStartDateChange={(e) => handleDateRangeChange("startDate", e.target.value)}
+                    onEndDateChange={(e) => handleDateRangeChange("endDate", e.target.value)}
+                    startDateLabel="Created From"
+                    endDateLabel="Created To"
+                  />
                 </div>
               }
               renderDetail={renderVendorDetail}
               actions={renderVendorActions}
+              emptyMessage={
+                filteredVendors.length === 0 && !loading ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-lg">
+                      {vendors.length === 0 ? 'No vendors found' : 'No vendors match the current filters'}
+                    </p>
+                  </div>
+                ) : null
+              }
             />
-          )}
         </>
       )}
 

@@ -5,7 +5,7 @@ import BranchFilter from '../components/common/BranchFilter';
 import TableList from '../components/common/TableList';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import ResponsiveFilters from '../components/common/ResponsiveFilters';
+
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
@@ -399,38 +399,45 @@ const FinancialLedger = () => {
           </div>
         </div>
 
-        <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <TableFilters
-              searchValue={transactionFilter}
-              searchPlaceholder="Search by description, category, reference..."
-              onSearchChange={(e) => setTransactionFilter(e.target.value)}
-              showSelect={false}
-            />
-            <BranchFilter
-              value={currentBranchId || ''}
-              onChange={(value) => {
-                console.log('Branch changed in Financial:', value);
-              }}
-            />
-          </div>
-          <div className="mt-4">
-            <DateRangeFilter
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-              onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-              startDateLabel="Transaction Date From"
-              endDateLabel="Transaction Date To"
-            />
-          </div>
-        </ResponsiveFilters>
-
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
             <h3 className="text-lg font-semibold text-gray-800">Financial Transactions</h3>
             <p className="text-sm text-gray-600 mt-1">Total: {filteredTransactions.length} records</p>
+            {/* Filters moved inside table header */}
+            <div className="mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <TableFilters
+                    searchValue={transactionFilter}
+                    searchPlaceholder="Search by description, category, reference..."
+                    onSearchChange={(e) => setTransactionFilter(e.target.value)}
+                    showSelect={false}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                  <BranchFilter
+                    value={currentBranchId || ''}
+                    onChange={(value) => {
+                      console.log('Branch changed in Financial:', value);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                  <DateRangeFilter
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
+                    onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                    onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                    startDateLabel="Transaction Date From"
+                    endDateLabel="Transaction Date To"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           <TableList
             data={filteredTransactions}

@@ -7,7 +7,7 @@ import FormSelect from "../components/common/FormSelect";
 import GroupedTable from "../components/common/GroupedTable";
 import TableFilters from "../components/common/TableFilters";
 import BranchFilter from "../components/common/BranchFilter";
-import ResponsiveFilters from "../components/common/ResponsiveFilters";
+
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import FileUpload from "../components/common/FileUpload";
 import DateRangeFilter from "../components/common/DateRangeFilter";
@@ -952,41 +952,37 @@ const RiceManagement = () => {
           </div>
         </div>
 
-        {/* Responsive Filters */}
-        <ResponsiveFilters title="Filters & Search" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <BranchFilter
-              value={currentBranchId || ""}
-              onChange={(value) => console.log("Branch changed:", value)}
-            />
-            <TableFilters
-              searchValue={riceFilter}
-              onSearchChange={setRiceFilter}
-              searchPlaceholder="Search by memo, lorry, godown, variety..."
-            />
-          </div>
-          <div className="mt-4">
-            <DateRangeFilter
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              onStartDateChange={(e) =>
-                setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-              }
-              onEndDateChange={(e) =>
-                setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-              }
-              startDateLabel="Date From"
-              endDateLabel="Date To"
-            />
-          </div>
-        </ResponsiveFilters>
-
         {/* Desktop Table View */}
         <div className="hidden lg:block">
           <GroupedTable
             tableTitle="Rice Deposit Records"
             data={filteredRiceDeposits}
             groupedHeaders={groupedHeaders}
+            childFilters={
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <BranchFilter
+                  value={currentBranchId || ""}
+                  onChange={(value) => console.log("Branch changed:", value)}
+                />
+                <TableFilters
+                  searchValue={riceFilter}
+                  onSearchChange={setRiceFilter}
+                  searchPlaceholder="Search by memo, lorry, godown, variety..."
+                />
+                <DateRangeFilter
+                  startDate={dateRange.startDate}
+                  endDate={dateRange.endDate}
+                  onStartDateChange={(e) =>
+                    setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                  }
+                  onEndDateChange={(e) =>
+                    setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                  }
+                  startDateLabel="Date From"
+                  endDateLabel="Date To"
+                />
+              </div>
+            }
             renderDetail={(rice) => (
               <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-500">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

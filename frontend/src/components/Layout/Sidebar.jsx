@@ -75,12 +75,7 @@ const Sidebar = ({
       roles: ["admin", "manager", "superadmin"],
     },
 
-    {
-      name: "Production",
-      path: "/production",
-      icon: <Icon name="production" />,
-      roles: ["admin", "manager", "superadmin"],
-    },
+
     {
       name: "Rice Management",
       path: "/rice-management",
@@ -176,7 +171,7 @@ const Sidebar = ({
           <div className="flex-shrink-0 flex items-center justify-center h-16 bg-gray-800">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Icon name="production" className="h-8 w-8 text-white" />
+                <Icon name="rice" className="h-8 w-8 text-white" />
               </div>
               <div className="ml-3">
                 <h1 className="text-white text-lg font-semibold hidden sm:block">

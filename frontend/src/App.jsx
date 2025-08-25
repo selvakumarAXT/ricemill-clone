@@ -11,7 +11,7 @@ import { getMe } from "./store/slices/authSlice";
 import SignIn from "./components/SignIn";
 import Dashboard from "./pages/Dashboard";
 import UserManagement from "./pages/UserManagement";
-import Production from "./pages/Production";
+
 import Inventory from "./pages/Inventory";
 
 import Settings from "./pages/Settings";
@@ -233,16 +233,7 @@ function AppContent() {
           }
         />
 
-        <Route
-          path="/production"
-          element={
-            <ProtectedRoute allowedRoles={["admin", "manager", "superadmin"]}>
-              <LayoutWrapper>
-                <Production />
-              </LayoutWrapper>
-            </ProtectedRoute>
-          }
-        />
+
 
         <Route
           path="/inventory"

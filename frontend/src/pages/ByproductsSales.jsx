@@ -568,27 +568,6 @@ const ByproductsSales = () => {
           </div>
         )}
 
-        {/* Filters and Actions */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-            <div className="flex flex-col lg:flex-row gap-4 flex-1">
-              <BranchFilter />
-              <DateRangeFilter
-                startDate={dateRange.startDate}
-                endDate={dateRange.endDate}
-                onStartDateChange={(date) => setDateRange(prev => ({ ...prev, startDate: date }))}
-                onEndDateChange={(date) => setDateRange(prev => ({ ...prev, endDate: date }))}
-              />
-            </div>
-            <Button
-              onClick={() => openModal()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
-            >
-              + New Byproduct Sale
-            </Button>
-          </div>
-        </div>
-
         {/* Byproducts Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <GroupedTable
@@ -602,6 +581,25 @@ const ByproductsSales = () => {
             tableTitle="Byproducts Sales"
             showRowNumbers={true}
             selectable={false}
+            childFilters={
+              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
+                  <BranchFilter />
+                  <DateRangeFilter
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
+                    onStartDateChange={(date) => setDateRange(prev => ({ ...prev, startDate: date }))}
+                    onEndDateChange={(date) => setDateRange(prev => ({ ...prev, endDate: date }))}
+                  />
+                </div>
+                <Button
+                  onClick={() => openModal()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                >
+                  + New Byproduct Sale
+                </Button>
+              </div>
+            }
           />
         </div>
 

@@ -5,7 +5,7 @@ import BranchFilter from '../components/common/BranchFilter';
 import TableList from '../components/common/TableList';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import ResponsiveFilters from '../components/common/ResponsiveFilters';
+
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
 import DialogBox from '../components/common/DialogBox';
@@ -1566,33 +1566,39 @@ const SalesDispatch = () => {
 
      
 
-        {/* Filters */}
-        <div className="mb-6">
-          <ResponsiveFilters>
-            <BranchFilter />
-            <DateRangeFilter
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              onStartDateChange={(date) => setDateRange(prev => ({ ...prev, startDate: date }))}
-              onEndDateChange={(date) => setDateRange(prev => ({ ...prev, endDate: date }))}
-            />
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                placeholder="Search byproduct sales..."
-                value={byproductsFilter}
-                onChange={(e) => setByproductsFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </ResponsiveFilters>
-        </div>
-
         {/* Desktop Table View - Byproducts Only */}
         <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
             <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
             <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
+            {/* Filters moved inside table header */}
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                  <BranchFilter />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                  <DateRangeFilter
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
+                    onStartDateChange={(date) => setDateRange(prev => ({ ...prev, startDate: date }))}
+                    onEndDateChange={(date) => setDateRange(prev => ({ ...prev, endDate: date }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <input
+                    type="text"
+                    placeholder="Search byproduct sales..."
+                    value={byproductsFilter}
+                    onChange={(e) => setByproductsFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           <TableList
             data={filteredByproducts}

@@ -11,7 +11,7 @@ const FileDisplayDemo = () => {
       mimetype: "image/png"
     },
     {
-      originalname: "Production Report Q1.pdf",
+              originalname: "Rice Report Q1.pdf",
       filename: "prod_report_q1.pdf",
       size: 234567,
       mimetype: "application/pdf"
@@ -89,12 +89,12 @@ const FileDisplayDemo = () => {
           />
         </div>
 
-        {/* Production Module */}
+        {/* Gunny Management */}
         <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-          <h3 className="text-md font-semibold mb-3 text-purple-600">Production Module</h3>
+          <h3 className="text-md font-semibold mb-3 text-purple-600">Gunny Management</h3>
           <FileDisplay 
             files={mockFiles.slice(1, 3)} 
-            title="PRODUCTION FILES"
+            title="GUNNY FILES"
             className="text-sm"
           />
         </div>
