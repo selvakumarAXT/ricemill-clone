@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useSelector } from 'react-redux';
 import DialogBox from './DialogBox';
 import WarningBox from './WarningBox';
 import Button from './Button';
@@ -66,6 +67,10 @@ const TableList = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [rowToDelete, setRowToDelete] = useState(null);
   const [deleteHandler, setDeleteHandler] = useState(null);
+
+  // Get user role from Redux store
+  const { user } = useSelector((state) => state.auth);
+  const isSuperAdmin = user?.role === 'superadmin';
 
   // Use server-side pagination data if available
   const isServerSide = serverSidePagination && paginationData;
@@ -306,7 +311,7 @@ const TableList = ({
                   )}
                 </th>
               ))}
-              {actions && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Actions</th>}
+                              {actions && isSuperAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Actions</th>}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -328,7 +333,7 @@ const TableList = ({
                       })())}
                     </td>
                   ))}
-                  {actions && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
+                  {actions && isSuperAdmin && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
                     <div className="flex gap-2">
                       {(() => {
                         const rendered = actions(row, i);
@@ -387,7 +392,7 @@ const TableList = ({
                 </tr>
                 {renderDetail && expanded === i && (
                   <tr key={`detail-${row.id || row._id || (currentPage - 1) * currentPageSize + i}`}>
-                    <td colSpan={visibleCols.length + (actions ? 1 : 0) + (selectable ? 1 : 0) + (showRowNumbers ? 1 : 0)} className="bg-gray-50 px-6 py-4">
+                    <td colSpan={visibleCols.length + (actions && isSuperAdmin ? 1 : 0) + (selectable ? 1 : 0) + (showRowNumbers ? 1 : 0)} className="bg-gray-50 px-6 py-4">
                       {renderDetail(row, i)}
                     </td>
                   </tr>

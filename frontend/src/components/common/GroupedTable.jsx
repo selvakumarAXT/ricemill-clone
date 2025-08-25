@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import Button from './Button';
 
 const GroupedTable = ({
@@ -23,6 +24,10 @@ const GroupedTable = ({
   childFilters,
 }) => {
   const [expanded, setExpanded] = useState(null); // NEW: Track expanded row
+  
+  // Get user role from Redux store
+  const { user } = useSelector((state) => state.auth);
+  const isSuperAdmin = user?.role === 'superadmin';
 
   const handleSort = (colKey) => {
     if (onSort) {
@@ -83,7 +88,7 @@ const GroupedTable = ({
                   {group.label}
                 </th>
               ))}
-              {actions && (
+              {actions && isSuperAdmin && (
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
                   Actions
                 </th>
@@ -114,7 +119,7 @@ const GroupedTable = ({
                   </th>
                 ))
               )}
-              {actions && (
+              {actions && isSuperAdmin && (
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
                 </th>
               )}
@@ -165,7 +170,7 @@ const GroupedTable = ({
                       </td>
                     ))
                   )}
-                  {actions && (
+                  {actions && isSuperAdmin && (
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
                       <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
                         {actions(row)}
@@ -179,7 +184,7 @@ const GroupedTable = ({
                     <td 
                       colSpan={
                         groupedHeaders.reduce((total, group) => total + group.columns.length, 0) + 
-                        (actions ? 1 : 0) + 
+                        (actions && isSuperAdmin ? 1 : 0) + 
                         (selectable ? 1 : 0) + 
                         (showRowNumbers ? 1 : 0)
                       } 
