@@ -407,15 +407,15 @@ const DocumentUploads = () => {
   if (loading && documents.length === 0) return <LoadingSpinner fullPage />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
+      <div className="bg-card shadow-sm border-b border-border px-4 py-6 sm:px-6">
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               All Modules - Document Uploads & History
             </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
               View and manage uploaded files from all modules
             </p>
           </div>
@@ -449,10 +449,10 @@ const DocumentUploads = () => {
       <div className="px-4 py-6 sm:px-6">
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg">
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
             <div className="flex items-center">
               <svg
-                className="w-5 h-5 text-red-500 mr-2"
+                className="w-5 h-5 text-destructive mr-2"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -464,15 +464,15 @@ const DocumentUploads = () => {
                   d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <span className="text-red-700 font-medium">{error}</span>
+              <span className="text-destructive font-medium">{error}</span>
             </div>
           </div>
         )}
 
         {/* Module Selection (when in module view) */}
         {viewMode === "module" && (
-          <div className="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+          <div className="mb-6 bg-card rounded-lg p-4 shadow-sm border border-border">
+            <h3 className="text-lg font-semibold text-foreground mb-3">
               Select Module
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -482,13 +482,12 @@ const DocumentUploads = () => {
                   onClick={() => handleModuleSelect(module.value)}
                   className={`p-3 rounded-lg border-2 transition-all duration-200 text-sm font-medium ${
                     selectedModule === module.value
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
-                      : "border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-muted text-muted-foreground hover:border-border hover:bg-accent"
                   }`}
                 >
                   <div className="text-center">
                     <div className="text-lg mb-1">
-  
                       {module.value === "paddy" && "🌾"}
                       {module.value === "rice" && "🍚"}
                       {module.value === "gunny" && "🛍️"}
@@ -513,13 +512,13 @@ const DocumentUploads = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-blue-600 text-lg">📁</span>
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-primary text-lg">📁</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   {viewMode === "module" && selectedModule
                     ? `${
                         documentService
@@ -528,46 +527,48 @@ const DocumentUploads = () => {
                       } Documents`
                     : "Total Documents"}
                 </p>
-                <p className="text-xl font-bold text-blue-600">
+                <p className="text-xl font-bold text-primary">
                   {stats.totalDocuments || 0}
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-green-600 text-lg">💾</span>
+              <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-green-500 text-lg">💾</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Size</p>
-                <p className="text-xl font-bold text-green-600">
+                <p className="text-sm text-muted-foreground">Total Size</p>
+                <p className="text-xl font-bold text-green-500">
                   {stats.totalSize || "0 B"}
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-purple-600 text-lg">⬇️</span>
+              <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-purple-500 text-lg">⬇️</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Downloads</p>
-                <p className="text-xl font-bold text-purple-600">
+                <p className="text-sm text-muted-foreground">Total Downloads</p>
+                <p className="text-xl font-bold text-purple-500">
                   {stats.totalDownloads || 0}
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-yellow-600 text-lg">✅</span>
+              <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-yellow-500 text-lg">✅</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Active Documents</p>
-                <p className="text-xl font-bold text-yellow-600">
+                <p className="text-sm text-muted-foreground">
+                  Active Documents
+                </p>
+                <p className="text-xl font-bold text-yellow-500">
                   {stats.activeDocuments || 0}
                 </p>
               </div>
@@ -579,18 +580,17 @@ const DocumentUploads = () => {
         {viewMode === "all" &&
           stats.moduleStats &&
           stats.moduleStats.length > 0 && (
-            <div className="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+            <div className="mb-6 bg-card rounded-lg p-4 shadow-sm border border-border">
+              <h3 className="text-lg font-semibold text-foreground mb-3">
                 Documents by Module
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 {stats.moduleStats.map((moduleStat) => (
                   <div
                     key={moduleStat._id}
-                    className="text-center p-3 bg-gray-50 rounded-lg"
+                    className="text-center p-3 bg-muted rounded-lg"
                   >
                     <div className="text-lg mb-1">
-  
                       {moduleStat._id === "paddy" && "🌾"}
                       {moduleStat._id === "rice" && "🍚"}
                       {moduleStat._id === "gunny" && "🛍️"}
@@ -605,7 +605,7 @@ const DocumentUploads = () => {
                       {moduleStat._id === "branches" && "🏢"}
                       {moduleStat._id === "general" && "📁"}
                     </div>
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-foreground">
                       {documentService
                         .getModuleOptions()
                         .find((opt) => opt.value === moduleStat._id)?.label ||
@@ -621,9 +621,9 @@ const DocumentUploads = () => {
           )}
 
         {/* Desktop Table View */}
-        <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">
+        <div className="hidden lg:block bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">
               {viewMode === "module" && selectedModule
                 ? `${
                     documentService
@@ -632,7 +632,7 @@ const DocumentUploads = () => {
                   } Documents`
                 : "All Modules - Document Records"}
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Total: {pagination.total} records • Page {pagination.page} of{" "}
               {pagination.totalPages}
             </p>
@@ -640,7 +640,9 @@ const DocumentUploads = () => {
             <div className="mt-4">
               <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Search
+                  </label>
                   <TableFilters
                     searchValue={filters.search}
                     searchPlaceholder="Search documents..."
@@ -651,11 +653,15 @@ const DocumentUploads = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Category
+                  </label>
                   <FormSelect
                     name="category"
                     value={filters.category}
-                    onChange={(e) => handleFilterChange("category", e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("category", e.target.value)
+                    }
                     options={[
                       { value: "", label: "All Categories" },
                       ...documentService.getCategoryOptions(),
@@ -663,7 +669,9 @@ const DocumentUploads = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Branch
+                  </label>
                   <BranchFilter
                     value={currentBranchId || ""}
                     onChange={(value) => {
@@ -672,24 +680,26 @@ const DocumentUploads = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                   <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <FormInput
                       name="startDate"
                       type="date"
                       value={filters.startDate}
-                      onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("startDate", e.target.value)
+                      }
                     />
                     <FormInput
                       name="endDate"
                       type="date"
                       value={filters.endDate}
-                      onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("endDate", e.target.value)
+                      }
                     />
                   </div>
                 </div>
               </div>
-       
-         
             </div>
           </div>
           <TableList
@@ -725,14 +735,14 @@ const DocumentUploads = () => {
               </Button>,
             ]}
             renderDetail={(document) => (
-              <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500">
+              <div className="p-6 bg-muted border-l-4 border-primary">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">
+                      <span className="w-24 text-sm font-medium text-muted-foreground">
                         Title:
                       </span>
-                      <span className="text-gray-900 font-medium">
+                      <span className="text-foreground font-medium">
                         {document.title}
                       </span>
                     </div>
@@ -932,9 +942,9 @@ const DocumentUploads = () => {
         </div>
 
         {/* Mobile Table View */}
-        <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">
+        <div className="lg:hidden bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
+          <div className="px-4 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">
               {viewMode === "module" && selectedModule
                 ? `${
                     documentService
@@ -943,7 +953,7 @@ const DocumentUploads = () => {
                   } Documents`
                 : "All Modules - Document Records"}
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Total: {pagination.total} records • Page {pagination.page} of{" "}
               {pagination.totalPages}
             </p>
@@ -953,7 +963,7 @@ const DocumentUploads = () => {
             {documents.length === 0 ? (
               <div className="text-center py-8">
                 <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
+                  className="mx-auto h-12 w-12 text-muted-foreground"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -965,10 +975,10 @@ const DocumentUploads = () => {
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                <h3 className="mt-2 text-sm font-medium text-foreground">
                   No documents
                 </h3>
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Get started by uploading a new document.
                 </p>
               </div>
@@ -977,10 +987,10 @@ const DocumentUploads = () => {
                 {documents.map((document) => (
                   <div
                     key={document._id}
-                    className="border border-gray-200 rounded-lg overflow-hidden"
+                    className="border border-border rounded-lg overflow-hidden"
                   >
                     <div
-                      className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="bg-card p-3 cursor-pointer hover:bg-accent transition-colors"
                       onClick={() =>
                         setExpandedDocument(
                           expandedDocument === document._id
@@ -991,13 +1001,13 @@ const DocumentUploads = () => {
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-foreground">
                             {document.title}
                           </div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-muted-foreground">
                             {document.originalName}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             {document.fileSizeFormatted} •{" "}
                             {document.uploadedBy_name} •{" "}
                             {new Date(document.createdAt).toLocaleDateString()}
@@ -1075,17 +1085,21 @@ const DocumentUploads = () => {
                     </div>
 
                     {expandedDocument === document._id && (
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 border-t border-gray-200">
+                      <div className="bg-muted p-4 border-t border-border">
                         <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                           <div>
-                            <span className="text-gray-600">Category:</span>
-                            <span className="ml-1 font-medium text-gray-900 capitalize">
+                            <span className="text-muted-foreground">
+                              Category:
+                            </span>
+                            <span className="ml-1 font-medium text-foreground capitalize">
                               {document.category.replace("_", " ")}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-600">File Type:</span>
-                            <span className="ml-1 font-medium text-gray-900 uppercase">
+                            <span className="text-muted-foreground">
+                              File Type:
+                            </span>
+                            <span className="ml-1 font-medium text-foreground uppercase">
                               {document.fileType}
                             </span>
                           </div>

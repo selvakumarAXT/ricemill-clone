@@ -10,7 +10,7 @@ import FormSelect from "../components/common/FormSelect";
 
 const ROLES = [
   { value: "manager", label: "Branch Manager" },
-  { value: "admin", label: "Admin" }
+  { value: "admin", label: "Admin" },
 ];
 
 const UserManagement = () => {
@@ -92,7 +92,9 @@ const UserManagement = () => {
           ? currentBranchId
           : userBranchFilter;
       const matchesBranch = effectiveBranchFilter
-        ? u.branch_id && (u.branch_id._id === effectiveBranchFilter || u.branch_id.id === effectiveBranchFilter)
+        ? u.branch_id &&
+          (u.branch_id._id === effectiveBranchFilter ||
+            u.branch_id.id === effectiveBranchFilter)
         : true;
       return matchesText && matchesRole && matchesBranch;
     });
@@ -108,7 +110,10 @@ const UserManagement = () => {
     setLoading(true);
     try {
       if (editingUser) {
-        await userService.updateUser(editingUser._id || editingUser.id, userForm);
+        await userService.updateUser(
+          editingUser._id || editingUser.id,
+          userForm
+        );
         setSuccess("User updated successfully");
       } else {
         await userService.createUser(userForm);
@@ -129,10 +134,14 @@ const UserManagement = () => {
   };
 
   const deleteUser = async (userId) => {
-    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this user? This action cannot be undone."
+      )
+    ) {
       return;
     }
-    
+
     setLoading(true);
     try {
       await userService.deleteUser(userId);
@@ -158,7 +167,11 @@ const UserManagement = () => {
         email: editUser.email || "",
         password: "",
         role: editUser.role || "manager",
-        branch_id: editUser.branch_id?._id || editUser.branch_id?.id || editUser.branch?.id || "",
+        branch_id:
+          editUser.branch_id?._id ||
+          editUser.branch_id?.id ||
+          editUser.branch?.id ||
+          "",
       });
     } else {
       setEditingUser(null);
@@ -210,7 +223,7 @@ const UserManagement = () => {
               Manage system users and their permissions
             </p>
           </div>
-          
+
           {/* Add User Button */}
           {/* {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
             (!user?.isSuperAdmin && user?.branch?.id)) && (
@@ -280,7 +293,7 @@ const UserManagement = () => {
         )}
 
         {/* Mobile Table View */}
-        <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="lg:hidden bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
           <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
             <h3 className="text-lg font-semibold text-gray-800">
               User Records
@@ -325,7 +338,9 @@ const UserManagement = () => {
                       className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                       onClick={() =>
                         setExpandedUser(
-                          expandedUser === (userItem._id || userItem.id) ? null : (userItem._id || userItem.id)
+                          expandedUser === (userItem._id || userItem.id)
+                            ? null
+                            : userItem._id || userItem.id
                         )
                       }
                     >
@@ -338,7 +353,10 @@ const UserManagement = () => {
                             {userItem.email}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {userItem.role} • {userItem.branch_id?.name || userItem.branch?.name || "N/A"}
+                            {userItem.role} •{" "}
+                            {userItem.branch_id?.name ||
+                              userItem.branch?.name ||
+                              "N/A"}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -366,7 +384,9 @@ const UserManagement = () => {
                           </Button>
                           <svg
                             className={`w-4 h-4 text-gray-400 transition-transform ${
-                              expandedUser === (userItem._id || userItem.id) ? "rotate-180" : ""
+                              expandedUser === (userItem._id || userItem.id)
+                                ? "rotate-180"
+                                : ""
                             }`}
                             fill="none"
                             stroke="currentColor"
@@ -397,13 +417,19 @@ const UserManagement = () => {
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600">Branch:</span>
                             <span className="font-medium text-gray-900">
-                              {userItem.branch_id?.name || userItem.branch?.name || "N/A"}
+                              {userItem.branch_id?.name ||
+                                userItem.branch?.name ||
+                                "N/A"}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600">Created:</span>
                             <span className="font-medium text-gray-900">
-                              {userItem.createdAt ? new Date(userItem.createdAt).toLocaleDateString() : "N/A"}
+                              {userItem.createdAt
+                                ? new Date(
+                                    userItem.createdAt
+                                  ).toLocaleDateString()
+                                : "N/A"}
                             </span>
                           </div>
                         </div>
@@ -421,7 +447,9 @@ const UserManagement = () => {
                                   : "bg-red-100 text-red-800"
                               }`}
                             >
-                              {userItem.isActive !== false ? "Active" : "Inactive"}
+                              {userItem.isActive !== false
+                                ? "Active"
+                                : "Inactive"}
                             </span>
                           </div>
                         </div>
@@ -452,12 +480,16 @@ const UserManagement = () => {
             }
             openUserModal={openUserModal}
             deleteUser={deleteUser}
-            showAddButton={((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
-              (!user?.isSuperAdmin && user?.branch?.id))}
+            showAddButton={
+              (user?.isSuperAdmin &&
+                currentBranchId &&
+                currentBranchId !== "all") ||
+              (!user?.isSuperAdmin && user?.branch?.id)
+            }
           />
         </div>
       </div>
-      
+
       {/* User Modal */}
       {showModal && (
         <DialogBox
@@ -506,29 +538,23 @@ const UserManagement = () => {
               name="role"
               value={userForm.role}
               onChange={handleUserFormChange}
+              options={ROLES}
+              placeholder="Select Role"
               required
-            >
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </FormSelect>
+            />
             {user?.isSuperAdmin ? (
               <FormSelect
                 label="Branch"
                 name="branch_id"
                 value={userForm.branch_id}
                 onChange={handleUserFormChange}
+                options={branches.map((b) => ({
+                  value: b._id,
+                  label: `${b.name} (${b.millCode})`,
+                }))}
+                placeholder="Select Branch"
                 required
-              >
-                <option value="">Select Branch</option>
-                {branches.map((b) => (
-                  <option key={b._id} value={b._id}>
-                    {b.name} ({b.millCode})
-                  </option>
-                ))}
-              </FormSelect>
+              />
             ) : (
               <div>
                 <label className="block text-sm font-medium text-gray-700">

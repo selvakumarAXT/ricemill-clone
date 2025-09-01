@@ -150,7 +150,7 @@ const PaddyManagement = () => {
 
       if (response.success) {
         const formattedPaddies = response.data.map(formatPaddyResponse);
-        
+
         setPaddies(formattedPaddies);
         setPaginationData(response.pagination);
       } else {
@@ -322,11 +322,7 @@ const PaddyManagement = () => {
       formattedPaddy.bagWeight = currentBagWeight;
 
       if (editingPaddy) {
-        await updatePaddy(
-          editingPaddy.id,
-          formattedPaddy,
-          uploadedFiles
-        );
+        await updatePaddy(editingPaddy.id, formattedPaddy, uploadedFiles);
         setSuccessMessage("Paddy record updated successfully!");
         // Refresh current page data
         fetchPaddies(
@@ -798,7 +794,7 @@ const PaddyManagement = () => {
                   </div>
                   <div className="text-muted-foreground">
                     <div>
-                      • Total Paddy: {" "}
+                      • Total Paddy:{" "}
                       {formatWeight(summaryStats.totalPaddyWeight)}
                     </div>
                     <div>
@@ -813,7 +809,7 @@ const PaddyManagement = () => {
                   </div>
                   <div className="text-muted-foreground">
                     <div>
-                      • Average Moisture: {" "}
+                      • Average Moisture:{" "}
                       {summaryStats.averageMoisture.toFixed(1)}%
                     </div>
                     <div>• Total Records: {summaryStats.recordCount}</div>
@@ -834,13 +830,17 @@ const PaddyManagement = () => {
                     </h5>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Expected (67%):</span>
+                        <span className="text-muted-foreground">
+                          Expected (67%):
+                        </span>
                         <span className="font-semibold text-foreground">
                           {formatWeight(summaryStats.totalExpectedRice)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Actual Received:</span>
+                        <span className="text-muted-foreground">
+                          Actual Received:
+                        </span>
                         <span className="font-semibold text-foreground">
                           {formatWeight(summaryStats.totalActualRice)}
                         </span>
@@ -865,7 +865,9 @@ const PaddyManagement = () => {
                         {summaryStats.totalRiceShortage === 0 &&
                           summaryStats.totalRiceSurplus === 0 && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Status:</span>
+                              <span className="text-muted-foreground">
+                                Status:
+                              </span>
                               <span className="font-semibold text-primary">
                                 Perfect Match
                               </span>
@@ -882,13 +884,17 @@ const PaddyManagement = () => {
                     </h5>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Expected (33%):</span>
+                        <span className="text-muted-foreground">
+                          Expected (33%):
+                        </span>
                         <span className="font-semibold text-foreground">
                           {formatWeight(summaryStats.totalExpectedByproducts)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Actual Received:</span>
+                        <span className="text-muted-foreground">
+                          Actual Received:
+                        </span>
                         <span className="font-semibold text-foreground">
                           {formatWeight(summaryStats.totalActualByproducts)}
                         </span>
@@ -917,7 +923,9 @@ const PaddyManagement = () => {
                         {summaryStats.totalByproductsShortage === 0 &&
                           summaryStats.totalByproductsSurplus === 0 && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Status:</span>
+                              <span className="text-muted-foreground">
+                                Status:
+                              </span>
                               <span className="font-semibold text-primary">
                                 Perfect Match
                               </span>
@@ -959,7 +967,9 @@ const PaddyManagement = () => {
                     value: variety,
                     label: `Variety ${variety}`,
                   }))}
-                  onSelectChange={(e) => handleVarietyFilterChange(e.target.value)}
+                  onSelectChange={(e) =>
+                    handleVarietyFilterChange(e.target.value)
+                  }
                   selectPlaceholder="All Varieties"
                   showSearch={false}
                   showSelect={true}
@@ -1075,25 +1085,33 @@ const PaddyManagement = () => {
                       </h5>
                       <div className="grid grid-cols-4 gap-2 text-xs w-full">
                         <div className="text-center">
-                          <div className="font-medium text-muted-foreground">NB</div>
+                          <div className="font-medium text-muted-foreground">
+                            NB
+                          </div>
                           <div className="text-foreground">
                             {paddy.gunny?.nb || 0}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="font-medium text-muted-foreground">ONB</div>
+                          <div className="font-medium text-muted-foreground">
+                            ONB
+                          </div>
                           <div className="text-foreground">
                             {paddy.gunny?.onb || 0}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="font-medium text-muted-foreground">SS</div>
+                          <div className="font-medium text-muted-foreground">
+                            SS
+                          </div>
                           <div className="text-foreground">
                             {paddy.gunny?.ss || 0}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="font-medium text-muted-foreground">SWP</div>
+                          <div className="font-medium text-muted-foreground">
+                            SWP
+                          </div>
                           <div className="text-foreground">
                             {paddy.gunny?.swp || 0}
                           </div>
@@ -1233,7 +1251,7 @@ const PaddyManagement = () => {
                             {paddy.lorryNumber}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {new Date(paddy.issueDate).toLocaleDateString()} • {" "}
+                            {new Date(paddy.issueDate).toLocaleDateString()} •{" "}
                             {paddy.paddyVariety}
                           </div>
                         </div>
@@ -1291,19 +1309,25 @@ const PaddyManagement = () => {
                             </span>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Variety:</span>
+                            <span className="text-muted-foreground">
+                              Variety:
+                            </span>
                             <span className="ml-1 font-medium text-foreground">
                               {paddy.paddyVariety}
                             </span>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Source:</span>
+                            <span className="text-muted-foreground">
+                              Source:
+                            </span>
                             <span className="ml-1 font-medium text-foreground">
                               {paddy.paddyFrom}
                             </span>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Moisture:</span>
+                            <span className="text-muted-foreground">
+                              Moisture:
+                            </span>
                             <span className="ml-1 font-medium text-foreground">
                               {paddy.moisture || 0}%
                             </span>
@@ -1442,15 +1466,14 @@ const PaddyManagement = () => {
                 name="paddyVariety"
                 value={paddyForm.paddyVariety}
                 onChange={handlePaddyFormChange}
+                options={PADDY_VARIETIES.map((variety) => ({
+                  value: variety,
+                  label: variety,
+                }))}
+                placeholder="Select Paddy Variety"
                 required
                 icon="seedling"
-              >
-                {PADDY_VARIETIES.map((variety) => (
-                  <option key={variety} value={variety}>
-                    {variety}
-                  </option>
-                ))}
-              </FormSelect>
+              />
               <FormInput
                 label="Moisture (%)"
                 name="moisture"

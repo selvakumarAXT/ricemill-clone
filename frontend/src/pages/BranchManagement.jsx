@@ -66,6 +66,12 @@ const BranchManagement = () => {
   const [showDeleteBranchDialog, setShowDeleteBranchDialog] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState(null);
 
+  // Branch type options
+  const BRANCH_TYPES = [
+    { value: "RR", label: "Raw Rice" },
+    { value: "BR", label: "Boiled Rice" },
+  ];
+
   // Fetch all branches and users
   useEffect(() => {
     if (user?.isSuperAdmin) {
@@ -75,8 +81,8 @@ const BranchManagement = () => {
         branchManagementService.getAllUsers(),
       ])
         .then(([branchesRes, usersRes]) => {
-        setBranches(branchesRes.data || []);
-        setUsers(usersRes.users || usersRes.data || []);
+          setBranches(branchesRes.data || []);
+          setUsers(usersRes.users || usersRes.data || []);
         })
         .finally(() => setLoading(false));
     }
@@ -204,17 +210,21 @@ const BranchManagement = () => {
   const filteredBranches = branches.filter((b) => {
     // Text search filter
     const q = branchSearchFilter.toLowerCase();
-    const matchesText = !branchSearchFilter || (
+    const matchesText =
+      !branchSearchFilter ||
       b.name?.toLowerCase().includes(q) ||
       b.millCode?.toLowerCase().includes(q) ||
       b.address?.region?.toLowerCase().includes(q) ||
-      b.contactInfo?.email?.toLowerCase().includes(q)
-    );
+      b.contactInfo?.email?.toLowerCase().includes(q);
 
     // Branch filter - use currentBranchId if set, otherwise use branchFilter
-    const effectiveBranchFilter = currentBranchId && currentBranchId !== 'all' ? currentBranchId : branchFilter;
-    const matchesBranch = !effectiveBranchFilter || b._id === effectiveBranchFilter;
-    
+    const effectiveBranchFilter =
+      currentBranchId && currentBranchId !== "all"
+        ? currentBranchId
+        : branchFilter;
+    const matchesBranch =
+      !effectiveBranchFilter || b._id === effectiveBranchFilter;
+
     return matchesText && matchesBranch;
   });
   const filteredUsers = users.filter((u) => {
@@ -228,7 +238,10 @@ const BranchManagement = () => {
           u.branch_id.millCode?.toLowerCase().includes(q)));
     const matchesRole = userRoleFilter ? u.role === userRoleFilter : true;
     // Branch filter - use currentBranchId if set, otherwise use userBranchFilter
-    const effectiveBranchFilter = currentBranchId && currentBranchId !== 'all' ? currentBranchId : userBranchFilter;
+    const effectiveBranchFilter =
+      currentBranchId && currentBranchId !== "all"
+        ? currentBranchId
+        : userBranchFilter;
     const matchesBranch = effectiveBranchFilter
       ? u.branch_id === effectiveBranchFilter
       : true;
@@ -240,39 +253,56 @@ const BranchManagement = () => {
     id: b._id || b.id || b.millCode,
   }));
 
-  if (loading) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-2 text-gray-600">Loading branches...</p>
+  if (loading)
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading branches...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   if (user?.role !== "superadmin") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg border border-red-200 p-8 text-center">
-          <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="bg-card rounded-2xl shadow-lg border border-destructive/20 p-8 text-center">
+          <svg
+            className="mx-auto h-12 w-12 text-destructive mb-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
           </svg>
-          <h2 className="text-xl font-bold text-red-600 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You don't have permission to access this page.</p>
+          <h2 className="text-xl font-bold text-destructive mb-2">
+            Access Denied
+          </h2>
+          <p className="text-muted-foreground">
+            You don't have permission to access this page.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
+      <div className="bg-card shadow-sm border-b border-border px-4 py-6 sm:px-6">
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Branch Management
             </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">Super Admin Panel</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+              Super Admin Panel
+            </p>
           </div>
         </div>
       </div>
@@ -280,7 +310,7 @@ const BranchManagement = () => {
       {/* Main Content */}
       <div className="px-4 py-6 sm:px-6">
         {/* Mobile Tabs */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 mb-6">
+        <div className="bg-card rounded-2xl shadow-lg border border-border p-4 mb-6">
           <div className="flex gap-2">
             {TABS.map((t) => (
               <Button
@@ -295,10 +325,10 @@ const BranchManagement = () => {
             ))}
           </div>
         </div>
-      {tab === "branches" && (
-        <div className="mb-8">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Branches</h2>
+        {tab === "branches" && (
+          <div className="mb-8">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Branches</h2>
               <Button
                 onClick={() => openBranchModal()}
                 variant="success"
@@ -307,313 +337,360 @@ const BranchManagement = () => {
               >
                 New Branch
               </Button>
-          </div>
-          <TableList
-            columns={["Name", "Mill Code", "Region", "Type", "Email"]}
-            data={filteredBranches}
-            renderRow={(b) => [
-              b.name,
-              b.millCode,
-              b.address?.region || "",
-              b.address?.type === 'RR' ? 'Raw Rice' : b.address?.type === 'BR' ? 'Boiled Rice' : '',
-              b.contactInfo?.email || "",
-            ]}
-            actions={(b) => (
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => openBranchModal(b)}
-                  variant="info"
-                  icon="edit"
-                  className="text-xs px-2 py-1"
-                >
-                  Edit
-                </Button>
-                <Button
-                  onClick={() => confirmDeleteBranch(b)}
-                  variant="danger"
-                  icon="delete"
-                  className="text-xs px-2 py-1"
-                >
-                  Delete
-                </Button>
-              </div>
-            )}
-            renderDetail={(b) => (
-              <div className="p-4 space-y-2">
-                <p>
-                  <strong>Mill Code:</strong> {b.millCode}
-                </p>
-                <p>
-                  <strong>Region:</strong> {b.address?.region || "N/A"}
-                </p>
-                <p>
-                  <strong>Type:</strong> {b.address?.type || "N/A"}
-                </p>
-                <p>
-                  <strong>Email:</strong> {b.contactInfo?.email || "N/A"}
-                </p>
-                <p>
-                  <strong>Created At:</strong>{" "}
-                  {new Date(b.createdAt).toLocaleDateString()}
-                </p>
-                <p>
-                  <strong>GSTN:</strong> {b.gstn || "N/A"}
-                </p>
-                <div className="flex gap-2">
-                <Button
-                  onClick={() => openBranchModal(b)}
-                   variant="info"
-                  icon="edit"
-                  className="text-xs px-2 py-1"
-                >
-                  Edit
-                </Button>
-                <Button
-                  onClick={() => confirmDeleteBranch(b)}
-                  variant="danger"
-                  icon="delete"
-                  className="text-xs px-2 py-1"
-                >
-                  Delete
-                </Button>
-              </div>
-              </div>
-            )}
-          />
-        </div>
-      )}
-      {tab === "users" && (
-        <UserTable
-          users={filteredUsers}
-          userFilter={userFilter}
-          userRoleFilter={userRoleFilter}
-          userBranchFilter={userBranchFilter}
-          setUserFilter={setUserFilter}
-          setUserRoleFilter={setUserRoleFilter}
-          setUserBranchFilter={setUserBranchFilter}
-          openUserModal={openUserModal}
-          deleteUser={deleteUser}
-          roles={ROLES}
-          showAddButton={currentBranchId && currentBranchId !== 'all'}
-        />
-      )}
-      {/* Branch Modal */}
-      {showBranchModal && (
-        <DialogBox
-          title={editingBranch ? "Edit Branch" : "New Branch"}
-          onClose={closeBranchModal}
-          onSubmit={saveBranch}
-          show={showBranchModal}
-          loading={loading}
-          size="2xl"
-        >
-          <form onSubmit={saveBranch} className="space-y-6">
-            {/* Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput
-                label="Name"
-                name="name"
-                value={branchForm.name}
-                onChange={e => setBranchForm({ ...branchForm, name: e.target.value })}
-                required
-                icon="branch"
-              />
-              <FormInput
-                label="Mill Code"
-                name="millCode"
-                value={branchForm.millCode}
-                onChange={e => setBranchForm({ ...branchForm, millCode: e.target.value })}
-                required
-                icon="branch"
-              />
             </div>
-            {/* Address */}
-            <fieldset className="border border-gray-200 rounded p-4">
-              <legend className="text-sm font-semibold text-gray-700 px-2">Region & Type</legend>
+            <TableList
+              columns={["Name", "Mill Code", "Region", "Type", "Email"]}
+              data={filteredBranches}
+              renderRow={(b) => [
+                b.name,
+                b.millCode,
+                b.address?.region || "",
+                BRANCH_TYPES.find((type) => type.value === b.address?.type)
+                  ?.label ||
+                  b.address?.type ||
+                  "",
+                b.contactInfo?.email || "",
+              ]}
+              actions={(b) => (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => openBranchModal(b)}
+                    variant="info"
+                    icon="edit"
+                    className="text-xs px-2 py-1"
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={() => confirmDeleteBranch(b)}
+                    variant="danger"
+                    icon="delete"
+                    className="text-xs px-2 py-1"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              )}
+              renderDetail={(b) => (
+                <div className="p-4 space-y-2">
+                  <p>
+                    <strong>Mill Code:</strong> {b.millCode}
+                  </p>
+                  <p>
+                    <strong>Region:</strong> {b.address?.region || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Type:</strong>{" "}
+                    {BRANCH_TYPES.find((type) => type.value === b.address?.type)
+                      ?.label ||
+                      b.address?.type ||
+                      "N/A"}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {b.contactInfo?.email || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Created At:</strong>{" "}
+                    {new Date(b.createdAt).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <strong>GSTN:</strong> {b.gstn || "N/A"}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => openBranchModal(b)}
+                      variant="info"
+                      icon="edit"
+                      className="text-xs px-2 py-1"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      onClick={() => confirmDeleteBranch(b)}
+                      variant="danger"
+                      icon="delete"
+                      className="text-xs px-2 py-1"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              )}
+            />
+          </div>
+        )}
+        {tab === "users" && (
+          <UserTable
+            users={filteredUsers}
+            userFilter={userFilter}
+            userRoleFilter={userRoleFilter}
+            userBranchFilter={userBranchFilter}
+            setUserFilter={setUserFilter}
+            setUserRoleFilter={setUserRoleFilter}
+            setUserBranchFilter={setUserBranchFilter}
+            openUserModal={openUserModal}
+            deleteUser={deleteUser}
+            roles={ROLES}
+            showAddButton={currentBranchId && currentBranchId !== "all"}
+          />
+        )}
+        {/* Branch Modal */}
+        {showBranchModal && (
+          <DialogBox
+            title={editingBranch ? "Edit Branch" : "New Branch"}
+            onClose={closeBranchModal}
+            onSubmit={saveBranch}
+            show={showBranchModal}
+            loading={loading}
+            size="2xl"
+          >
+            <form onSubmit={saveBranch} className="space-y-6">
+              {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormInput
-                  label="Region"
-                  name="address.region"
-                  value={branchForm.address.region || ''}
-                  onChange={e => setBranchForm({
-                    ...branchForm,
-                    address: { ...branchForm.address, region: e.target.value }
-                  })}
+                  label="Name"
+                  name="name"
+                  value={branchForm.name}
+                  onChange={(e) =>
+                    setBranchForm({ ...branchForm, name: e.target.value })
+                  }
                   required
                   icon="branch"
                 />
-                <FormSelect
-                  label="Type"
-                  name="address.type"
-                  value={branchForm.address.type || ''}
-                  onChange={e => setBranchForm({
-                    ...branchForm,
-                    address: { ...branchForm.address, type: e.target.value }
-                  })}
-                  required
-                >
-                  <option value="RR">Raw Rice</option>
-                  <option value="BR">Boiled Rice</option>
-                </FormSelect>
-              </div>
-            </fieldset>
-            {/* Contact Info */}
-            <fieldset className="border border-gray-200 rounded p-4">
-              <legend className="text-sm font-semibold text-gray-700 px-2">
-                Contact Info
-              </legend>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormInput
-                  label="Phone"
-                  name="contactInfo.phone"
-                  value={branchForm.contactInfo.phone}
-                  onChange={e => setBranchForm({ ...branchForm, contactInfo: { ...branchForm.contactInfo, phone: e.target.value } })}
-                  required
-                  icon="phone"
-                />
-                <FormInput
-                  label="Email"
-                  name="contactInfo.email"
-                  value={branchForm.contactInfo.email}
+                  label="Mill Code"
+                  name="millCode"
+                  value={branchForm.millCode}
                   onChange={(e) =>
-                    setBranchForm({
-                      ...branchForm,
-                      contactInfo: {
-                        ...branchForm.contactInfo,
-                        email: e.target.value,
-                      },
-                    })
+                    setBranchForm({ ...branchForm, millCode: e.target.value })
                   }
                   required
-                  icon="mail"
+                  icon="branch"
                 />
               </div>
-            </fieldset>
-            {/* Settings */}
-            {/* Operating Hours */}
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
-              <FormInput
-              label="GSTN"
-              name="gstn"
-              value={branchForm.gstn || ''}
-              onChange={e => setBranchForm({ ...branchForm, gstn: e.target.value })}
-              required
-              icon="branch"
-            />
-            </div>
-            <div className="flex gap-2 justify-end">
-            <Button onClick={()=>closeBranchModal()} variant="secondary" icon="close">Cancel</Button>
+              {/* Address */}
+              <fieldset className="border border-border rounded p-4">
+                <legend className="text-sm font-semibold text-gray-700 px-2">
+                  Region & Type
+                </legend>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormInput
+                    label="Region"
+                    name="address.region"
+                    value={branchForm.address.region || ""}
+                    onChange={(e) =>
+                      setBranchForm({
+                        ...branchForm,
+                        address: {
+                          ...branchForm.address,
+                          region: e.target.value,
+                        },
+                      })
+                    }
+                    required
+                    icon="branch"
+                  />
+                  <FormSelect
+                    label="Type"
+                    name="address.type"
+                    value={branchForm.address.type || ""}
+                    onChange={(e) =>
+                      setBranchForm({
+                        ...branchForm,
+                        address: {
+                          ...branchForm.address,
+                          type: e.target.value,
+                        },
+                      })
+                    }
+                    options={BRANCH_TYPES}
+                    required
+                  />
+                </div>
+              </fieldset>
+              {/* Contact Info */}
+              <fieldset className="border border-border rounded p-4">
+                <legend className="text-sm font-semibold text-gray-700 px-2">
+                  Contact Info
+                </legend>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormInput
+                    label="Phone"
+                    name="contactInfo.phone"
+                    value={branchForm.contactInfo.phone}
+                    onChange={(e) =>
+                      setBranchForm({
+                        ...branchForm,
+                        contactInfo: {
+                          ...branchForm.contactInfo,
+                          phone: e.target.value,
+                        },
+                      })
+                    }
+                    required
+                    icon="phone"
+                  />
+                  <FormInput
+                    label="Email"
+                    name="contactInfo.email"
+                    value={branchForm.contactInfo.email}
+                    onChange={(e) =>
+                      setBranchForm({
+                        ...branchForm,
+                        contactInfo: {
+                          ...branchForm.contactInfo,
+                          email: e.target.value,
+                        },
+                      })
+                    }
+                    required
+                    icon="mail"
+                  />
+                </div>
+              </fieldset>
+              {/* Settings */}
+              {/* Operating Hours */}
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
+                <FormInput
+                  label="GSTN"
+                  name="gstn"
+                  value={branchForm.gstn || ""}
+                  onChange={(e) =>
+                    setBranchForm({ ...branchForm, gstn: e.target.value })
+                  }
+                  required
+                  icon="branch"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  onClick={() => closeBranchModal()}
+                  variant="secondary"
+                  icon="close"
+                >
+                  Cancel
+                </Button>
 
-              <Button type="submit" variant="primary" icon="save">
-                {editingBranch ? "Update" : "Create"}
-              </Button>
-            </div>
-          </form>
-        </DialogBox>
-      )}
-      {/* User Modal */}
-      {showUserModal && (
-        <DialogBox
-          title={editingUser ? "Edit User" : "New User"}
-          onClose={closeUserModal}
-          onSubmit={saveUser}
-          show={showUserModal}
-          loading={loading}
-          size="2xl"
-        >
-          <form onSubmit={saveUser} className="space-y-4">
-            <FormInput
-              label="Name"
-              name="name"
-              value={userForm.name}
-              onChange={handleUserFormChange}
-              required
-              icon="user"
-            />
-            <FormInput
-              label="Email"
-              name="email"
-              value={userForm.email}
-              onChange={handleUserFormChange}
-              required
-              icon="user"
-            />
-            {!editingUser && (
+                <Button type="submit" variant="primary" icon="save">
+                  {editingBranch ? "Update" : "Create"}
+                </Button>
+              </div>
+            </form>
+          </DialogBox>
+        )}
+        {/* User Modal */}
+        {showUserModal && (
+          <DialogBox
+            title={editingUser ? "Edit User" : "New User"}
+            onClose={closeUserModal}
+            onSubmit={saveUser}
+            show={showUserModal}
+            loading={loading}
+            size="2xl"
+          >
+            <form onSubmit={saveUser} className="space-y-4">
               <FormInput
-                label="Password"
-                name="password"
-                value={userForm.password}
+                label="Name"
+                name="name"
+                value={userForm.name}
                 onChange={handleUserFormChange}
                 required
-                type="password"
-                icon="lock"
+                icon="user"
               />
-            )}
-            <FormSelect
-              label="Role"
-              name="role"
-              value={userForm.role}
-              onChange={handleUserFormChange}
-              required
-            >
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </FormSelect>
-            <FormSelect
-              label="Branch"
-              name="branch_id"
-              value={userForm.branch_id}
-              onChange={handleUserFormChange}
-              required
-            >
-              <option value="">Select Branch</option>
-              {branches.map((b) => (
-                <option key={b._id} value={b._id}>
-                  {b.name} ({b.millCode})
-                </option>
-              ))}
-            </FormSelect>
-            <div className="flex gap-2 justify-end">
-              <Button onClick={()=>closeUserModal()} variant="secondary" icon="close">Cancel</Button>
-              <Button type="submit" variant="primary" icon="save">
-                {editingUser ? "Update" : "Create"}
+              <FormInput
+                label="Email"
+                name="email"
+                value={userForm.email}
+                onChange={handleUserFormChange}
+                required
+                icon="user"
+              />
+              {!editingUser && (
+                <FormInput
+                  label="Password"
+                  name="password"
+                  value={userForm.password}
+                  onChange={handleUserFormChange}
+                  required
+                  type="password"
+                  icon="lock"
+                />
+              )}
+              <FormSelect
+                label="Role"
+                name="role"
+                value={userForm.role}
+                onChange={handleUserFormChange}
+                required
+              >
+                {ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </FormSelect>
+              <FormSelect
+                label="Branch"
+                name="branch_id"
+                value={userForm.branch_id}
+                onChange={handleUserFormChange}
+                required
+              >
+                <option value="">Select Branch</option>
+                {branches.map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name} ({b.millCode})
+                  </option>
+                ))}
+              </FormSelect>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  onClick={() => closeUserModal()}
+                  variant="secondary"
+                  icon="close"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" icon="save">
+                  {editingUser ? "Update" : "Create"}
+                </Button>
+              </div>
+            </form>
+          </DialogBox>
+        )}
+        {showDeleteBranchDialog && (
+          <DialogBox
+            title="Delete Branch"
+            onClose={cancelDeleteBranch}
+            size="2xl"
+          >
+            <WarningBox>
+              Deleting this branch will also delete all users and related data
+              for this branch. This action cannot be undone. Are you sure you
+              want to continue?
+            </WarningBox>
+            <div className="flex justify-end gap-2">
+              <Button
+                onClick={cancelDeleteBranch}
+                variant="secondary"
+                icon="close"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteBranch}
+                variant="danger"
+                icon="delete"
+                disabled={loading}
+              >
+                {loading ? "Deleting..." : "Delete Branch"}
               </Button>
             </div>
-          </form>
-        </DialogBox>
-      )}
-      {showDeleteBranchDialog && (
-        <DialogBox title="Delete Branch" onClose={cancelDeleteBranch} size="2xl">
-          <WarningBox>
-            Deleting this branch will also delete all users and related data for
-            this branch. This action cannot be undone. Are you sure you want to
-            continue?
-          </WarningBox>
-          <div className="flex justify-end gap-2">
-            <Button
-              onClick={cancelDeleteBranch}
-              variant="secondary"
-              icon="close"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteBranch}
-              variant="danger"
-              icon="delete"
-              disabled={loading}
-            >
-              {loading ? "Deleting..." : "Delete Branch"}
-            </Button>
-          </div>
-        </DialogBox>
-      )}
+          </DialogBox>
+        )}
       </div>
     </div>
   );
 };
 
-export default BranchManagement; 
+export default BranchManagement;

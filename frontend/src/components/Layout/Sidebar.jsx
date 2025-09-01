@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../../store/slices/authSlice";
 import { setCurrentBranchId } from "../../store/slices/branchSlice";
 import FormSelect from "../common/FormSelect";
 import Icon from "../common/Icon";
@@ -14,7 +13,6 @@ const Sidebar = ({
   onBranchChange,
 }) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { currentBranchId } = useSelector((state) => state.branch);
@@ -50,11 +48,6 @@ const Sidebar = ({
     // eslint-disable-next-line
   }, [user, currentBranchId, dispatch]);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/signin");
-  };
-
   const handleBranchSelect = (branchId) => {
     dispatch(setCurrentBranchId(branchId));
 
@@ -89,7 +82,6 @@ const Sidebar = ({
       icon: <Icon name="inventory" />,
       roles: ["admin", "manager", "superadmin"],
     },
-
 
     {
       name: "Rice Management",
@@ -184,7 +176,11 @@ const Sidebar = ({
         <div className="flex flex-col h-full">
           {/* Header - Fixed */}
           <div className="flex-shrink-0 flex items-center h-16 bg-muted px-3">
-            <div className={`flex items-center ${collapsed ? "lg:justify-center w-full" : ""}`}>
+            <div
+              className={`flex items-center ${
+                collapsed ? "lg:justify-center w-full" : ""
+              }`}
+            >
               <div className="flex-shrink-0">
                 <Icon name="rice" className="h-8 w-8 text-foreground" />
               </div>
@@ -224,13 +220,23 @@ const Sidebar = ({
                           isActive
                             ? "bg-muted text-foreground"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        } group flex items-center ${collapsed ? "justify-center" : ""} px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150`}
+                        } group flex items-center ${
+                          collapsed ? "justify-center" : ""
+                        } px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150`}
                         onClick={() =>
                           window.innerWidth < 1024 && toggleSidebar()
                         }
                       >
-                        <span className={`${collapsed ? "mr-0" : "mr-3"} flex-shrink-0 h-5 w-5`}>{item.icon}</span>
-                        {!collapsed && <span className="truncate">{item.name}</span>}
+                        <span
+                          className={`${
+                            collapsed ? "mr-0" : "mr-3"
+                          } flex-shrink-0 h-5 w-5`}
+                        >
+                          {item.icon}
+                        </span>
+                        {!collapsed && (
+                          <span className="truncate">{item.name}</span>
+                        )}
                       </Link>
                     );
                   })}
@@ -246,14 +252,21 @@ const Sidebar = ({
                 {user?.role === "superadmin" && branches.length > 0 && (
                   <div>
                     <button
-                      className={`flex items-center w-full px-2 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-md transition-colors duration-150 ${collapsed ? "justify-center" : ""}`}
+                      className={`flex items-center w-full px-2 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-md transition-colors duration-150 ${
+                        collapsed ? "justify-center" : ""
+                      }`}
                       onClick={() => setBranchesOpen((open) => !open)}
                     >
-                      <Icon name="branch" className={`h-4 w-4 ${collapsed ? "" : "mr-2"}`} />
+                      <Icon
+                        name="branch"
+                        className={`h-4 w-4 ${collapsed ? "" : "mr-2"}`}
+                      />
                       {!collapsed && (
                         <>
                           Branches
-                          <span className="ml-auto">{branchesOpen ? "▼" : "▶"}</span>
+                          <span className="ml-auto">
+                            {branchesOpen ? "▼" : "▶"}
+                          </span>
                         </>
                       )}
                     </button>
@@ -306,44 +319,6 @@ const Sidebar = ({
               </div>
             </div>
           )}
-
-          {/* User info and logout - Fixed at bottom */}
-          <div className="flex-shrink-0 border-t border-border">
-            <div className="px-2 py-4 space-y-1">
-              <div className="flex items-center px-2 py-2 text-sm text-muted-foreground">
-                <div className="flex-shrink-0">
-                  <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
-                    <span className="text-foreground text-sm font-medium">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-                {!collapsed && (
-                  <div className="ml-3 min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {user?.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground capitalize truncate">
-                      {user?.role}
-                    </p>
-                    {user?.branch_id && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {user.branch_id.name}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className={`text-muted-foreground hover:bg-muted hover:text-foreground group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${collapsed ? "justify-center" : ""}`}
-              >
-                <Icon name="logout" className={`${collapsed ? "" : "mr-3"} flex-shrink-0 h-5 w-5`} />
-                {!collapsed && "Logout"}
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </>
