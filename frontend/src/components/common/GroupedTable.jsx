@@ -50,66 +50,66 @@ const GroupedTable = ({
   };
 
   return (
-    <div className={`bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden ${className}`}>
-      <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800">{tableTitle}</h3>
-        <p className="text-sm text-gray-600 mt-1">Total: {paginationData?.total || data.length} records</p>
+    <div className={`bg-card rounded-xl shadow-sm border border-border overflow-hidden ${className}`}>
+      <div className="px-6 py-4 border-b border-border bg-muted">
+        <h3 className="text-lg font-semibold text-foreground">{tableTitle}</h3>
+        <p className="text-sm text-muted-foreground mt-1">Total: {paginationData?.total || data.length} records</p>
         <div className="mt-4">
           {childFilters}
         </div>
       </div>
       
       <div className="overflow-x-auto">
-        <table className="w-full border border-gray-300">
+        <table className="w-full border border-border">
           {/* Grouped Headers */}
-          <thead className="bg-gray-50">
+          <thead className="bg-muted">
             {/* Main Header Row */}
             <tr>
               {showRowNumbers && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border border-border">
                   #
                 </th>
               )}
               {selectable && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border border-border">
                   <input 
                     type="checkbox" 
                     onChange={onSelectAll}
-                    className="rounded border-gray-300" 
+                    className="rounded border-input text-primary focus:ring-ring" 
                   />
                 </th>
               )}
               {groupedHeaders.map((group, groupIndex) => (
                 <th 
                   key={groupIndex}
-                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300"
+                  className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider border border-border"
                   colSpan={group.columns.length}
                 >
                   {group.label}
                 </th>
               ))}
               {actions && isSuperAdmin && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border border-border">
                   Actions
                 </th>
               )}
             </tr>
             
             {/* Sub-header Row */}
-            <tr className="bg-gray-50">
+            <tr className="bg-muted">
               {showRowNumbers && (
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border border-border">
                 </th>
               )}
               {selectable && (
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border border-border">
                 </th>
               )}
               {groupedHeaders.map((group) =>
                 group.columns.map((col, colIndex) => (
                   <th 
                     key={`${group.label}-${colIndex}`}
-                    className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 border border-gray-300"
+                    className="px-4 py-2 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted border border-border"
                     onClick={() => handleSort(col.key)}
                   >
                     <div className="flex items-center justify-center space-x-1">
@@ -120,22 +120,22 @@ const GroupedTable = ({
                 ))
               )}
               {actions && isSuperAdmin && (
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border border-border">
                 </th>
               )}
             </tr>
           </thead>
           
           {/* Table Body */}
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {data.map((row, rowIndex) => (
               <React.Fragment key={row.id || rowIndex}>
                 <tr 
-                  className={`hover:bg-gray-50 ${renderDetail ? 'cursor-pointer' : ''}`}
+                  className={`hover:bg-muted ${renderDetail ? 'cursor-pointer' : ''}`}
                   onClick={() => handleRowClick(rowIndex)}
                 >
                   {showRowNumbers && (
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground border border-border">
                       {serverSidePagination 
                         ? ((paginationData.page - 1) * paginationData.limit) + rowIndex + 1
                         : rowIndex + 1
@@ -143,12 +143,12 @@ const GroupedTable = ({
                     </td>
                   )}
                   {selectable && (
-                    <td className="px-4 py-4 whitespace-nowrap border border-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap border border-border">
                       <input 
                         type="checkbox" 
                         checked={selected.includes(rowIndex)}
                         onChange={() => onSelectRow(rowIndex)}
-                        className="rounded border-gray-300" 
+                        className="rounded border-input text-primary focus:ring-ring" 
                       />
                     </td>
                   )}
@@ -156,7 +156,7 @@ const GroupedTable = ({
                     group.columns.map((col, colIndex) => (
                       <td 
                         key={`${row.id || rowIndex}-${col.key}`}
-                        className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center border border-gray-300"
+                        className="px-4 py-4 whitespace-nowrap text-sm text-foreground text-center border border-border"
                       >
                         {col.key === 'serialNumber' 
                           ? (serverSidePagination 
@@ -171,7 +171,7 @@ const GroupedTable = ({
                     ))
                   )}
                   {actions && isSuperAdmin && (
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground border border-border">
                       <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
                         {actions(row)}
                       </div>
@@ -188,7 +188,7 @@ const GroupedTable = ({
                         (selectable ? 1 : 0) + 
                         (showRowNumbers ? 1 : 0)
                       } 
-                      className="bg-gray-50 px-6 py-4"
+                      className="bg-muted px-6 py-4"
                     >
                       {renderDetail(row, rowIndex)}
                     </td>
@@ -202,37 +202,37 @@ const GroupedTable = ({
       
       {/* Pagination */}
       {serverSidePagination && paginationData && (
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="px-6 py-4 border-t border-border bg-muted">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-700">Show</span>
+              <span className="text-sm text-muted-foreground">Show</span>
               <select
                 value={paginationData.limit}
                 onChange={(e) => onPageSizeChange(parseInt(e.target.value))}
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                className="border border-input rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
               >
                 {[5, 10, 25, 50, 100].map(size => (
                   <option key={size} value={size}>{size}</option>
                 ))}
               </select>
-              <span className="text-sm text-gray-700">entries</span>
+              <span className="text-sm text-muted-foreground">entries</span>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-muted-foreground">
                 Showing {((paginationData.page - 1) * paginationData.limit) + 1} to {Math.min(paginationData.page * paginationData.limit, paginationData.total)} of {paginationData.total} entries
               </span>
               <div className="flex space-x-1">
                 <button
                   onClick={() => onPageChange(paginationData.page - 1)}
                   disabled={paginationData.page <= 1}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-input rounded bg-background text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => onPageChange(paginationData.page + 1)}
                   disabled={paginationData.page >= paginationData.pages}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-input rounded bg-background text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>

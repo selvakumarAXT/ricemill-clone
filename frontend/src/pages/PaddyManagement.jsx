@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
-import Button from "../components/common/Button";
+import { Button } from "../components/ui/button";
 import DialogBox from "../components/common/DialogBox";
 import FormInput from "../components/common/FormInput";
 import FormSelect from "../components/common/FormSelect";
@@ -14,6 +14,7 @@ import GunnyEntryDetails from "../components/common/GunnyEntryDetails";
 import PaddyEntryDetails from "../components/common/PaddyEntryDetails";
 import FileUpload from "../components/common/FileUpload";
 import DateRangeFilter from "../components/common/DateRangeFilter";
+import { Plus, Edit, Trash } from "lucide-react";
 import {
   getAllPaddy,
   createPaddy,
@@ -145,14 +146,11 @@ const PaddyManagement = () => {
         endDate: endDate || undefined,
       };
 
-      console.log("Fetching paddies with params:", params);
-      console.log("Current branch ID:", currentBranchId);
       const response = await getAllPaddy(params);
-      console.log("Raw API response:", response);
 
       if (response.success) {
         const formattedPaddies = response.data.map(formatPaddyResponse);
-        console.log("Formatted paddies:", formattedPaddies);
+        
         setPaddies(formattedPaddies);
         setPaginationData(response.pagination);
       } else {
@@ -242,9 +240,6 @@ const PaddyManagement = () => {
   const openPaddyModal = (paddy = null) => {
     setEditingPaddy(paddy);
 
-    // Debug: Check if the paddy data is already formatted
-    console.log("Raw paddy data:", paddy);
-
     const formData = paddy
       ? {
           ...initialPaddyForm,
@@ -258,9 +253,6 @@ const PaddyManagement = () => {
           paddy: { ...initialPaddyForm.paddy, ...(paddy.paddy || {}) },
         }
       : initialPaddyForm;
-
-    console.log("Form data after setting:", formData);
-    console.log("Issue date in form:", formData.issueDate);
 
     // Set the bag weight from the record if editing, otherwise use default
     if (paddy && paddy.bagWeight) {
@@ -311,12 +303,10 @@ const PaddyManagement = () => {
   };
 
   const handleFilesChange = (files) => {
-    console.log("Files selected:", files);
     setSelectedFiles(files);
   };
 
   const handleFileUploadSuccess = (uploadedFiles) => {
-    console.log("Files uploaded successfully:", uploadedFiles);
     setUploadedFiles(uploadedFiles);
     setSelectedFiles([]); // Clear selected files after upload
   };
@@ -331,14 +321,8 @@ const PaddyManagement = () => {
       // Add the current bag weight to the data
       formattedPaddy.bagWeight = currentBagWeight;
 
-      console.log("Saving paddy with uploaded files:", uploadedFiles);
-      console.log("Formatted paddy data:", formattedPaddy);
-      console.log("Editing Paddy object:", editingPaddy);
-      console.log("Editing Paddy ID:", editingPaddy?.id);
-
       if (editingPaddy) {
-        console.log("Attempting to update Paddy with ID:", editingPaddy.id);
-        const response = await updatePaddy(
+        await updatePaddy(
           editingPaddy.id,
           formattedPaddy,
           uploadedFiles
@@ -353,8 +337,7 @@ const PaddyManagement = () => {
           sortData.dir
         );
       } else {
-        console.log("Creating new Paddy record");
-        const response = await createPaddy(formattedPaddy, uploadedFiles);
+        await createPaddy(formattedPaddy, uploadedFiles);
         setSuccessMessage("Paddy record created successfully!");
         // Refresh current page data
         fetchPaddies(
@@ -671,32 +654,28 @@ const PaddyManagement = () => {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="py-12 flex items-center justify-center">
         <LoadingSpinner />
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
+      <div className="bg-card shadow-sm border-b border-border px-4 py-6 sm:px-6">
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">
               Paddy Management
             </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
               Manage rice paddy inventory
             </p>
           </div>
           {currentBranchId && currentBranchId !== "all" && (
             <div className="flex justify-center sm:justify-start">
-              <Button
-                onClick={() => openPaddyModal()}
-                variant="primary"
-                icon="plus"
-                className="px-6 py-3"
-              >
+              <Button onClick={() => openPaddyModal()} size="lg">
+                <Plus className="mr-2 h-4 w-4" />
                 Add New Paddy
               </Button>
             </div>
@@ -708,9 +687,9 @@ const PaddyManagement = () => {
       <div className="px-4 py-6 sm:px-6">
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="text-red-800">
-              <div className="font-medium">Error:</div>
+          <div className="mb-4 p-4 rounded-lg border border-destructive/30 bg-destructive/10">
+            <div className="text-destructive">
+              <div className="font-medium">Error</div>
               <div>{error}</div>
             </div>
           </div>
@@ -718,9 +697,9 @@ const PaddyManagement = () => {
 
         {/* Success Message */}
         {successMessage && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="text-green-800">
-              <div className="font-medium">Success:</div>
+          <div className="mb-4 p-4 rounded-lg border border-primary/30 bg-primary/10">
+            <div className="text-foreground">
+              <div className="font-medium text-primary">Success</div>
               <div>{successMessage}</div>
             </div>
           </div>
@@ -728,12 +707,12 @@ const PaddyManagement = () => {
 
         {/* Summary Statistics */}
         <div className="mb-6">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <h3 className="text-lg font-semibold text-gray-800">
+          <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+            <div className="px-6 py-4 border-b border-border bg-muted">
+              <h3 className="text-lg font-semibold text-foreground">
                 Summary Statistics
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Total records: {summaryStats.recordCount}
               </p>
             </div>
@@ -742,14 +721,14 @@ const PaddyManagement = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Total Paddy */}
                 <div className="text-center">
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                    <div className="text-2xl font-bold text-blue-600 mb-2">
+                  <div className="rounded-lg p-4 border bg-muted border-border">
+                    <div className="text-2xl font-semibold text-foreground mb-2">
                       {summaryStats.totalPaddyBags.toLocaleString()}
                     </div>
-                    <div className="text-sm font-medium text-gray-700">
+                    <div className="text-sm font-medium text-muted-foreground">
                       Total Paddy Bags
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-muted-foreground mt-1">
                       {formatWeight(summaryStats.totalPaddyWeight)}
                     </div>
                   </div>
@@ -757,14 +736,14 @@ const PaddyManagement = () => {
 
                 {/* Rice Output */}
                 <div className="text-center">
-                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                    <div className="text-2xl font-bold text-green-600 mb-2">
+                  <div className="rounded-lg p-4 border bg-muted border-border">
+                    <div className="text-2xl font-semibold text-foreground mb-2">
                       {formatWeight(summaryStats.totalRiceOutput)}
                     </div>
-                    <div className="text-sm font-medium text-gray-700">
+                    <div className="text-sm font-medium text-muted-foreground">
                       Rice Output
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-muted-foreground mt-1">
                       67% of paddy weight
                     </div>
                   </div>
@@ -772,14 +751,14 @@ const PaddyManagement = () => {
 
                 {/* By-Products */}
                 <div className="text-center">
-                  <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                    <div className="text-2xl font-bold text-orange-600 mb-2">
+                  <div className="rounded-lg p-4 border bg-muted border-border">
+                    <div className="text-2xl font-semibold text-foreground mb-2">
                       {formatWeight(summaryStats.totalByProducts)}
                     </div>
-                    <div className="text-sm font-medium text-gray-700">
+                    <div className="text-sm font-medium text-muted-foreground">
                       By-Products
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-muted-foreground mt-1">
                       Husk, bran, etc. (33%)
                     </div>
                   </div>
@@ -787,14 +766,14 @@ const PaddyManagement = () => {
 
                 {/* Gunny & Moisture */}
                 <div className="text-center">
-                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                    <div className="text-2xl font-bold text-purple-600 mb-2">
+                  <div className="rounded-lg p-4 border bg-muted border-border">
+                    <div className="text-2xl font-semibold text-foreground mb-2">
                       {summaryStats.totalGunny.toLocaleString()}
                     </div>
-                    <div className="text-sm font-medium text-gray-700">
+                    <div className="text-sm font-medium text-muted-foreground">
                       Total Gunny
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-muted-foreground mt-1">
                       Avg. Moisture: {summaryStats.averageMoisture.toFixed(1)}%
                     </div>
                   </div>
@@ -803,23 +782,23 @@ const PaddyManagement = () => {
 
               {/* Additional Details */}
               <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="font-medium text-gray-700 mb-1">
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="font-medium text-foreground mb-1">
                     Processing Ratio
                   </div>
-                  <div className="text-gray-600">
+                  <div className="text-muted-foreground">
                     <div>• Rice: 67% of paddy weight</div>
                     <div>• By-products: 33% of paddy weight</div>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="font-medium text-gray-700 mb-1">
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="font-medium text-foreground mb-1">
                     Weight Distribution
                   </div>
-                  <div className="text-gray-600">
+                  <div className="text-muted-foreground">
                     <div>
-                      • Total Paddy:{" "}
+                      • Total Paddy: {" "}
                       {formatWeight(summaryStats.totalPaddyWeight)}
                     </div>
                     <div>
@@ -828,13 +807,13 @@ const PaddyManagement = () => {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="font-medium text-gray-700 mb-1">
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="font-medium text-foreground mb-1">
                     Quality Metrics
                   </div>
-                  <div className="text-gray-600">
+                  <div className="text-muted-foreground">
                     <div>
-                      • Average Moisture:{" "}
+                      • Average Moisture: {" "}
                       {summaryStats.averageMoisture.toFixed(1)}%
                     </div>
                     <div>• Total Records: {summaryStats.recordCount}</div>
@@ -844,41 +823,41 @@ const PaddyManagement = () => {
 
               {/* Distribution Analysis */}
               <div className="mt-6">
-                <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                <h4 className="text-lg font-semibold text-foreground mb-4">
                   Distribution Analysis (Expected vs Actual)
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Rice Distribution */}
-                  <div className="bg-white rounded-lg border border-gray-200 p-4">
-                    <h5 className="text-md font-semibold text-green-700 mb-3">
+                  <div className="bg-card rounded-lg border border-border p-4">
+                    <h5 className="text-md font-semibold text-foreground mb-3">
                       Rice Distribution
                     </h5>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Expected (67%):</span>
-                        <span className="font-semibold text-gray-800">
+                        <span className="text-muted-foreground">Expected (67%):</span>
+                        <span className="font-semibold text-foreground">
                           {formatWeight(summaryStats.totalExpectedRice)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Actual Received:</span>
-                        <span className="font-semibold text-gray-800">
+                        <span className="text-muted-foreground">Actual Received:</span>
+                        <span className="font-semibold text-foreground">
                           {formatWeight(summaryStats.totalActualRice)}
                         </span>
                       </div>
-                      <div className="border-t border-gray-200 pt-2 mt-2">
+                      <div className="border-t border-border pt-2 mt-2">
                         {summaryStats.totalRiceShortage > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-red-600">Shortage:</span>
-                            <span className="font-semibold text-red-600">
+                            <span className="text-destructive">Shortage:</span>
+                            <span className="font-semibold text-destructive">
                               {formatWeight(summaryStats.totalRiceShortage)}
                             </span>
                           </div>
                         )}
                         {summaryStats.totalRiceSurplus > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-green-600">Surplus:</span>
-                            <span className="font-semibold text-green-600">
+                            <span className="text-primary">Surplus:</span>
+                            <span className="font-semibold text-primary">
                               {formatWeight(summaryStats.totalRiceSurplus)}
                             </span>
                           </div>
@@ -886,8 +865,8 @@ const PaddyManagement = () => {
                         {summaryStats.totalRiceShortage === 0 &&
                           summaryStats.totalRiceSurplus === 0 && (
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Status:</span>
-                              <span className="font-semibold text-green-600">
+                              <span className="text-muted-foreground">Status:</span>
+                              <span className="font-semibold text-primary">
                                 Perfect Match
                               </span>
                             </div>
@@ -897,28 +876,28 @@ const PaddyManagement = () => {
                   </div>
 
                   {/* Byproducts Distribution */}
-                  <div className="bg-white rounded-lg border border-gray-200 p-4">
-                    <h5 className="text-md font-semibold text-orange-700 mb-3">
+                  <div className="bg-card rounded-lg border border-border p-4">
+                    <h5 className="text-md font-semibold text-foreground mb-3">
                       Byproducts Distribution
                     </h5>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Expected (33%):</span>
-                        <span className="font-semibold text-gray-800">
+                        <span className="text-muted-foreground">Expected (33%):</span>
+                        <span className="font-semibold text-foreground">
                           {formatWeight(summaryStats.totalExpectedByproducts)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Actual Received:</span>
-                        <span className="font-semibold text-gray-800">
+                        <span className="text-muted-foreground">Actual Received:</span>
+                        <span className="font-semibold text-foreground">
                           {formatWeight(summaryStats.totalActualByproducts)}
                         </span>
                       </div>
-                      <div className="border-t border-gray-200 pt-2 mt-2">
+                      <div className="border-t border-border pt-2 mt-2">
                         {summaryStats.totalByproductsShortage > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-red-600">Shortage:</span>
-                            <span className="font-semibold text-red-600">
+                            <span className="text-destructive">Shortage:</span>
+                            <span className="font-semibold text-destructive">
                               {formatWeight(
                                 summaryStats.totalByproductsShortage
                               )}
@@ -927,8 +906,8 @@ const PaddyManagement = () => {
                         )}
                         {summaryStats.totalByproductsSurplus > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-green-600">Surplus:</span>
-                            <span className="font-semibold text-green-600">
+                            <span className="text-primary">Surplus:</span>
+                            <span className="font-semibold text-primary">
                               {formatWeight(
                                 summaryStats.totalByproductsSurplus
                               )}
@@ -938,8 +917,8 @@ const PaddyManagement = () => {
                         {summaryStats.totalByproductsShortage === 0 &&
                           summaryStats.totalByproductsSurplus === 0 && (
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Status:</span>
-                              <span className="font-semibold text-green-600">
+                              <span className="text-muted-foreground">Status:</span>
+                              <span className="font-semibold text-primary">
                                 Perfect Match
                               </span>
                             </div>
@@ -987,11 +966,7 @@ const PaddyManagement = () => {
                 />
                 <BranchFilter
                   value={currentBranchId || ""}
-                  onChange={(e) => {
-                    // The BranchFilter component will handle Redux updates for superadmin users
-                    // This will automatically trigger a re-fetch when currentBranchId changes
-                    console.log("Branch filter changed:", e.target.value);
-                  }}
+                  onChange={() => {}}
                 />
                 <DateRangeFilter
                   startDate={dateRange.startDate}
@@ -1008,89 +983,85 @@ const PaddyManagement = () => {
               </div>
             }
             renderDetail={(paddy) => (
-              <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500">
+              <div className="p-6 bg-muted border-l-4 border-primary">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">
+                      <span className="w-24 text-sm font-medium text-muted-foreground">
                         Issue Date:
                       </span>
-                      <span className="text-gray-900 font-medium">
+                      <span className="text-foreground font-medium">
                         {new Date(paddy.issueDate).toLocaleDateString()}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">
+                      <span className="w-24 text-sm font-medium text-muted-foreground">
                         Issue Memo:
                       </span>
-                      <span className="text-gray-900 font-medium">
+                      <span className="text-foreground font-medium">
                         {paddy.issueMemo}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">
+                      <span className="w-24 text-sm font-medium text-muted-foreground">
                         Lorry Number:
                       </span>
-                      <span className="text-gray-900 font-medium">
+                      <span className="text-foreground font-medium">
                         {paddy.lorryNumber}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">
+                      <span className="w-24 text-sm font-medium text-muted-foreground">
                         Paddy From:
                       </span>
-                      <span className="text-gray-900 font-medium">
+                      <span className="text-foreground font-medium">
                         {paddy.paddyFrom}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">
+                      <span className="w-24 text-sm font-medium text-muted-foreground">
                         Variety:
                       </span>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          paddy.paddyVariety === "A"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground`}
                       >
                         Variety {paddy.paddyVariety}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">
+                      <span className="w-24 text-sm font-medium text-muted-foreground">
                         Moisture:
                       </span>
-                      <span className="text-gray-900 font-medium">
+                      <span className="text-foreground font-medium">
                         {paddy.moisture || 0}%
                       </span>
                     </div>
                     {paddy.bagWeight && (
                       <div className="flex items-center">
-                        <span className="w-24 text-sm font-medium text-gray-600">
+                        <span className="w-24 text-sm font-medium text-muted-foreground">
                           Bag Weight:
                         </span>
-                        <span className="text-gray-900 font-medium">
+                        <span className="text-foreground font-medium">
                           {paddy.bagWeight} kg
                         </span>
                       </div>
                     )}
                     {paddy.createdAt && (
                       <div className="flex items-center">
-                        <span className="w-24 text-sm font-medium text-gray-600">
+                        <span className="w-24 text-sm font-medium text-muted-foreground">
                           Created:
                         </span>
-                        <span className="text-gray-900 font-medium">
+                        <span className="text-foreground font-medium">
                           {new Date(paddy.createdAt).toLocaleString()}
                         </span>
                       </div>
                     )}
                     {paddy.updatedAt && paddy.updatedAt !== paddy.createdAt && (
                       <div className="flex items-center">
-                        <span className="w-24 text-sm font-medium text-gray-600">
+                        <span className="w-24 text-sm font-medium text-muted-foreground">
                           Updated:
                         </span>
-                        <span className="text-gray-900 font-medium">
+                        <span className="text-foreground font-medium">
                           {new Date(paddy.updatedAt).toLocaleString()}
                         </span>
                       </div>
@@ -1098,42 +1069,42 @@ const PaddyManagement = () => {
                   </div>
                   <div className="space-y-3">
                     {/* Gunny Summary */}
-                    <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
-                      <h5 className="text-sm font-semibold text-gray-800 mb-2">
+                    <div className="p-3 bg-card rounded-lg border border-border w-full">
+                      <h5 className="text-sm font-semibold text-foreground mb-2">
                         Gunny Summary
                       </h5>
                       <div className="grid grid-cols-4 gap-2 text-xs w-full">
                         <div className="text-center">
-                          <div className="font-medium text-blue-600">NB</div>
-                          <div className="text-gray-900">
+                          <div className="font-medium text-muted-foreground">NB</div>
+                          <div className="text-foreground">
                             {paddy.gunny?.nb || 0}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="font-medium text-green-600">ONB</div>
-                          <div className="text-gray-900">
+                          <div className="font-medium text-muted-foreground">ONB</div>
+                          <div className="text-foreground">
                             {paddy.gunny?.onb || 0}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="font-medium text-yellow-600">SS</div>
-                          <div className="text-gray-900">
+                          <div className="font-medium text-muted-foreground">SS</div>
+                          <div className="text-foreground">
                             {paddy.gunny?.ss || 0}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="font-medium text-purple-600">SWP</div>
-                          <div className="text-gray-900">
+                          <div className="font-medium text-muted-foreground">SWP</div>
+                          <div className="text-foreground">
                             {paddy.gunny?.swp || 0}
                           </div>
                         </div>
                       </div>
-                      <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="mt-2 pt-2 border-t border-border">
                         <div className="text-center">
-                          <div className="text-xs font-medium text-gray-600">
+                          <div className="text-xs font-medium text-muted-foreground">
                             Total Gunny
                           </div>
-                          <div className="text-lg font-bold text-indigo-600">
+                          <div className="text-lg font-bold text-foreground">
                             {(paddy.gunny?.nb || 0) +
                               (paddy.gunny?.onb || 0) +
                               (paddy.gunny?.ss || 0) +
@@ -1144,20 +1115,20 @@ const PaddyManagement = () => {
                     </div>
 
                     {/* Paddy Summary */}
-                    <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
-                      <h5 className="text-sm font-semibold text-gray-800 mb-2">
+                    <div className="p-3 bg-card rounded-lg border border-border w-full">
+                      <h5 className="text-sm font-semibold text-foreground mb-2">
                         Paddy Summary
                       </h5>
                       <div className="grid grid-cols-2 gap-4 text-sm w-full">
                         <div>
-                          <span className="text-gray-600">Bags:</span>
-                          <span className="ml-1 font-medium text-indigo-600">
+                          <span className="text-muted-foreground">Bags:</span>
+                          <span className="ml-1 font-medium text-foreground">
                             {paddy.paddy?.bags || 0}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Weight:</span>
-                          <span className="ml-1 font-medium text-red-600">
+                          <span className="text-muted-foreground">Weight:</span>
+                          <span className="ml-1 font-medium text-foreground">
                             {formatWeight(paddy.paddy?.weight || 0)}
                           </span>
                         </div>
@@ -1165,15 +1136,15 @@ const PaddyManagement = () => {
                     </div>
 
                     {/* Rice Output Calculation */}
-                    <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
-                      <h5 className="text-sm font-semibold text-gray-800 mb-2">
+                    <div className="p-3 bg-card rounded-lg border border-border w-full">
+                      <h5 className="text-sm font-semibold text-foreground mb-2">
                         Expected Rice Output
                       </h5>
                       <div className="text-center">
-                        <div className="text-xs text-gray-600 mb-1">
+                        <div className="text-xs text-muted-foreground mb-1">
                           (67% of paddy weight)
                         </div>
-                        <div className="text-lg font-bold text-green-600">
+                        <div className="text-lg font-bold text-foreground">
                           {formatWeight((paddy.paddy?.weight || 0) * 0.67)}
                         </div>
                       </div>
@@ -1186,17 +1157,17 @@ const PaddyManagement = () => {
               <Button
                 key="edit"
                 onClick={() => openPaddyModal(paddy)}
-                variant="info"
-                icon="edit"
+                variant="secondary"
               >
+                <Edit className="mr-2 h-4 w-4" />
                 Edit
               </Button>,
               <Button
                 key="delete"
                 onClick={() => handleDeletePaddy(paddy.id)}
-                variant="danger"
-                icon="delete"
+                variant="destructive"
               >
+                <Trash className="mr-2 h-4 w-4" />
                 Delete
               </Button>,
             ]}
@@ -1204,12 +1175,12 @@ const PaddyManagement = () => {
         </div>
 
         {/* Mobile Table View */}
-        <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">
+        <div className="lg:hidden bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+          <div className="px-4 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">
               Paddy Records
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Total: {paginationData.total} records
             </p>
           </div>
@@ -1218,7 +1189,7 @@ const PaddyManagement = () => {
             {filteredPaddies.length === 0 ? (
               <div className="text-center py-8">
                 <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
+                  className="mx-auto h-12 w-12 text-muted-foreground"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -1230,10 +1201,10 @@ const PaddyManagement = () => {
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                <h3 className="mt-2 text-sm font-medium text-foreground">
                   No paddy records
                 </h3>
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Get started by creating a new paddy record.
                 </p>
               </div>
@@ -1242,11 +1213,11 @@ const PaddyManagement = () => {
                 {filteredPaddies.map((paddy) => (
                   <div
                     key={paddy.id}
-                    className="border border-gray-200 rounded-lg overflow-hidden"
+                    className="border border-border rounded-lg overflow-hidden"
                   >
                     {/* Mobile Table Row */}
                     <div
-                      className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="bg-card p-3 cursor-pointer hover:bg-muted transition-colors"
                       onClick={() =>
                         setExpandedPaddy(
                           expandedPaddy === paddy.id ? null : paddy.id
@@ -1255,14 +1226,14 @@ const PaddyManagement = () => {
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-foreground">
                             {paddy.issueMemo}
                           </div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-muted-foreground">
                             {paddy.lorryNumber}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {new Date(paddy.issueDate).toLocaleDateString()} •{" "}
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(paddy.issueDate).toLocaleDateString()} • {" "}
                             {paddy.paddyVariety}
                           </div>
                         </div>
@@ -1272,10 +1243,10 @@ const PaddyManagement = () => {
                               e.stopPropagation();
                               openPaddyModal(paddy);
                             }}
-                            variant="info"
-                            icon="edit"
+                            variant="secondary"
                             className="text-xs px-2 py-1"
                           >
+                            <Edit className="mr-1 h-4 w-4" />
                             Edit
                           </Button>
                           <Button
@@ -1283,14 +1254,14 @@ const PaddyManagement = () => {
                               e.stopPropagation();
                               handleDeletePaddy(paddy.id);
                             }}
-                            variant="danger"
-                            icon="delete"
+                            variant="destructive"
                             className="text-xs px-2 py-1"
                           >
+                            <Trash className="mr-1 h-4 w-4" />
                             Delete
                           </Button>
                           <svg
-                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                            className={`w-4 h-4 text-muted-foreground transition-transform ${
                               expandedPaddy === paddy.id ? "rotate-180" : ""
                             }`}
                             fill="none"
@@ -1310,70 +1281,70 @@ const PaddyManagement = () => {
 
                     {/* Expanded Detail View */}
                     {expandedPaddy === paddy.id && (
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 border-t border-gray-200">
+                      <div className="bg-muted p-4 border-t border-border">
                         {/* Details Grid */}
                         <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                           <div>
-                            <span className="text-gray-600">Date:</span>
-                            <span className="ml-1 font-medium text-gray-900">
+                            <span className="text-muted-foreground">Date:</span>
+                            <span className="ml-1 font-medium text-foreground">
                               {new Date(paddy.issueDate).toLocaleDateString()}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Variety:</span>
-                            <span className="ml-1 font-medium text-gray-900">
+                            <span className="text-muted-foreground">Variety:</span>
+                            <span className="ml-1 font-medium text-foreground">
                               {paddy.paddyVariety}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Source:</span>
-                            <span className="ml-1 font-medium text-gray-900">
+                            <span className="text-muted-foreground">Source:</span>
+                            <span className="ml-1 font-medium text-foreground">
                               {paddy.paddyFrom}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Moisture:</span>
-                            <span className="ml-1 font-medium text-gray-900">
+                            <span className="text-muted-foreground">Moisture:</span>
+                            <span className="ml-1 font-medium text-foreground">
                               {paddy.moisture || 0}%
                             </span>
                           </div>
                         </div>
 
                         {/* Gunny Summary */}
-                        <div className="mb-3 p-3 bg-white rounded-lg border border-gray-200 w-full">
-                          <h5 className="text-sm font-semibold text-gray-800 mb-2">
+                        <div className="mb-3 p-3 bg-card rounded-lg border border-border w-full">
+                          <h5 className="text-sm font-semibold text-foreground mb-2">
                             Gunny Summary
                           </h5>
                           <div className="grid grid-cols-4 gap-1 text-xs w-full">
                             <div className="text-center">
-                              <div className="font-medium text-blue-600 truncate">
+                              <div className="font-medium text-muted-foreground truncate">
                                 NB
                               </div>
-                              <div className="text-gray-900 truncate">
+                              <div className="text-foreground truncate">
                                 {paddy.gunny?.nb || 0}
                               </div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-blue-600 truncate">
+                              <div className="font-medium text-muted-foreground truncate">
                                 ONB
                               </div>
-                              <div className="text-gray-900 truncate">
+                              <div className="text-foreground truncate">
                                 {paddy.gunny?.onb || 0}
                               </div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-blue-600 truncate">
+                              <div className="font-medium text-muted-foreground truncate">
                                 SS
                               </div>
-                              <div className="text-gray-900 truncate">
+                              <div className="text-foreground truncate">
                                 {paddy.gunny?.ss || 0}
                               </div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-blue-600 truncate">
+                              <div className="font-medium text-muted-foreground truncate">
                                 SWP
                               </div>
-                              <div className="text-gray-900 truncate">
+                              <div className="text-foreground truncate">
                                 {paddy.gunny?.swp || 0}
                               </div>
                             </div>
@@ -1381,24 +1352,24 @@ const PaddyManagement = () => {
                         </div>
 
                         {/* Paddy Summary */}
-                        <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
-                          <h5 className="text-sm font-semibold text-gray-800 mb-2">
+                        <div className="p-3 bg-card rounded-lg border border-border w-full">
+                          <h5 className="text-sm font-semibold text-foreground mb-2">
                             Paddy Summary
                           </h5>
                           <div className="grid grid-cols-2 gap-2 text-xs w-full">
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600 truncate">
+                              <span className="text-muted-foreground truncate">
                                 Bags:
                               </span>
-                              <span className="font-medium text-green-600 ml-2">
+                              <span className="font-medium text-foreground ml-2">
                                 {paddy.paddy?.bags || 0}
                               </span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600 truncate">
+                              <span className="text-muted-foreground truncate">
                                 Weight:
                               </span>
-                              <span className="font-medium text-green-600 ml-2">
+                              <span className="font-medium text-foreground ml-2">
                                 {formatWeight(paddy.paddy?.weight || 0)}
                               </span>
                             </div>

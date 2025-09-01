@@ -192,8 +192,8 @@ const TableList = ({
   const getRowNumber = (i) => (currentPage - 1) * currentPageSize + i + 1;
 
   // Loading/empty state
-  if (loading) return <div className="p-4 text-center text-gray-500">Loading...</div>;
-  if (!data.length) return <div className="p-4 text-center text-gray-500">{empty}</div>;
+  if (loading) return <div className="p-4 text-center text-muted-foreground">Loading...</div>;
+  if (!data.length) return <div className="p-4 text-center text-muted-foreground">{empty}</div>;
 
   // Helper to wrap delete actions
   const handleDeleteClick = (row, i, handler) => {
@@ -281,21 +281,21 @@ const TableList = ({
       )}
       {/* Export button */}
       {exportable && (
-        <button onClick={handleExport} className="mb-2 px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700">Export CSV</button>
+        <button onClick={handleExport} className="mb-2 px-3 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90">Export CSV</button>
       )}
       <div className={stickyHeader ? 'overflow-x-auto max-h-[60vh]' : ''}>
         <table
-          className="min-w-full w-full divide-y divide-gray-200 border border-gray-300"
+          className="min-w-full w-full divide-y divide-border border border-border"
           style={{ width: tableWidth }}
         >
-          <thead className={stickyHeader ? 'bg-gray-50 sticky top-0 z-10' : 'bg-gray-50'}>
+          <thead className={stickyHeader ? 'bg-muted sticky top-0 z-10' : 'bg-muted'}>
             <tr>
-              {showRowNumbers && <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">#</th>}
-              {selectable && <th className="px-3 py-3 border border-gray-300"><input type="checkbox" checked={selected.length === displayData.length && displayData.length > 0} onChange={handleSelectAll} /></th>}
+              {showRowNumbers && <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border border-border">#</th>}
+              {selectable && <th className="px-3 py-3 border border-border"><input type="checkbox" className="rounded border-input text-primary focus:ring-ring" checked={selected.length === displayData.length && displayData.length > 0} onChange={handleSelectAll} /></th>}
               {visibleCols.map((col, i) => (
                 <th
                   key={col.idx}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none relative border border-gray-300"
+                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer select-none relative border border-border"
                   onClick={() => handleSort(col.idx)}
                   style={colWidths[col.idx] ? { width: colWidths[col.idx] } : {}}
                 >
@@ -311,29 +311,29 @@ const TableList = ({
                   )}
                 </th>
               ))}
-                              {actions && isSuperAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Actions</th>}
+                              {actions && isSuperAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border border-border">Actions</th>}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {displayData.map((row, i) => (
               <React.Fragment key={row.id || row._id || `row-${(currentPage - 1) * currentPageSize + i}`}>
                 <tr
-                  className="cursor-pointer hover:bg-gray-50"
+                  className="cursor-pointer hover:bg-muted"
                   onClick={() => renderDetail && handleRowClick(i)}
                 >
-                  {showRowNumbers && <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">{getRowNumber(i)}</td>}
-                  {selectable && <td className="px-3 py-4 border border-gray-300"><input type="checkbox" checked={selected.includes((currentPage - 1) * currentPageSize + i)} onChange={() => handleSelectRow((currentPage - 1) * currentPageSize + i)} /></td>}
+                  {showRowNumbers && <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground border border-border">{getRowNumber(i)}</td>}
+                  {selectable && <td className="px-3 py-4 border border-border"><input type="checkbox" className="rounded border-input text-primary focus:ring-ring" checked={selected.includes((currentPage - 1) * currentPageSize + i)} onChange={() => handleSelectRow((currentPage - 1) * currentPageSize + i)} /></td>}
                   {visibleCols.map((col, j) => (
-                    <td key={`${row.id || row._id || i}-${col.idx}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
-                      {col.renderCell ? col.renderCell(row[col.key], i) : (renderRow ? renderRow(row, i)[col.idx] : (() => {
-                        const value = row[col.key];
+                    <td key={`${row.id || row._id || i}-${col.idx}`} className="px-6 py-4 whitespace-nowrap text-sm text-foreground border border-border">
+                      {col.renderCell ? col.renderCell(row[col.accessor], row, (currentPage - 1) * currentPageSize + i) : (renderRow ? renderRow(row, i)[col.idx] : (() => {
+                        const value = row[col.accessor];
                         if (value === null || value === undefined) return '';
                         if (typeof value === 'object') return JSON.stringify(value);
                         return String(value);
                       })())}
                     </td>
                   ))}
-                  {actions && isSuperAdmin && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border border-gray-300">
+                  {actions && isSuperAdmin && <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground border border-border">
                     <div className="flex gap-2">
                       {(() => {
                         const rendered = actions(row, i);
@@ -392,7 +392,7 @@ const TableList = ({
                 </tr>
                 {renderDetail && expanded === i && (
                   <tr key={`detail-${row.id || row._id || (currentPage - 1) * currentPageSize + i}`}>
-                    <td colSpan={visibleCols.length + (actions && isSuperAdmin ? 1 : 0) + (selectable ? 1 : 0) + (showRowNumbers ? 1 : 0)} className="bg-gray-50 px-6 py-4">
+                    <td colSpan={visibleCols.length + (actions && isSuperAdmin ? 1 : 0) + (selectable ? 1 : 0) + (showRowNumbers ? 1 : 0)} className="bg-muted px-6 py-4">
                       {renderDetail(row, i)}
                     </td>
                   </tr>
@@ -410,25 +410,25 @@ const TableList = ({
       )}
       {/* Enhanced Pagination */}
       {totalPages > 1 && (
-        <div className="mt-4 px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+        <div className="mt-4 px-4 py-3 bg-card border-t border-border sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Page Size Selector */}
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-700">Show:</label>
+              <label className="text-sm text-muted-foreground">Show:</label>
               <select
                 value={isServerSide ? paginationData.limit : currentPageSize}
                 onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="border border-input rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
               >
                 {pageSizeOptions.map(size => (
                   <option key={size} value={size}>{size}</option>
                 ))}
               </select>
-              <span className="text-sm text-gray-700">entries</span>
+              <span className="text-sm text-muted-foreground">entries</span>
             </div>
 
             {/* Results Info */}
-            <div className="text-sm text-gray-700">
+            <div className="text-sm text-muted-foreground">
               Showing {((currentPage - 1) * currentPageSize) + 1} to {Math.min(currentPage * currentPageSize, totalItems)} of {totalItems} results
             </div>
 
@@ -438,7 +438,7 @@ const TableList = ({
               <button
                 onClick={goToFirstPage}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-input bg-background text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
                 title="First page"
               >
                 <Icon name="chevronDoubleLeft" className="w-4 h-4" />
@@ -448,7 +448,7 @@ const TableList = ({
               <button
                 onClick={goToPreviousPage}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-2 py-2 border border-input bg-background text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Previous page"
               >
                 <Icon name="chevronLeft" className="w-4 h-4" />
@@ -458,7 +458,7 @@ const TableList = ({
               {getPageNumbers().map((pageNum, index) => (
                 <React.Fragment key={index}>
                   {pageNum === '...' ? (
-                    <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                    <span className="relative inline-flex items-center px-4 py-2 border border-input bg-background text-sm font-medium text-muted-foreground">
                       ...
                     </span>
                   ) : (
@@ -466,8 +466,8 @@ const TableList = ({
                       onClick={() => goToPage(pageNum)}
                       className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                         currentPage === pageNum
-                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          ? 'z-10 bg-primary/10 border-primary text-primary'
+                          : 'bg-background border-input text-muted-foreground hover:bg-muted'
                       }`}
                     >
                       {pageNum}
@@ -480,7 +480,7 @@ const TableList = ({
               <button
                 onClick={goToNextPage}
                 disabled={currentPage === totalPages}
-                className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-2 py-2 border border-input bg-background text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Next page"
               >
                 <Icon name="chevronRight" className="w-4 h-4" />
@@ -490,7 +490,7 @@ const TableList = ({
               <button
                 onClick={goToLastPage}
                 disabled={currentPage === totalPages}
-                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-input bg-background text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Last page"
               >
                 <Icon name="chevronDoubleRight" className="w-4 h-4" />

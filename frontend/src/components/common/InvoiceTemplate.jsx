@@ -3,6 +3,8 @@ import DialogBox from './DialogBox';
 import Button from './Button';
 import FormInput from './FormInput';
 import FormSelect from './FormSelect';
+import Icon from './Icon';
+import { Button as UIButton } from '../../components/ui/button';
 
 const InvoiceTemplate = ({ 
   record, 
@@ -414,7 +416,7 @@ const InvoiceTemplate = ({
         show={show}
         onClose={onClose}
         title={title}
-        size="6xl"
+        size="7xl"
       >
         <div className="space-y-6">
           {/* Record Information Summary */}
@@ -640,23 +642,32 @@ const InvoiceTemplate = ({
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">
-              <Button 
+              <UIButton 
                 type="button" 
                 onClick={() => setShowPreview(true)}
-                variant="info"
+                variant="outline"
+                className="flex items-center"
               >
-                👁️ Preview Invoice
-              </Button>
-              <Button 
+                <Icon name="eye" className="mr-1.5 h-4 w-4" />
+                Preview Invoice
+              </UIButton>
+              <UIButton 
                 type="button" 
                 onClick={onClose}
                 variant="secondary"
+                className="flex items-center"
               >
+                <Icon name="x" className="mr-1.5 h-4 w-4" />
                 Cancel
-              </Button>
-              <Button type="submit" variant="primary">
+              </UIButton>
+              <UIButton 
+                type="submit" 
+                variant="default"
+                className="flex items-center"
+              >
+                <Icon name="file-text" className="mr-1.5 h-4 w-4" />
                 Generate Invoice
-              </Button>
+              </UIButton>
             </div>
           </form>
         </div>
@@ -667,23 +678,27 @@ const InvoiceTemplate = ({
         show={showPreview}
         onClose={() => setShowPreview(false)}
         title="Invoice Preview"
-        size="6xl"
+        size="7xl"
       >
         <div className="space-y-4">
           {renderInvoicePreview()}
           <div className="flex justify-end space-x-3">
-            <Button 
+            <UIButton 
               onClick={() => setShowPreview(false)}
               variant="secondary"
+              className="flex items-center"
             >
+              <Icon name="x-circle" className="mr-1.5 h-4 w-4" />
               Close Preview
-            </Button>
-            <Button 
+            </UIButton>
+            <UIButton 
               onClick={handleGenerateInvoice}
-              variant="primary"
+              variant="default"
+              className="flex items-center"
             >
+              <Icon name="file-text" className="mr-1.5 h-4 w-4" />
               Generate Invoice
-            </Button>
+            </UIButton>
           </div>
         </div>
       </DialogBox>

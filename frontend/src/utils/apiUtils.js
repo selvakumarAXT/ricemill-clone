@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getCurrentBranchId, getBranchIdFromStorage } from './branchUtils';
+import { getCurrentBranchId,  } from './branchUtils';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api`;
 

@@ -19,6 +19,21 @@ const Sidebar = ({
   const { user } = useSelector((state) => state.auth);
   const { currentBranchId } = useSelector((state) => state.branch);
   const [branchesOpen, setBranchesOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Initialize collapsed state from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("sidebarCollapsed");
+    setCollapsed(stored === "1");
+  }, []);
+
+  const toggleCollapse = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      localStorage.setItem("sidebarCollapsed", next ? "1" : "0");
+      return next;
+    });
+  };
 
   // Set currentBranchId to user's branch by default for non-superadmin
   useEffect(() => {
@@ -154,31 +169,43 @@ const Sidebar = ({
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 transition-opacity lg:hidden z-20"
+          className="fixed inset-0 bg-black/40 transition-opacity lg:hidden z-20"
           onClick={toggleSidebar}
         />
       )}
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-80 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+        className={`fixed inset-y-0 left-0 z-30 w-80 bg-card border-r border-border transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } ${collapsed ? "lg:w-20" : "lg:w-72"} transition-[width]`}
       >
         {/* Sidebar Container with Flex Layout */}
         <div className="flex flex-col h-full">
           {/* Header - Fixed */}
-          <div className="flex-shrink-0 flex items-center justify-center h-16 bg-gray-800">
-            <div className="flex items-center">
+          <div className="flex-shrink-0 flex items-center h-16 bg-muted px-3">
+            <div className={`flex items-center ${collapsed ? "lg:justify-center w-full" : ""}`}>
               <div className="flex-shrink-0">
-                <Icon name="rice" className="h-8 w-8 text-white" />
+                <Icon name="rice" className="h-8 w-8 text-foreground" />
               </div>
-              <div className="ml-3">
-                <h1 className="text-white text-lg font-semibold hidden sm:block">
-                  Rice Mill
-                </h1>
-              </div>
+              {!collapsed && (
+                <div className="ml-3">
+                  <h1 className="text-foreground text-lg font-semibold hidden sm:block">
+                    Rice Mill
+                  </h1>
+                </div>
+              )}
             </div>
+            <button
+              onClick={toggleCollapse}
+              className="ml-auto hidden lg:inline-flex p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/40 transition-colors"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              <Icon
+                name={collapsed ? "chevronDoubleRight" : "chevronDoubleLeft"}
+                className="h-5 w-5"
+              />
+            </button>
           </div>
 
           {/* Navigation - Scrollable */}
@@ -195,15 +222,15 @@ const Sidebar = ({
                         to={item.path}
                         className={`${
                           isActive
-                            ? "bg-gray-800 text-white"
-                            : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                        } group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150`}
+                            ? "bg-muted text-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        } group flex items-center ${collapsed ? "justify-center" : ""} px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150`}
                         onClick={() =>
                           window.innerWidth < 1024 && toggleSidebar()
                         }
                       >
-                        <span className="mr-3 flex-shrink-0">{item.icon}</span>
-                        {item.name}
+                        <span className={`${collapsed ? "mr-0" : "mr-3"} flex-shrink-0 h-5 w-5`}>{item.icon}</span>
+                        {!collapsed && <span className="truncate">{item.name}</span>}
                       </Link>
                     );
                   })}
@@ -213,29 +240,31 @@ const Sidebar = ({
 
           {/* Branches Selection - Fixed above user info */}
           {(user?.role === "superadmin" || user?.branch) && (
-            <div className="flex-shrink-0 border-t border-gray-700">
+            <div className="flex-shrink-0 border-t border-border">
               <div className="px-2 py-3">
                 {/* Branches tree for superadmin */}
                 {user?.role === "superadmin" && branches.length > 0 && (
                   <div>
                     <button
-                      className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors duration-150"
+                      className={`flex items-center w-full px-2 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-md transition-colors duration-150 ${collapsed ? "justify-center" : ""}`}
                       onClick={() => setBranchesOpen((open) => !open)}
                     >
-                      <span className="mr-2">🌳</span>
-                      Branches
-                      <span className="ml-auto">
-                        {branchesOpen ? "▼" : "▶"}
-                      </span>
+                      <Icon name="branch" className={`h-4 w-4 ${collapsed ? "" : "mr-2"}`} />
+                      {!collapsed && (
+                        <>
+                          Branches
+                          <span className="ml-auto">{branchesOpen ? "▼" : "▶"}</span>
+                        </>
+                      )}
                     </button>
-                    {branchesOpen && (
+                    {branchesOpen && !collapsed && (
                       <ul className="ml-6 mt-1 space-y-1">
                         <li key="all-branches">
                           <button
                             className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${
                               !currentBranchId
-                                ? "bg-indigo-600 text-white"
-                                : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
                             }`}
                             onClick={() => handleBranchSelect("")}
                           >
@@ -250,8 +279,8 @@ const Sidebar = ({
                               <button
                                 className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${
                                   currentBranchId === branch._id
-                                    ? "bg-indigo-600 text-white"
-                                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                 }`}
                                 onClick={() => handleBranchSelect(branch._id)}
                               >
@@ -264,10 +293,10 @@ const Sidebar = ({
                   </div>
                 )}
                 {/* Show only the user's branch for non-superadmin */}
-                {user?.role !== "superadmin" && user?.branch && (
+                {user?.role !== "superadmin" && user?.branch && !collapsed && (
                   <div>
                     <button
-                      className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 bg-indigo-600 text-white`}
+                      className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 bg-primary text-primary-foreground`}
                       disabled
                     >
                       {user.branch.name} ({user.branch.millCode})
@@ -279,37 +308,39 @@ const Sidebar = ({
           )}
 
           {/* User info and logout - Fixed at bottom */}
-          <div className="flex-shrink-0 border-t border-gray-700">
+          <div className="flex-shrink-0 border-t border-border">
             <div className="px-2 py-4 space-y-1">
-              <div className="flex items-center px-2 py-2 text-sm text-gray-300">
+              <div className="flex items-center px-2 py-2 text-sm text-muted-foreground">
                 <div className="flex-shrink-0">
-                  <div className="h-8 w-8 bg-gray-600 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">
+                  <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
+                    <span className="text-foreground text-sm font-medium">
                       {user?.name?.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 </div>
-                <div className="ml-3 min-w-0 flex-1">
-                  <p className="text-sm font-medium text-white truncate">
-                    {user?.name}
-                  </p>
-                  <p className="text-xs text-gray-400 capitalize truncate">
-                    {user?.role}
-                  </p>
-                  {user?.branch_id && (
-                    <p className="text-xs text-gray-500 truncate">
-                      {user.branch_id.name}
+                {!collapsed && (
+                  <div className="ml-3 min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {user?.name}
                     </p>
-                  )}
-                </div>
+                    <p className="text-xs text-muted-foreground capitalize truncate">
+                      {user?.role}
+                    </p>
+                    {user?.branch_id && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.branch_id.name}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <button
                 onClick={handleLogout}
-                className="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                className={`text-muted-foreground hover:bg-muted hover:text-foreground group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${collapsed ? "justify-center" : ""}`}
               >
-                <Icon name="logout" className="mr-3 flex-shrink-0 h-5 w-5" />
-                Logout
+                <Icon name="logout" className={`${collapsed ? "" : "mr-3"} flex-shrink-0 h-5 w-5`} />
+                {!collapsed && "Logout"}
               </button>
             </div>
           </div>

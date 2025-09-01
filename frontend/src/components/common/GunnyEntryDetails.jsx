@@ -39,20 +39,20 @@ const GunnyEntryDetails = ({
   };
 
   return (
-    <fieldset className={`border border-gray-200 rounded p-4 ${className}`}>
+    <fieldset className={`border border-border rounded p-4 bg-card ${className}`}>
       {showLegend && (
-        <legend className="text-sm font-semibold text-gray-700 px-2">
+        <legend className="text-sm font-semibold text-foreground px-2">
           Gunny Details (4 Varieties)
           {enableAutoCalculation && onGunnyTotalChange && (
-            <span className="text-xs text-blue-600 ml-2">→ Auto-updates bags</span>
+            <span className="text-xs text-primary ml-2">→ Auto-updates bags</span>
           )}
         </legend>
       )}
       
       {/* Total Gunny Count Display */}
       {enableAutoCalculation && onGunnyTotalChange && (
-        <div className="mb-3 p-2 bg-blue-50 rounded-lg">
-          <div className="text-sm text-blue-800">
+        <div className="mb-3 p-2 bg-primary/10 rounded-lg">
+          <div className="text-sm text-primary">
             <span className="font-medium">Total Gunny:</span> 
             <span className="ml-2 text-lg font-bold">
               {calculateTotalGunny(gunnyData)}

@@ -108,7 +108,7 @@ const BranchFilter = ({
       {isFilterDisabled && (
         <Icon 
           name="lock" 
-          className="w-4 h-4 text-gray-500" 
+          className="w-4 h-4 text-muted-foreground" 
           title="Locked to selected branch"
         />
       )}

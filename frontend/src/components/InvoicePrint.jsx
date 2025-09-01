@@ -40,7 +40,7 @@ const InvoicePrint = ({ invoice, onClose, isPreview = false }) => {
 
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -87,16 +87,18 @@ const InvoicePrint = ({ invoice, onClose, isPreview = false }) => {
 
         {/* Invoice Content */}
         <div className="p-6">
-          <div className="bg-white border border-gray-300 rounded-lg p-8 print:p-4">
+          <div className="bg-white border border-[#0070c0] rounded-lg p-0 print:p-0" style={{ width: '820px', margin: '0 auto' }}>
             {/* Company Header */}
-            <div className="text-center border-b-2 border-gray-300 pb-4 mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                SREE ESWAR HI-TECH MODERN RICE MILL
-              </h1>
-              <p className="text-gray-600 text-lg">Professional Rice Processing & Distribution</p>
-              <p className="text-gray-600">Chennai, Tamil Nadu, India</p>
-              <p className="text-gray-600">Phone: +91 98765 43210 | Email: info@sreeeswar.com</p>
-              <p className="text-gray-600">GSTIN: 33AABCS1234A1Z5</p>
+            <div className="p-[18px] border-b-[8px] border-[#0070c0] flex justify-between items-start">
+              <div className="max-w-[63%] text-left">
+                <h1 className="m-0 text-[26px] tracking-[0.6px] font-bold text-[#12202b]">SREE ESWAR HI-TECH MODERN RICE MILL</h1>
+                <div className="mt-2 text-[13px] text-[#6b7280] leading-[1.35]">99, REDHILLS MAIN ROAD, KILANUR VILLAGE, THIRUVALLUR<br/>THIRUVALLUR, Tamil Nadu (33) - 602021</div>
+              </div>
+              <div className="text-right text-[13px] text-[#6b7280] leading-[0.5]">
+                <p className="text-[#12202b]"><b>Name: </b>VIKRAMSELVAM</p>
+                <p className="text-[#12202b]"><b>Phone: </b>8608012345</p>
+                <p className="text-[#12202b]"><b>Email: </b>eswarofficial@gmail.com</p>
+              </div>
             </div>
 
             {/* Invoice Details */}

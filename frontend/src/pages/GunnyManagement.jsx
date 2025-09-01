@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
-import Button from "../components/common/Button";
 import DialogBox from "../components/common/DialogBox";
 import FormInput from "../components/common/FormInput";
 import FormSelect from "../components/common/FormSelect";
@@ -18,6 +17,8 @@ import gunnyAggregationService from "../services/gunnyAggregationService";
 import branchService from "../services/branchService";
 import { formatWeight } from "../utils/calculations";
 import { PADDY_VARIETIES } from "../utils/constants";
+import { Button as UIButton } from "../components/ui/button";
+import Icon from "../components/common/Icon";
 
 const GunnyManagement = () => {
   const { user } = useSelector((state) => state.auth);
@@ -534,12 +535,7 @@ const GunnyManagement = () => {
   // Table columns for comprehensive gunny records
   const comprehensiveColumns = [
     { key: "source", label: "Source", render: (value) => (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-        value === 'Paddy Management' ? 'bg-blue-100 text-blue-800' :
-        value === 'Rice Management' ? 'bg-green-100 text-green-800' :
-
-        'bg-gray-100 text-gray-800'
-      }`}>
+      <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
         {value}
       </span>
     )},
@@ -571,19 +567,19 @@ const GunnyManagement = () => {
       render: (gunny) => (
         <div className="text-xs">
           <div className="flex justify-between">
-            <span className="text-blue-600">NB:</span>
+            <span className="text-muted-foreground">NB:</span>
             <span>{gunny?.nb || 0}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-green-600">ONB:</span>
+            <span className="text-muted-foreground">ONB:</span>
             <span>{gunny?.onb || 0}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-yellow-600">SS:</span>
+            <span className="text-muted-foreground">SS:</span>
             <span>{gunny?.ss || 0}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-purple-600">SWP:</span>
+            <span className="text-muted-foreground">SWP:</span>
             <span>{gunny?.swp || 0}</span>
           </div>
         </div>
@@ -594,16 +590,16 @@ const GunnyManagement = () => {
       label: "Paddy Details", 
       render: (paddy, record) => {
         if (record.recordType === 'rice') {
-          return <span className="text-gray-500 text-xs">N/A</span>;
+          return <span className="text-muted-foreground text-xs">N/A</span>;
         }
         return (
           <div className="text-xs">
             <div className="flex justify-between">
-              <span className="text-indigo-600">Bags:</span>
+              <span className="text-muted-foreground">Bags:</span>
               <span>{paddy?.bags || 0}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-red-600">Weight:</span>
+              <span className="text-muted-foreground">Weight:</span>
               <span>{formatWeight(paddy?.weight || 0)}</span>
             </div>
           </div>
@@ -646,32 +642,31 @@ const GunnyManagement = () => {
   ];
 
   if (loading) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <LoadingSpinner />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
+      <div className="bg-card shadow-sm border-b border-border px-4 py-6 sm:px-6">
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Gunny Management
             </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage gunny records and track inventory</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage gunny records and track inventory</p>
           </div>
           {currentBranchId && currentBranchId !== 'all' && (
             <div className="flex justify-center sm:justify-start">
-                              <Button
-                  onClick={() => openGunnyModal()}
-                  variant="primary" 
-                  icon="plus"
-                  className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
-                >
+              <UIButton
+                onClick={() => openGunnyModal()}
+                className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Icon name="add" className="mr-2 h-4 w-4" />
                 Add New Gunny Record
-              </Button>
+              </UIButton>
             </div>
           )}
         </div>
@@ -680,155 +675,155 @@ const GunnyManagement = () => {
       {/* Main Content */}
       <div className="px-4 py-6 sm:px-6">
         {/* Comprehensive Statistics Cards */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6 mb-6">
+        <div className="bg-card rounded-2xl shadow-lg border border-border p-4 sm:p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-              <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <h3 className="text-lg font-semibold text-foreground flex items-center">
+              <svg className="w-5 h-5 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               Comprehensive Gunny Statistics (All Sources) - Balance Included
             </h3>
             <div className="flex items-center gap-2">
               {aggregatedLoading && (
-                <div className="flex items-center text-sm text-gray-600">
+                <div className="flex items-center text-sm text-muted-foreground">
                   <LoadingSpinner size="sm" />
                   <span className="ml-2">Loading...</span>
                 </div>
               )}
-              <Button
+              <UIButton
                 onClick={fetchAllGunnyData}
                 variant="secondary"
-                icon="refresh"
+                size="sm"
                 disabled={aggregatedLoading}
-                className="text-xs"
               >
+                <Icon name="refresh" className="mr-2 h-4 w-4" />
                 Refresh
-              </Button>
+              </UIButton>
             </div>
           </div>
           
           {/* Overall Totals */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 mb-6">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-4 rounded-lg border border-gray-200 text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Total Records</h4>
-              <p className="text-lg sm:text-2xl font-bold text-gray-900">{filteredStats.totalRecords}</p>
+            <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total Records</h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalRecords}</p>
             </div>
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 sm:p-4 rounded-lg border border-blue-200 text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-blue-600 mb-1">Total NB</h4>
-              <p className="text-lg sm:text-2xl font-bold text-blue-700">{filteredStats.totalNB}</p>
-              <p className="text-xs text-blue-600">Balance: {gunnyBalanceStats.balanceGunny.nb}</p>
+            <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total NB</h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalNB}</p>
+              <p className="text-xs text-muted-foreground">Balance: {gunnyBalanceStats.balanceGunny.nb}</p>
             </div>
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 sm:p-4 rounded-lg border border-green-200 text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-green-600 mb-1">Total ONB</h4>
-              <p className="text-lg sm:text-2xl font-bold text-green-700">{filteredStats.totalONB}</p>
-              <p className="text-xs text-green-600">Balance: {gunnyBalanceStats.balanceGunny.onb}</p>
+            <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total ONB</h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalONB}</p>
+              <p className="text-xs text-muted-foreground">Balance: {gunnyBalanceStats.balanceGunny.onb}</p>
             </div>
-            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-3 sm:p-4 rounded-lg border border-yellow-200 text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-yellow-600 mb-1">Total SS</h4>
-              <p className="text-lg sm:text-2xl font-bold text-yellow-700">{filteredStats.totalSS}</p>
-              <p className="text-xs text-yellow-600">Balance: {gunnyBalanceStats.balanceGunny.ss}</p>
+            <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total SS</h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalSS}</p>
+              <p className="text-xs text-muted-foreground">Balance: {gunnyBalanceStats.balanceGunny.ss}</p>
             </div>
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 sm:p-4 rounded-lg border border-purple-200 text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-purple-600 mb-1">Total SWP</h4>
-              <p className="text-lg sm:text-2xl font-bold text-purple-700">{filteredStats.totalSWP}</p>
-              <p className="text-xs text-purple-600">Balance: {gunnyBalanceStats.balanceGunny.swp}</p>
+            <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total SWP</h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalSWP}</p>
+              <p className="text-xs text-muted-foreground">Balance: {gunnyBalanceStats.balanceGunny.swp}</p>
             </div>
-            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-3 sm:p-4 rounded-lg border border-indigo-200 text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-indigo-600 mb-1">Total Bags</h4>
-              <p className="text-lg sm:text-2xl font-bold text-indigo-700">{filteredStats.totalBags}</p>
+            <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total Bags</h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalBags}</p>
             </div>
-            <div className="bg-gradient-to-br from-red-50 to-red-100 p-3 sm:p-4 rounded-lg border border-red-200 text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-red-600 mb-1">Total Weight</h4>
-              <p className="text-lg sm:text-2xl font-bold text-red-700">{formatWeight(filteredStats.totalWeight)}</p>
+            <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total Weight</h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{formatWeight(filteredStats.totalWeight)}</p>
             </div>
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-3 sm:p-4 rounded-lg border border-orange-200 text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-orange-600 mb-1">Total Balance</h4>
-              <p className="text-lg sm:text-2xl font-bold text-orange-700">{gunnyBalanceStats.balanceGunny.nb + gunnyBalanceStats.balanceGunny.onb}</p>
-              <p className="text-xs text-orange-600">NB+ONB: {((gunnyBalanceStats.totalRiceGunny.nb + gunnyBalanceStats.totalRiceGunny.onb) / (gunnyBalanceStats.totalPaddyGunny.nb + gunnyBalanceStats.totalPaddyGunny.onb) * 100).toFixed(1)}% Used</p>
+            <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total Balance</h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{gunnyBalanceStats.balanceGunny.nb + gunnyBalanceStats.balanceGunny.onb}</p>
+              <p className="text-xs text-muted-foreground">NB+ONB: {((gunnyBalanceStats.totalRiceGunny.nb + gunnyBalanceStats.totalRiceGunny.onb) / (gunnyBalanceStats.totalPaddyGunny.nb + gunnyBalanceStats.totalPaddyGunny.onb) * 100).toFixed(1)}% Used</p>
             </div>
           </div>
 
           {/* Breakdown by Source */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
-              <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+            <div className="bg-card p-4 rounded-lg border border-border">
+              <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                <div className="w-3 h-3 bg-primary rounded-full mr-2"></div>
                 Paddy Management (Source)
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-blue-700">Records:</span>
+                  <span className="text-muted-foreground">Records:</span>
                   <span className="font-medium">{filteredStats.bySource.paddy.count}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-blue-700">NB:</span>
+                  <span className="text-muted-foreground">NB:</span>
                   <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.nb}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-blue-700">ONB:</span>
+                  <span className="text-muted-foreground">ONB:</span>
                   <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.onb}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-blue-700">SS:</span>
+                  <span className="text-muted-foreground">SS:</span>
                   <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.ss}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-blue-700">SWP:</span>
+                  <span className="text-muted-foreground">SWP:</span>
                   <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.swp}</span>
                 </div>
-                <div className="pt-2 border-t border-blue-200">
+                <div className="pt-2 border-t border-border">
                   <div className="flex justify-between font-semibold">
-                    <span className="text-blue-800">Total:</span>
-                    <span className="text-blue-900">{gunnyBalanceStats.totalPaddyGunny.total}</span>
+                    <span className="text-foreground">Total:</span>
+                    <span className="text-foreground">{gunnyBalanceStats.totalPaddyGunny.total}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
-              <h4 className="text-sm font-semibold text-green-800 mb-3 flex items-center">
-                <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+            <div className="bg-card p-4 rounded-lg border border-border">
+              <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                <div className="w-3 h-3 bg-primary rounded-full mr-2"></div>
                 Rice Management (Consumption)
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-green-700">Records:</span>
+                  <span className="text-muted-foreground">Records:</span>
                   <span className="font-medium">{filteredStats.bySource.rice.count}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-700">NB Used:</span>
+                  <span className="text-muted-foreground">NB Used:</span>
                   <span className="font-medium">{filteredStats.bySource.rice.nb || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-700">ONB Used:</span>
+                  <span className="text-muted-foreground">ONB Used:</span>
                   <span className="font-medium">{filteredStats.bySource.rice.onb || 0}</span>
                 </div>
-                <div className="pt-2 border-t border-green-200">
+                <div className="pt-2 border-t border-border">
                   <div className="flex justify-between font-semibold">
-                    <span className="text-green-800">Total Used Gunnys:</span>
-                    <span className="text-green-900">{(filteredStats.bySource.rice.nb || 0) + (filteredStats.bySource.rice.onb || 0)}</span>
+                    <span className="text-foreground">Total Used Gunnys:</span>
+                    <span className="text-foreground">{(filteredStats.bySource.rice.nb || 0) + (filteredStats.bySource.rice.onb || 0)}</span>
                   </div>
                 </div>
-                <div className="pt-1 border-t border-green-200">
+                <div className="pt-1 border-t border-border">
                   <div className="flex justify-between text-xs">
-                    <span className="text-green-600">Rice NB:</span>
+                    <span className="text-muted-foreground">Rice NB:</span>
                     <span className="font-medium">{filteredStats.bySource.rice.nb || 0}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-green-600">Rice ONB:</span>
+                    <span className="text-muted-foreground">Rice ONB:</span>
                     <span className="font-medium">{filteredStats.bySource.rice.onb || 0}</span>
                   </div>
                 </div>
-                <div className="pt-2 border-t border-green-200">
+                <div className="pt-2 border-t border-border">
                   <div className="flex justify-between font-semibold">
-                    <span className="text-green-800">Total Used:</span>
-                    <span className="text-green-900">{gunnyBalanceStats.totalRiceGunny.total}</span>
+                    <span className="text-foreground">Total Used:</span>
+                    <span className="text-foreground">{gunnyBalanceStats.totalRiceGunny.total}</span>
                   </div>
                 </div>
-                <div className="pt-2 border-t border-green-200">
+                <div className="pt-2 border-t border-border">
                   <div className="flex justify-between text-xs">
-                    <span className="text-green-600">Utilization Rate (NB+ONB):</span>
-                    <span className="font-medium text-green-800">
+                    <span className="text-muted-foreground">Utilization Rate (NB+ONB):</span>
+                    <span className="font-medium text-foreground">
                       {(() => {
                         const riceUsed = (filteredStats.bySource.rice.nb || 0) + (filteredStats.bySource.rice.onb || 0);
                         const paddyAvailable = gunnyBalanceStats.totalPaddyGunny.nb + gunnyBalanceStats.totalPaddyGunny.onb;
@@ -837,47 +832,45 @@ const GunnyManagement = () => {
                     </span>
                   </div>
                 </div>
-                <div className="pt-2 border-t border-green-200">
+                <div className="pt-2 border-t border-border">
                   <div className="flex justify-between text-xs">
-                    <span className="text-green-600">Rice Output:</span>
-                    <span className="font-medium text-green-800">{filteredStats.bySource.rice.weight || 0} kg</span>
+                    <span className="text-muted-foreground">Rice Output:</span>
+                    <span className="font-medium text-foreground">{filteredStats.bySource.rice.weight || 0} kg</span>
                   </div>
                 </div>
               </div>
             </div>
 
-
-
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
-                <div className="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
+            <div className="bg-card p-4 rounded-lg border border-border">
+              <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                <div className="w-3 h-3 bg-muted-foreground rounded-full mr-2"></div>
                 Direct Gunny Management
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-700">Records:</span>
+                  <span className="text-muted-foreground">Records:</span>
                   <span className="font-medium">{filteredStats.bySource.gunny.count}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-700">NB:</span>
+                  <span className="text-muted-foreground">NB:</span>
                   <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.nb}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-700">ONB:</span>
+                  <span className="text-muted-foreground">ONB:</span>
                   <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.onb}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-700">SS:</span>
+                  <span className="text-muted-foreground">SS:</span>
                   <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.ss}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-700">SWP:</span>
+                  <span className="text-muted-foreground">SWP:</span>
                   <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.swp}</span>
                 </div>
-                <div className="pt-2 border-t border-gray-200">
+                <div className="pt-2 border-t border-border">
                   <div className="flex justify-between font-semibold">
-                    <span className="text-gray-800">Total:</span>
-                    <span className="text-gray-900">{gunnyBalanceStats.totalDirectGunny.total}</span>
+                    <span className="text-foreground">Total:</span>
+                    <span className="text-foreground">{gunnyBalanceStats.totalDirectGunny.total}</span>
                   </div>
                 </div>
               </div>
@@ -908,15 +901,15 @@ const GunnyManagement = () => {
         )} */}
 
         {/* Desktop Table View - Comprehensive Gunny Data */}
-        <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Comprehensive Gunny Records (All Sources)</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {getAllRecords().length} records</p>
-            {/* Filters moved inside table header */}
-            <div className="mt-4">
-              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
-                <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+        <div className="hidden lg:block bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">Comprehensive Gunny Records (All Sources)</h3>
+            <p className="text-sm text-muted-foreground mt-1">Total: {getAllRecords().length} records</p>
+          {/* Filters moved inside table header */}
+          <div className="mt-4">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
+              <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Search</label>
                   <TableFilters
                     searchValue={gunnyFilter}
                     searchPlaceholder="Search by memo, lorry number, or source..."
@@ -925,11 +918,11 @@ const GunnyManagement = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Source</label>
                   <select
                     value={selectedSource}
                     onChange={(e) => setSelectedSource(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white shadow-sm"
+                    className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-colors bg-background text-foreground shadow-sm"
                   >
                     <option value="all">All Sources</option>
                     <option value="paddy">Paddy Management</option>
@@ -938,7 +931,7 @@ const GunnyManagement = () => {
                   </select>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Branch</label>
                   <BranchFilter
                     value={currentBranchId || ''}
                     onChange={(value) => {
@@ -963,110 +956,108 @@ const GunnyManagement = () => {
           {aggregatedLoading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner />
-              <span className="ml-3 text-gray-600">Loading comprehensive gunny data...</span>
+              <span className="ml-3 text-muted-foreground">Loading comprehensive gunny data...</span>
             </div>
           ) : (
             <TableList
               data={getAllRecords()}
               columns={comprehensiveColumns}
               actions={(record) => [
-                <Button
+                <UIButton
                   key="edit"
                   onClick={() => openGunnyModal(record)}
-                  variant="info"
-                  icon="edit"
-                  className="text-xs px-2 py-1"
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 px-2 gap-1"
                 >
-                  Edit
-                </Button>,
-                <Button
+                  <Icon name="edit" className="h-4 w-4" />
+                  <span className="hidden sm:inline">Edit</span>
+                </UIButton>,
+                <UIButton
                   key="delete"
                   onClick={() => deleteGunny(record._id)}
-                  variant="danger"
-                  icon="delete"
-                  className="text-xs px-2 py-1"
+                  variant="destructive"
+                  size="sm"
+                  className="h-8 px-2 gap-1"
                 >
-                  Delete
-                </Button>
+                  <Icon name="delete" className="h-4 w-4" />
+                  <span className="hidden sm:inline">Delete</span>
+                </UIButton>
               ]}
               renderDetail={(record) => (
-                <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-amber-500">
+                <div className="p-6 bg-muted border-l-4 border-primary">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <div className="flex items-center">
-                        <span className="w-24 text-sm font-medium text-gray-600">Source:</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          record.source === 'Paddy Management' ? 'bg-blue-100 text-blue-800' :
-                          record.source === 'Rice Management' ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className="w-24 text-sm font-medium text-muted-foreground">Source:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground`}>
                           {record.source}
                         </span>
                       </div>
                       <div className="flex items-center">
-                        <span className="w-24 text-sm font-medium text-gray-600">Date:</span>
-                        <span className="text-gray-900 font-medium">{record.displayDate}</span>
+                        <span className="w-24 text-sm font-medium text-muted-foreground">Date:</span>
+                        <span className="text-foreground font-medium">{record.displayDate}</span>
                       </div>
                       {record.recordType === 'gunny' && (
                         <>
                           <div className="flex items-center">
-                            <span className="w-24 text-sm font-medium text-gray-600">Issue Memo:</span>
-                            <span className="text-gray-900 font-medium">{record.issueMemo}</span>
+                            <span className="w-24 text-sm font-medium text-muted-foreground">Issue Memo:</span>
+                            <span className="text-foreground font-medium">{record.issueMemo}</span>
                           </div>
                           <div className="flex items-center">
-                            <span className="w-24 text-sm font-medium text-gray-600">Lorry Number:</span>
-                            <span className="text-gray-900 font-medium">{record.lorryNumber}</span>
+                            <span className="w-24 text-sm font-medium text-muted-foreground">Lorry Number:</span>
+                            <span className="text-foreground font-medium">{record.lorryNumber}</span>
                           </div>
                           <div className="flex items-center">
-                            <span className="w-24 text-sm font-medium text-gray-600">Paddy From:</span>
-                            <span className="text-gray-900 font-medium">{record.paddyFrom}</span>
+                            <span className="w-24 text-sm font-medium text-muted-foreground">Paddy From:</span>
+                            <span className="text-foreground font-medium">{record.paddyFrom}</span>
                           </div>
                         </>
                       )}
                       {record.recordType === 'rice' && (
                         <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Month:</span>
-                          <span className="text-gray-900 font-medium">{record.month}</span>
+                          <span className="w-24 text-sm font-medium text-muted-foreground">Month:</span>
+                          <span className="text-foreground font-medium">{record.month}</span>
                         </div>
                       )}
 
                     </div>
                     <div className="space-y-3">
                       {/* Gunny Summary */}
-                      <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
-                        <h5 className="text-sm font-semibold text-gray-800 mb-2">Gunny Summary</h5>
+                      <div className="p-3 bg-card rounded-lg border border-border w-full">
+                        <h5 className="text-sm font-semibold text-foreground mb-2">Gunny Summary</h5>
                         <div className="grid grid-cols-4 gap-2 text-xs w-full">
                           <div className="text-center">
-                            <div className="font-medium text-blue-600">NB</div>
-                            <div className="text-gray-900">{record.gunny?.nb || 0}</div>
+                            <div className="font-medium text-muted-foreground">NB</div>
+                            <div className="text-foreground">{record.gunny?.nb || 0}</div>
                           </div>
                           <div className="text-center">
-                            <div className="font-medium text-green-600">ONB</div>
-                            <div className="text-gray-900">{record.gunny?.onb || 0}</div>
+                            <div className="font-medium text-muted-foreground">ONB</div>
+                            <div className="text-foreground">{record.gunny?.onb || 0}</div>
                           </div>
                           <div className="text-center">
-                            <div className="font-medium text-yellow-600">SS</div>
-                            <div className="text-gray-900">{record.gunny?.ss || 0}</div>
+                            <div className="font-medium text-muted-foreground">SS</div>
+                            <div className="text-foreground">{record.gunny?.ss || 0}</div>
                           </div>
                           <div className="text-center">
-                            <div className="font-medium text-purple-600">SWP</div>
-                            <div className="text-gray-900">{record.gunny?.swp || 0}</div>
+                            <div className="font-medium text-muted-foreground">SWP</div>
+                            <div className="text-foreground">{record.gunny?.swp || 0}</div>
                           </div>
                         </div>
                       </div>
 
                       {/* Paddy Summary (only for gunny and paddy records) */}
                       {(record.recordType === 'gunny' || record.recordType === 'paddy') && (
-                        <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
-                          <h5 className="text-sm font-semibold text-gray-800 mb-2">Paddy Summary</h5>
-                          <div className="grid grid-cols-2 gap-4 text-sm w-full">
-                            <div>
-                              <span className="text-gray-600">Bags:</span>
-                              <span className="ml-1 font-medium text-indigo-600">{record.paddy?.bags || 0}</span>
+                        <div className="p-3 bg-card rounded-lg border border-border w-full">
+                          <h5 className="text-sm font-semibold text-foreground mb-2">Paddy Summary</h5>
+                          <div className="grid grid-cols-2 gap-2 text-xs w-full">
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground truncate">Bags:</span>
+                              <span className="font-medium text-foreground ml-2">{record.paddy?.bags || 0}</span>
                             </div>
-                            <div>
-                              <span className="text-gray-600">Weight:</span>
-                              <span className="ml-1 font-medium text-red-600">{formatWeight(record.paddy?.weight || 0)}</span>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground truncate">Weight:</span>
+                              <span className="font-medium text-foreground ml-2">{formatWeight(record.paddy?.weight || 0)}</span>
                             </div>
                           </div>
                         </div>
@@ -1080,39 +1071,34 @@ const GunnyManagement = () => {
         </div>
 
         {/* Mobile Table View - Comprehensive Gunny Data */}
-        <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6">
-          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">All Gunny Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {getAllRecords().length} records from all sources</p>
+        <div className="lg:hidden bg-card rounded-2xl shadow-lg border border-border overflow-hidden mb-6">
+          <div className="px-4 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">All Gunny Records</h3>
+            <p className="text-sm text-muted-foreground mt-1">Total: {getAllRecords().length} records from all sources</p>
           </div>
           
           <div className="p-4">
             {getAllRecords().length === 0 ? (
               <div className="text-center py-8">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="mx-auto h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No gunny records found</h3>
-                <p className="mt-1 text-sm text-gray-500">No gunny data available from any management module.</p>
+                <h3 className="mt-2 text-sm font-medium text-foreground">No gunny records found</h3>
+                <p className="mt-1 text-sm text-muted-foreground">No gunny data available from any management module.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {getAllRecords().map((record, index) => (
-                  <div key={`${record.recordType}-${record._id || index}`} className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-white p-3">
+                  <div key={`${record.recordType}-${record._id || index}`} className="border border-border rounded-lg overflow-hidden">
+                    <div className="bg-card p-3">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              record.source === 'Paddy Management' ? 'bg-blue-100 text-blue-800' :
-                              record.source === 'Rice Management' ? 'bg-green-100 text-green-800' :
-                              record.source === 'Godown Management' ? 'bg-purple-100 text-purple-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground`}>
                               {record.source}
                             </span>
                                     {currentBranchId === 'all' && (
-          <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
             {(() => {
               const branchName = record.branch_id?.name || record.branch?.name;
               const branchId = record.branch_id?._id || record.branch_id;
@@ -1121,27 +1107,27 @@ const GunnyManagement = () => {
           </span>
         )}
         {currentBranchId !== 'all' && (
-          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
             {currentBranchName || currentBranchId}
           </span>
         )}
                           </div>
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-foreground">
                             {record.recordType === 'rice' ? `Month: ${record.month}` :
                              record.issueMemo || 'N/A'}
                           </div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-muted-foreground">
                             {record.recordType === 'gunny' ? record.lorryNumber : 'N/A'}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             {record.displayDate} • {record.recordType === 'gunny' ? record.paddyFrom : 'N/A'}
                           </div>
                         </div>
                         <div className="text-xs text-right">
-                          <div className="font-medium text-blue-600">NB: {record.gunny?.nb || 0}</div>
-                          <div className="font-medium text-green-600">ONB: {record.gunny?.onb || 0}</div>
-                          <div className="font-medium text-yellow-600">SS: {record.gunny?.ss || 0}</div>
-                          <div className="font-medium text-purple-600">SWP: {record.gunny?.swp || 0}</div>
+                          <div className="font-medium text-foreground">NB: {record.gunny?.nb || 0}</div>
+                          <div className="font-medium text-foreground">ONB: {record.gunny?.onb || 0}</div>
+                          <div className="font-medium text-foreground">SS: {record.gunny?.ss || 0}</div>
+                          <div className="font-medium text-foreground">SWP: {record.gunny?.swp || 0}</div>
                         </div>
                       </div>
                     </div>
@@ -1153,63 +1139,65 @@ const GunnyManagement = () => {
         </div>
 
         {/* Original Gunny Management Records */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Gunny Management Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredGunnyRecords.length} records</p>
+        <div className="bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
+          <div className="px-4 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">Gunny Management Records</h3>
+            <p className="text-sm text-muted-foreground mt-1">Total: {filteredGunnyRecords.length} records</p>
           </div>
           
           <div className="p-4">
             {filteredGunnyRecords.length === 0 ? (
               <div className="text-center py-8">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="mx-auto h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No gunny records</h3>
-                <p className="mt-1 text-sm text-gray-500">Get started by creating a new gunny record.</p>
+                <h3 className="mt-2 text-sm font-medium text-foreground">No gunny records</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Get started by creating a new gunny record.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredGunnyRecords.map((gunny) => (
-                  <div key={gunny._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div key={gunny._id} className="border border-border rounded-lg overflow-hidden">
                     {/* Mobile Table Row */}
                     <div 
-                      className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="bg-card p-3 cursor-pointer hover:bg-muted transition-colors"
                       onClick={() => setExpandedGunny(expandedGunny === gunny._id ? null : gunny._id)}
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{gunny.issueMemo}</div>
-                          <div className="text-sm text-gray-600">{gunny.lorryNumber}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="font-medium text-foreground">{gunny.issueMemo}</div>
+                          <div className="text-sm text-muted-foreground">{gunny.lorryNumber}</div>
+                          <div className="text-xs text-muted-foreground">
                             {new Date(gunny.issueDate).toLocaleDateString()} • {gunny.paddyFrom}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button
+                          <UIButton
                             onClick={(e) => {
                               e.stopPropagation();
                               openGunnyModal(gunny);
                             }}
-                            variant="info"
-                            icon="edit"
-                            className="text-xs px-2 py-1"
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 px-2 gap-1"
                           >
-                            Edit
-                          </Button>
-                          <Button
+                            <Icon name="edit" className="h-4 w-4" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </UIButton>
+                          <UIButton
                             onClick={(e) => {
                               e.stopPropagation();
                               deleteGunny(gunny._id);
                             }}
-                            variant="danger"
-                            icon="delete"
-                            className="text-xs px-2 py-1"
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 px-2 gap-1"
                           >
-                            Delete
-                          </Button>
+                            <Icon name="delete" className="h-4 w-4" />
+                            <span className="hidden sm:inline">Delete</span>
+                          </UIButton>
                           <svg 
-                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                            className={`w-4 h-4 text-muted-foreground transition-transform ${
                               expandedGunny === gunny._id ? 'rotate-180' : ''
                             }`}
                             fill="none" 
@@ -1224,55 +1212,55 @@ const GunnyManagement = () => {
 
                     {/* Expanded Detail View */}
                     {expandedGunny === gunny._id && (
-                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 border-t border-gray-200">
+                      <div className="bg-muted p-4 border-t border-border">
                         {/* Details Grid */}
                         <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                           <div>
-                            <span className="text-gray-600">Date:</span>
-                            <span className="ml-1 font-medium text-gray-900">
+                            <span className="text-muted-foreground">Date:</span>
+                            <span className="ml-1 font-medium text-foreground">
                               {new Date(gunny.issueDate).toLocaleDateString()}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Source:</span>
-                            <span className="ml-1 font-medium text-gray-900">{gunny.paddyFrom}</span>
+                            <span className="text-muted-foreground">Source:</span>
+                            <span className="ml-1 font-medium text-foreground">{gunny.paddyFrom}</span>
                           </div>
                         </div>
 
                         {/* Gunny Summary */}
-                        <div className="mb-3 p-3 bg-white rounded-lg border border-gray-200 w-full">
-                          <h5 className="text-sm font-semibold text-gray-800 mb-2">Gunny Summary</h5>
+                        <div className="mb-3 p-3 bg-card rounded-lg border border-border w-full">
+                          <h5 className="text-sm font-semibold text-foreground mb-2">Gunny Summary</h5>
                           <div className="grid grid-cols-4 gap-1 text-xs w-full">
                             <div className="text-center">
-                              <div className="font-medium text-blue-600 truncate">NB</div>
-                              <div className="text-gray-900 truncate">{gunny.gunny?.nb || 0}</div>
+                              <div className="font-medium text-muted-foreground truncate">NB</div>
+                              <div className="text-foreground truncate">{gunny.gunny?.nb || 0}</div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-green-600 truncate">ONB</div>
-                              <div className="text-gray-900 truncate">{gunny.gunny?.onb || 0}</div>
+                              <div className="font-medium text-muted-foreground truncate">ONB</div>
+                              <div className="text-foreground truncate">{gunny.gunny?.onb || 0}</div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-yellow-600 truncate">SS</div>
-                              <div className="text-gray-900 truncate">{gunny.gunny?.ss || 0}</div>
+                              <div className="font-medium text-muted-foreground truncate">SS</div>
+                              <div className="text-foreground truncate">{gunny.gunny?.ss || 0}</div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-purple-600 truncate">SWP</div>
-                              <div className="text-gray-900 truncate">{gunny.gunny?.swp || 0}</div>
+                              <div className="font-medium text-muted-foreground truncate">SWP</div>
+                              <div className="text-foreground truncate">{gunny.gunny?.swp || 0}</div>
                             </div>
                           </div>
                         </div>
 
                         {/* Paddy Summary */}
-                        <div className="p-3 bg-white rounded-lg border border-gray-200 w-full">
-                          <h5 className="text-sm font-semibold text-gray-800 mb-2">Paddy Summary</h5>
+                        <div className="p-3 bg-card rounded-lg border border-border w-full">
+                          <h5 className="text-sm font-semibold text-foreground mb-2">Paddy Summary</h5>
                           <div className="grid grid-cols-2 gap-2 text-xs w-full">
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600 truncate">Bags:</span>
-                              <span className="font-medium text-indigo-600 ml-2">{gunny.paddy?.bags || 0}</span>
+                              <span className="text-muted-foreground truncate">Bags:</span>
+                              <span className="font-medium text-foreground ml-2">{gunny.paddy?.bags || 0}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600 truncate">Weight:</span>
-                              <span className="font-medium text-red-600 ml-2">{formatWeight(gunny.paddy?.weight || 0)}</span>
+                              <span className="text-muted-foreground truncate">Weight:</span>
+                              <span className="font-medium text-foreground ml-2">{formatWeight(gunny.paddy?.weight || 0)}</span>
                             </div>
                           </div>
                         </div>
@@ -1298,8 +1286,8 @@ const GunnyManagement = () => {
       >
         <form onSubmit={saveGunny} className="space-y-6">
           {/* Basic Information */}
-          <fieldset className="border border-gray-200 rounded p-4">
-            <legend className="text-sm font-semibold text-gray-700 px-2">
+          <fieldset className="border border-border rounded p-4">
+            <legend className="text-sm font-semibold text-muted-foreground px-2">
               Basic Information
             </legend>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

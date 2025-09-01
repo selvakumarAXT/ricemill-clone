@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ReactApexChart from 'react-apexcharts';
 
 const SouthIndiaSalesChart = ({ 
@@ -17,6 +17,22 @@ const SouthIndiaSalesChart = ({
     }).format(amount);
   };
 
+  // Resolve CSS variable hsl values to usable CSS color strings
+  const resolveVar = (name) => {
+    if (typeof window === 'undefined') return undefined;
+    const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return val ? `hsl(${val})` : undefined;
+  };
+
+  // Track theme changes to recompute colors when .dark class toggles
+  const [themeVersion, setThemeVersion] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const observer = new MutationObserver(() => setThemeVersion((v) => v + 1));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   // Extract sales data for ALL states from backend (dynamic)
   const allStatesData = Object.entries(data?.stateSales || {}).map(([state, sales]) => ({
     state,
@@ -31,84 +47,84 @@ const SouthIndiaSalesChart = ({
   const stateNames = sortedStatesData.map(item => item.state);
   const salesData = sortedStatesData.map(item => item.sales);
 
-  const options = {
-    chart: {
-      type: 'bar',
-      height: height,
-      toolbar: {
-        show: true,
-        tools: {
-          selection: false,
-          zoom: false,
-          zoomin: false,
-          zoomout: false,
-          pan: false,
-          reset: false
-        }
-      }
-    },
-    plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: '60%',
-        borderRadius: 4,
-        dataLabels: {
-          position: 'top'
-        }
-      }
-    },
-    colors: ['#10B981'], // Single green color for all bars (matching Dashboard)
-    dataLabels: {
-      enabled: true,
-      formatter: function (val) {
-        return formatCurrency(val);
-      },
-      style: {
-        fontSize: '12px',
-        colors: ['#fff']
-      }
-    },
-    stroke: {
-      width: 1,
-      colors: ['#fff']
-    },
-    xaxis: {
-      categories: stateNames, // Dynamic state names from backend
-      labels: {
-        style: {
-          colors: '#6B7280',
-          fontSize: '14px'
-        }
-      }
-    },
-    yaxis: {
-      labels: {
-        style: {
-          colors: '#6B7280',
-          fontSize: '12px'
+  const options = useMemo(() => {
+    const primary = resolveVar('--primary') || '#10b981';
+    const border = resolveVar('--border') || '#e5e7eb';
+    const mutedFg = resolveVar('--muted-foreground') || '#6b7280';
+    const primaryFg = resolveVar('--primary-foreground') || '#ffffff';
+
+    return {
+      chart: {
+        type: 'bar',
+        height: height,
+        toolbar: {
+          show: false,
         },
-        formatter: function (value) {
-          return formatCurrency(value);
-        }
-      }
-    },
-    grid: {
-      show: true,
-      borderColor: '#E5E7EB',
-      strokeDashArray: 5
-    },
-    tooltip: {
-      y: {
-        formatter: function (value) {
-          return formatCurrency(value);
-        }
-      }
-    }
-  };
+      },
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          columnWidth: '60%',
+          borderRadius: 4,
+          dataLabels: {
+            position: 'top',
+          },
+        },
+      },
+      colors: [primary],
+      dataLabels: {
+        enabled: true,
+        formatter: function (val) {
+          return formatCurrency(val);
+        },
+        style: {
+          fontSize: '12px',
+          colors: [primaryFg],
+        },
+      },
+      stroke: {
+        width: 1,
+        colors: [border],
+      },
+      xaxis: {
+        categories: stateNames, // Dynamic state names from backend
+        labels: {
+          style: {
+            colors: mutedFg,
+            fontSize: '12px',
+          },
+        },
+      },
+      yaxis: {
+        labels: {
+          style: {
+            colors: mutedFg,
+            fontSize: '12px',
+          },
+          formatter: function (value) {
+            return formatCurrency(value);
+          },
+        },
+      },
+      grid: {
+        show: true,
+        borderColor: border,
+        strokeDashArray: 5,
+      },
+      tooltip: {
+        y: {
+          formatter: function (value) {
+            return formatCurrency(value);
+          },
+        },
+      },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [height, stateNames.join(','), themeVersion]);
 
   return (
-    <div className={`bg-white rounded-lg p-6 shadow-sm border border-gray-200 ${className}`}>
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
+    <div className={`rounded-lg border bg-card text-card-foreground p-6 shadow-sm ${className}`}>
+      <h3 className="text-lg font-semibold text-muted-foreground mb-4">{title}</h3>
       <ReactApexChart
         options={options}
         series={[

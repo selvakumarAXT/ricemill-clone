@@ -61,12 +61,12 @@ const PaddyEntryDetails = ({
   };
 
   return (
-    <fieldset className={`border border-gray-200 rounded p-4 ${className}`}>
+    <fieldset className={`border border-border rounded p-4 ${className}`}>
       {showLegend && (
-        <legend className="text-sm font-semibold text-gray-700 px-2">
+        <legend className="text-sm font-semibold text-foreground px-2">
           Paddy Details 
-          {isAutoCalculationEnabled && <span className="text-xs text-gray-500">(1 bag = {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons)</span>}
-          {!enableAutoCalculation && <span className="text-xs text-blue-600">(auto-calculated from gunny)</span>}
+          {isAutoCalculationEnabled && <span className="text-xs text-muted-foreground">(1 bag = {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons)</span>}
+          {!enableAutoCalculation && <span className="text-xs text-primary">(auto-calculated from gunny)</span>}
         </legend>
       )}
       
@@ -80,14 +80,14 @@ const PaddyEntryDetails = ({
                 id="autoCalculation"
                 checked={isAutoCalculationEnabled}
                 onChange={toggleAutoCalculation}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-input text-primary focus:ring-ring"
               />
-              <label htmlFor="autoCalculation" className="text-sm text-gray-700">
+              <label htmlFor="autoCalculation" className="text-sm text-foreground">
                 Enable auto-calculation
               </label>
             </div>
             {isAutoCalculationEnabled && (
-              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+              <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded">
                 ✓ Active
               </span>
             )}
@@ -151,8 +151,8 @@ const PaddyEntryDetails = ({
       
       {/* Calculation info */}
       {isAutoCalculationEnabled && (
-        <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-          <div className="text-xs text-blue-800">
+        <div className="mt-3 p-3 bg-primary/10 rounded-lg">
+          <div className="text-xs text-primary">
             <div className="font-medium mb-1">💡 Auto-calculation is active:</div>
             <ul className="space-y-1">
               <li>• Enter <strong>bags</strong> → Weight will be calculated (bags × {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons)</li>
@@ -164,8 +164,8 @@ const PaddyEntryDetails = ({
       
       {/* Manual calculation info */}
       {!isAutoCalculationEnabled && enableAutoCalculation && (
-        <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-          <div className="text-xs text-gray-600">
+        <div className="mt-3 p-3 bg-muted rounded-lg">
+          <div className="text-xs text-muted-foreground">
             <div className="font-medium mb-1">📝 Manual mode:</div>
             <div>You can enter bags and weight independently. Current standard: 1 bag = {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons</div>
           </div>
@@ -174,8 +174,8 @@ const PaddyEntryDetails = ({
       
       {/* Gunny-controlled info */}
       {!enableAutoCalculation && (
-        <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-          <div className="text-xs text-blue-800">
+        <div className="mt-3 p-3 bg-primary/10 rounded-lg">
+          <div className="text-xs text-primary">
             <div className="font-medium mb-1">🎯 Auto-calculated from Gunny:</div>
             <div>Both bags and weight are automatically calculated from gunny count. Bags = Total Gunny, Weight = Bags × {currentBagWeight}kg = {(currentBagWeight/1000).toFixed(2)} tons</div>
           </div>
@@ -184,8 +184,8 @@ const PaddyEntryDetails = ({
       
       {/* Validation errors */}
       {validationErrors.length > 0 && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <div className="text-xs text-red-800">
+        <div className="mt-3 p-3 bg-destructive/10 border border-destructive rounded-lg">
+          <div className="text-xs text-destructive">
             <div className="font-medium mb-1">⚠️ Validation warnings:</div>
             <ul className="space-y-1">
               {validationErrors.map((error, index) => (

@@ -4,7 +4,8 @@ import TableFilters from '../components/common/TableFilters';
 import BranchFilter from '../components/common/BranchFilter';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 import TableList from '../components/common/TableList';
-import Button from '../components/common/Button';
+import { Button as UIButton } from '../components/ui/button';
+import Icon from '../components/common/Icon';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 import FormInput from '../components/common/FormInput';
@@ -426,27 +427,24 @@ const EBMeterCalculation = () => {
   if (loading) return <LoadingSpinner fullPage />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
+      <div className="bg-card shadow-sm border-b border-border px-4 py-6 sm:px-6">
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
            
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mt-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground mt-2">
               EB Reading Checklist
             </h2>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
               MONTH: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} 
             </p>
           </div>
           <div className="flex justify-center sm:justify-start space-x-2">
-            <Button
-              onClick={() => openMeterModal()}
-              variant="success"
-              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              ⚡ Add Meter Reading
-            </Button>
+            <UIButton onClick={() => openMeterModal()}>
+              <Icon name="add" className="mr-2 h-4 w-4" />
+              Add Meter Reading
+            </UIButton>
             
           </div>
         </div>
@@ -456,56 +454,56 @@ const EBMeterCalculation = () => {
       <div className="px-4 py-6 sm:px-6">
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg">
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
             <div className="flex items-center">
               <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-red-700 font-medium">{error}</span>
+              <span className="text-destructive font-medium">{error}</span>
             </div>
           </div>
         )}
 
         {/* Monthly Summary */}
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Summary - {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
+        <div className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Monthly Summary - {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{meterReadings.length}</div>
-              <div className="text-sm text-gray-600">Days Recorded</div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-foreground">{meterReadings.length}</div>
+              <div className="text-sm text-muted-foreground">Days Recorded</div>
             </div>
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{totalUnits.toFixed(2)}</div>
-              <div className="text-sm text-gray-600">Total KWH</div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-foreground">{totalUnits.toFixed(2)}</div>
+              <div className="text-sm text-muted-foreground">Total KWH</div>
             </div>
-            <div className="text-center p-3 bg-yellow-50 rounded-lg">
-              <div className="text-2xl font-bold text-yellow-600">{(totalUnits / Math.max(meterReadings.length, 1)).toFixed(2)}</div>
-              <div className="text-sm text-gray-600">Avg KWH/Day</div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-foreground">{(totalUnits / Math.max(meterReadings.length, 1)).toFixed(2)}</div>
+              <div className="text-sm text-muted-foreground">Avg KWH/Day</div>
             </div>
           </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-blue-600 text-lg">📅</span>
+              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center mr-3">
+                <span className="text-primary text-lg">📅</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Today's Date</p>
-                <p className="text-xl font-bold text-blue-600">{new Date().toLocaleDateString()}</p>
+                <p className="text-sm text-muted-foreground">Today's Date</p>
+                <p className="text-xl font-bold text-foreground">{new Date().toLocaleDateString()}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-green-600 text-lg">⚡</span>
+              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center mr-3">
+                <span className="text-primary text-lg">⚡</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Today's KWH</p>
-                <p className="text-xl font-bold text-green-600">{totalUnits.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">Today's KWH</p>
+                <p className="text-xl font-bold text-foreground">{totalUnits.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -513,15 +511,15 @@ const EBMeterCalculation = () => {
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Meter Readings</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredMeterReadings.length} records</p>
+        <div className="hidden lg:block bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">Meter Readings</h3>
+            <p className="text-sm text-muted-foreground mt-1">Total: {filteredMeterReadings.length} records</p>
             {/* Filters moved inside table header */}
             <div className="mt-4">
               <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Search</label>
                   <TableFilters
                     searchValue={meterFilter}
                     searchPlaceholder="Search by meter number, bill number..."
@@ -530,7 +528,7 @@ const EBMeterCalculation = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Meter Number</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Meter Number</label>
                   <FormSelect
                     value={meterNumberFilter}
                     onChange={(e) => setMeterNumberFilter(e.target.value)}
@@ -544,7 +542,7 @@ const EBMeterCalculation = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Branch</label>
                   <BranchFilter
                     value={currentBranchId || ''}
                     onChange={(value) => {
@@ -569,84 +567,74 @@ const EBMeterCalculation = () => {
             data={filteredMeterReadings}
             columns={columns}
             actions={(meter) => [
-              <Button
-                key="edit"
-                onClick={() => openMeterModal(meter)}
-                variant="info"
-                icon="edit"
-                className="text-xs px-2 py-1"
-              >
+              <UIButton key="edit" onClick={() => openMeterModal(meter)} variant="secondary" size="sm">
+                <Icon name="edit" className="mr-2 h-4 w-4" />
                 Edit
-              </Button>,
-              <Button
-                key="delete"
-                onClick={() => deleteMeter(meter._id)}
-                variant="danger"
-                icon="delete"
-                className="text-xs px-2 py-1"
-              >
+              </UIButton>,
+              <UIButton key="delete" onClick={() => deleteMeter(meter._id)} variant="destructive" size="sm">
+                <Icon name="delete" className="mr-2 h-4 w-4" />
                 Delete
-              </Button>
+              </UIButton>
             ]}
             renderDetail={(meter) => (
-              <div className="p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border-l-4 border-yellow-500">
+              <div className="p-6 bg-muted border-l-4 border-primary">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Reading Date:</span>
-                      <span className="text-gray-900 font-medium">{new Date(meter.readingDate).toLocaleDateString()}</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Reading Date:</span>
+                      <span className="text-foreground font-medium">{new Date(meter.readingDate).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Meter Number:</span>
-                      <span className="text-blue-600 font-medium">{meter.meterNumber}</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Meter Number:</span>
+                      <span className="text-primary font-medium">{meter.meterNumber}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Bill Number:</span>
-                      <span className="text-gray-900 font-medium">{meter.billNumber}</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Bill Number:</span>
+                      <span className="text-foreground font-medium">{meter.billNumber}</span>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Power Factor:</span>
-                      <span className="text-gray-900 font-medium">{meter.pf}</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Power Factor:</span>
+                      <span className="text-foreground font-medium">{meter.pf}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Start KWH:</span>
-                      <span className="text-indigo-600 font-medium">{formatKWH(meter.startKWH)}</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Start KWH:</span>
+                      <span className="text-primary font-medium">{formatKWH(meter.startKWH)}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">End KWH:</span>
-                      <span className="text-gray-900 font-medium">{formatKWHWithFallback(meter.endKWH)}</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">End KWH:</span>
+                      <span className="text-foreground font-medium">{formatKWHWithFallback(meter.endKWH)}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="text-gray-600">Consumption:</span>
-                      <span className="ml-1 font-medium text-indigo-600">{formatKWH(meter.consumption)} KWH</span>
+                      <span className="text-muted-foreground">Consumption:</span>
+                      <span className="ml-1 font-medium text-primary">{formatKWH(meter.consumption)} KWH</span>
                     </div>
                   </div>
                 </div>
                 
                 {/* Calculation Details */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-800 mb-3">Calculation Details</h4>
+                <div className="mt-4 pt-4 border-t border-border">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Calculation Details</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="text-center">
-                      <div className="text-lg font-bold text-indigo-600">{formatKWH(meter.startKWH)}</div>
-                      <div className="text-xs text-gray-600">Start KWH</div>
+                      <div className="text-lg font-bold text-primary">{formatKWH(meter.startKWH)}</div>
+                      <div className="text-xs text-muted-foreground">Start KWH</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-green-600">{formatKWHWithFallback(meter.endKWH)}</div>
-                      <div className="text-xs text-gray-600">End KWH</div>
+                      <div className="text-lg font-bold text-foreground">{formatKWHWithFallback(meter.endKWH)}</div>
+                      <div className="text-xs text-muted-foreground">End KWH</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-purple-600">{formatKWH(meter.consumption)}</div>
-                      <div className="text-xs text-gray-600">Consumption KWH</div>
+                      <div className="text-lg font-bold text-primary">{formatKWH(meter.consumption)}</div>
+                      <div className="text-xs text-muted-foreground">Consumption KWH</div>
                     </div>
                   </div>
                   
                   {meter.remarks && (
-                    <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
-                      <h4 className="text-sm font-semibold text-gray-800 mb-1">Remarks</h4>
-                      <p className="text-gray-700 text-sm">{meter.remarks}</p>
+                    <div className="mt-4 p-3 bg-card rounded-lg border border-border">
+                      <h4 className="text-sm font-semibold text-foreground mb-1">Remarks</h4>
+                      <p className="text-muted-foreground text-sm">{meter.remarks}</p>
                     </div>
                   )}
                 </div>
@@ -656,62 +644,62 @@ const EBMeterCalculation = () => {
         </div>
 
         {/* Mobile Table View */}
-        <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Meter Readings</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredMeterReadings.length} records</p>
+        <div className="lg:hidden bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
+          <div className="px-4 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">Meter Readings</h3>
+            <p className="text-sm text-muted-foreground mt-1">Total: {filteredMeterReadings.length} records</p>
           </div>
           
           <div className="p-4">
             {filteredMeterReadings.length === 0 ? (
               <div className="text-center py-8">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="mx-auto h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No meter readings</h3>
-                <p className="mt-1 text-sm text-gray-500">Get started by creating a new meter reading.</p>
+                <h3 className="mt-2 text-sm font-medium text-foreground">No meter readings</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Get started by creating a new meter reading.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredMeterReadings.map((meter) => (
-                  <div key={meter._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div key={meter._id} className="border border-border rounded-lg overflow-hidden">
                     <div 
-                      className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="bg-card p-3 cursor-pointer hover:bg-accent transition-colors"
                       onClick={() => setExpandedMeter(expandedMeter === meter._id ? null : meter._id)}
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="font-medium text-blue-600">{meter.meterNumber}</div>
-                          <div className="text-sm text-gray-600">{new Date(meter.readingDate).toLocaleDateString()}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="font-medium text-primary">{meter.meterNumber}</div>
+                          <div className="text-sm text-muted-foreground">{new Date(meter.readingDate).toLocaleDateString()}</div>
+                          <div className="text-xs text-muted-foreground">
                             PF: {meter.pf} • {formatKWH(meter.startKWH)} → {formatKWHWithFallback(meter.endKWH)} • {formatKWH(meter.consumption)} KWH
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button
+                          <UIButton
                             onClick={(e) => {
                               e.stopPropagation();
                               openMeterModal(meter);
                             }}
-                            variant="info"
-                            icon="edit"
-                            className="text-xs px-2 py-1"
+                            variant="secondary"
+                            size="sm"
                           >
+                            <Icon name="edit" className="mr-2 h-4 w-4" />
                             Edit
-                          </Button>
-                          <Button
+                          </UIButton>
+                          <UIButton
                             onClick={(e) => {
                               e.stopPropagation();
                               deleteMeter(meter._id);
                             }}
-                            variant="danger"
-                            icon="delete"
-                            className="text-xs px-2 py-1"
+                            variant="destructive"
+                            size="sm"
                           >
+                            <Icon name="delete" className="mr-2 h-4 w-4" />
                             Delete
-                          </Button>
+                          </UIButton>
                           <svg 
-                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                            className={`w-4 h-4 text-muted-foreground transition-transform ${
                               expandedMeter === meter._id ? 'rotate-180' : ''
                             }`}
                             fill="none" 
@@ -725,33 +713,33 @@ const EBMeterCalculation = () => {
                     </div>
 
                     {expandedMeter === meter._id && (
-                      <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-4 border-t border-gray-200">
+                      <div className="bg-muted p-4 border-t border-border">
                         <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                           <div>
-                            <span className="text-gray-600">Bill Number:</span>
-                            <span className="ml-1 font-medium text-gray-900">{meter.billNumber}</span>
+                            <span className="text-muted-foreground">Bill Number:</span>
+                            <span className="ml-1 font-medium text-foreground">{meter.billNumber}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Power Factor:</span>
-                            <span className="ml-1 font-medium text-gray-900">{meter.pf}</span>
+                            <span className="text-muted-foreground">Power Factor:</span>
+                            <span className="ml-1 font-medium text-foreground">{meter.pf}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Start KWH:</span>
-                            <span className="ml-1 font-medium text-indigo-600">{formatKWH(meter.startKWH)}</span>
+                            <span className="text-muted-foreground">Start KWH:</span>
+                            <span className="ml-1 font-medium text-primary">{formatKWH(meter.startKWH)}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">End KWH:</span>
-                            <span className="ml-1 font-medium text-gray-900">{formatKWHWithFallback(meter.endKWH)}</span>
+                            <span className="text-muted-foreground">End KWH:</span>
+                            <span className="ml-1 font-medium text-foreground">{formatKWHWithFallback(meter.endKWH)}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Consumption:</span>
-                            <span className="ml-1 font-medium text-indigo-600">{formatKWH(meter.consumption)} KWH</span>
+                            <span className="text-muted-foreground">Consumption:</span>
+                            <span className="ml-1 font-medium text-primary">{formatKWH(meter.consumption)} KWH</span>
                           </div>
                         </div>
                         {meter.remarks && (
-                          <div className="p-3 bg-white rounded-lg border border-gray-200">
-                            <h5 className="text-sm font-semibold text-gray-800 mb-1">Remarks</h5>
-                            <p className="text-gray-700 text-sm">{meter.remarks}</p>
+                          <div className="p-3 bg-card rounded-lg border border-border">
+                            <h5 className="text-sm font-semibold text-foreground mb-1">Remarks</h5>
+                            <p className="text-muted-foreground text-sm">{meter.remarks}</p>
                           </div>
                         )}
                       </div>
@@ -774,7 +762,7 @@ const EBMeterCalculation = () => {
         <form onSubmit={saveMeter} className="space-y-6" key={editingMeter ? 'edit' : 'add'}>
           {/* Basic Information Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Basic Information</h3>
+            <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormInput
                 label="Reading Date (Auto-set)"
@@ -786,10 +774,10 @@ const EBMeterCalculation = () => {
                 icon="calendar"
                 placeholder="Automatically set to today"
                 readOnly
-                className="bg-gray-50 cursor-not-allowed"
+                className="bg-muted cursor-not-allowed"
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
                   Meter Number <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2">
@@ -807,16 +795,14 @@ const EBMeterCalculation = () => {
                     ]}
                     className="flex-1"
                   />
-                  <Button
+                  <UIButton
                     type="button"
                     variant="outline"
+                    size="icon"
                     onClick={() => setShowMeterNumberModal(true)}
-                    className="px-3 py-2"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </Button>
+                    <Icon name="add" className="h-4 w-4" />
+                  </UIButton>
                 </div>
               </div>
               <FormInput
@@ -850,7 +836,7 @@ const EBMeterCalculation = () => {
 
           {/* Meter Readings Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Today's Meter Readings</h3>
+            <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">Today's Meter Readings</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormInput
                 label="Power Factor (PF)"
@@ -899,7 +885,7 @@ const EBMeterCalculation = () => {
 
           {/* Additional Information Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Additional Information</h3>
+            <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">Additional Information</h3>
             <FormInput
               label="Remarks"
               name="remarks"
@@ -923,13 +909,13 @@ const EBMeterCalculation = () => {
             </div>
           </div>
           
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <Button type="button" onClick={closeMeterModal} variant="secondary">
+          <div className="flex justify-end space-x-3 pt-6 border-t border-border">
+            <UIButton type="button" onClick={closeMeterModal} variant="secondary">
               Cancel
-            </Button>
-            <Button type="submit" variant="primary">
+            </UIButton>
+            <UIButton type="submit">
               {editingMeter ? 'Update Meter Reading' : 'Create Meter Reading'}
-            </Button>
+            </UIButton>
           </div>
         </form>
       </DialogBox>
@@ -981,13 +967,13 @@ const EBMeterCalculation = () => {
             />
           </div>
           
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <Button type="button" onClick={closeMeterNumberModal} variant="secondary">
+          <div className="flex justify-end space-x-3 pt-6 border-t border-border">
+            <UIButton type="button" onClick={closeMeterNumberModal} variant="secondary">
               Cancel
-            </Button>
-            <Button type="submit" variant="primary">
+            </UIButton>
+            <UIButton type="submit">
               Create Meter Number
-            </Button>
+            </UIButton>
           </div>
         </form>
       </DialogBox>

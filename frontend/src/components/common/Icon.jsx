@@ -1,7 +1,152 @@
 import React from "react";
+import {
+  LayoutDashboard,
+  Users,
+  Wheat,
+  Boxes,
+  ShoppingBag,
+  Building2,
+  Wallet,
+  Zap,
+  TrendingUp,
+  GitBranch,
+  FileText as FileTextIcon,
+  Settings as SettingsIcon,
+  LogOut,
+  Plus,
+  Pencil,
+  Trash2,
+  Save,
+  Search as SearchIcon,
+  Filter,
+  Download,
+  Upload,
+  RefreshCcw,
+  User as UserIcon,
+  Mail,
+  Phone,
+  Lock,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Info,
+  Menu,
+  X,
+  Scale,
+  Truck,
+  BadgeCheck,
+  Archive,
+  BarChart3,
+  TrendingDown,
+  DollarSign,
+  Calendar,
+  Tag,
+  Hash as HashIcon,
+  CreditCard,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronDown,
+  ChevronUp,
+  Package as PackageIcon,
+  Box,
+  Droplet,
+  StickyNote,
+  Check,
+} from "lucide-react";
 
 // Icon component that accepts icon name and optional props
 const Icon = ({ name, className = "w-5 h-5", ...props }) => {
+  // Professional lucide-react icon mapping
+  const LucideIconMap = {
+    // Navigation & UI
+    dashboard: LayoutDashboard,
+    users: Users,
+    paddy: Wheat,
+    rice: Wheat,
+    inventory: Boxes,
+    gunny: ShoppingBag,
+    vendor: Building2,
+    financial: Wallet,
+    ebMeter: Zap,
+    sales: TrendingUp,
+    branch: GitBranch,
+    documents: FileTextIcon,
+    settings: SettingsIcon,
+    logout: LogOut,
+
+    // Actions
+    add: Plus,
+    edit: Pencil,
+    delete: Trash2,
+    save: Save,
+    search: SearchIcon,
+    filter: Filter,
+    download: Download,
+    upload: Upload,
+    refresh: RefreshCcw,
+
+    // Form
+    user: UserIcon,
+    mail: Mail,
+    phone: Phone,
+    lock: Lock,
+    eye: Eye,
+    eyeOff: EyeOff,
+
+    // Status
+    success: CheckCircle2,
+    error: XCircle,
+    warning: AlertTriangle,
+    info: Info,
+    check: Check,
+
+    // Navigation
+    menu: Menu,
+    close: X,
+
+    // Domain-specific
+    grain: Wheat,
+    mill: Building2,
+    bag: ShoppingBag,
+    weight: Scale,
+    truck: Truck,
+    farmer: UserIcon,
+    quality: BadgeCheck,
+    storage: Archive,
+    delivery: Truck,
+
+    // Charts & finance
+    barChart: BarChart3,
+    trendingUp: TrendingUp,
+    trendingDown: TrendingDown,
+    payment: CreditCard,
+    calendar: Calendar,
+    tag: Tag,
+    dollarSign: DollarSign,
+    fileText: FileTextIcon,
+    hash: HashIcon,
+    creditCard: CreditCard,
+    checkCircle: CheckCircle2,
+    building: Building2,
+
+    // Pagination
+    chevronLeft: ChevronLeft,
+    chevronRight: ChevronRight,
+    chevronDoubleLeft: ChevronsLeft,
+    chevronDoubleRight: ChevronsRight,
+    chevronDown: ChevronDown,
+    chevronUp: ChevronUp,
+
+    // Inventory add-ons
+    package: PackageIcon,
+    box: Box,
+    droplet: Droplet,
+    note: StickyNote,
+  };
   const icons = {
     // Navigation & UI Icons
     dashboard: (
@@ -430,6 +575,10 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
     ),
   };
 
+  if (LucideIconMap[name]) {
+    const Lucide = LucideIconMap[name];
+    return <Lucide className={className} {...props} />;
+  }
   return icons[name] || icons.default;
 };
 

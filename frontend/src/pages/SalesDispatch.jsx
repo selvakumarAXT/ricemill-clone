@@ -4,6 +4,8 @@ import TableFilters from '../components/common/TableFilters';
 import BranchFilter from '../components/common/BranchFilter';
 import TableList from '../components/common/TableList';
 import Button from '../components/common/Button';
+import { Button as UIButton } from '../components/ui/button';
+import Icon from '../components/common/Icon';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 import FormInput from '../components/common/FormInput';
@@ -699,31 +701,34 @@ const SalesDispatch = () => {
 
   // Helper function to get status color
   const getStatusColor = (status) => {
-    if (!status) return 'bg-gray-100 text-gray-800';
+    if (!status) return 'bg-muted text-muted-foreground';
     
     switch (status.toLowerCase()) {
+      case 'completed':
       case 'paid':
       case 'delivered':
-      case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary/20 text-primary';
       case 'pending':
-      case 'unpaid':
-        return 'bg-yellow-100 text-yellow-800';
+      case 'partial':
+        return 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400';
       case 'cancelled':
-      case 'failed':
-        return 'bg-red-100 text-red-800';
+      case 'rejected':
+        return 'bg-destructive/20 text-destructive';
+      case 'processing':
+      case 'in_transit':
+        return 'bg-blue-500/20 text-blue-700 dark:text-blue-400';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
   const getPaymentMethodIcon = (method) => {
     switch (method) {
-      case 'cash': return '💵';
-      case 'bank_transfer': return '🏦';
-      case 'cheque': return '📄';
-      case 'upi': return '📱';
-      default: return '';
+      case 'cash': return <Icon name="banknote" className="h-4 w-4" />;
+      case 'bank_transfer': return <Icon name="building-bank" className="h-4 w-4" />;
+      case 'cheque': return <Icon name="file-check" className="h-4 w-4" />;
+      case 'upi': return <Icon name="smartphone" className="h-4 w-4" />;
+      default: return <Icon name="circle-help" className="h-4 w-4" />;
     }
   };
 
@@ -943,147 +948,176 @@ const SalesDispatch = () => {
       const currentDate = new Date().toLocaleDateString();
       
       invoiceDiv.innerHTML = `
-        <div style="border: 2px solid #333; padding: 20px; min-height: 1000px; font-family: Arial, sans-serif;">
-          <!-- Header -->
-          <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
-            <h1 style="margin: 0; color: #333; font-size: 24px; font-weight: bold;">SREE ESWAR HI-TECH MODERN RICE MILL</h1>
-            <p style="margin: 5px 0; color: #666; font-size: 12px;">99, REDHILLS MAIN ROAD, KILANUR VILLAGE, THIRUVALLUR, THIRUVALLUR, Tamil Nadu (33) - 602021</p>
-            <p style="margin: 5px 0; color: #666; font-size: 12px;">GSTIN: 33AVLPV6754C3Z8</p>
-          </div>
-          
-          <!-- Invoice Type and Details -->
-          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-            <div style="flex: 1;">
-              <h2 style="margin: 0; color: #333; font-size: 18px; font-weight: bold;">PURCHASE INVOICE</h2>
+        <section style="border:1px solid #0070c0; padding: 0px 15px;">
+          <!-- header -->
+          <header style="padding: 18px 20px; border-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="max-width: 63%; text-align: left">
+              <h1 style="margin: 0; font-size: 26px; letter-spacing: 0.6px; font-weight: 700;">SREE ESWAR HI-TECH MODERN RICE MILL</h1>
+              <div style="margin-top: 8px; font-size: 13px; color: #6b7280; line-height: 1.35;">99, REDHILLS MAIN ROAD, KILANUR VILLAGE, THIRUVALLUR<br>THIRUVALLUR, Tamil Nadu (33) - 602021</div>
             </div>
-            <div style="flex: 1; text-align: right;">
-              <p style="margin: 2px 0; font-size: 12px;"><strong>Invoice No.:</strong> ${invoiceNumber}</p>
-              <p style="margin: 2px 0; font-size: 12px;"><strong>Invoice Date:</strong> ${currentDate}</p>
-              <p style="margin: 2px 0; font-size: 12px;"><strong>Reverse Charge:</strong> No</p>
-              <p style="margin: 2px 0; font-size: 12px;"><strong>Original For:</strong> RECIPIENT</p>
+            <div style="text-align: right; font-size: 13px; color: #6b7280; line-height: 0.5;">
+              <p style="color: #12202b;"><b>Name: </b>VIKRAMSELVAM</p>
+              <p style="color: #12202b;"><b>Phone: </b>8608012345</p>
+              <p style="color: #12202b;"><b>Email: </b>eswarofficial@gmail.com</p>
             </div>
-          </div>
-          
-          <!-- Vendor Details -->
-          <div style="margin-bottom: 20px;">
-            <h3 style="margin: 0 0 10px 0; color: #333; font-size: 14px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Vendor Detail:</h3>
-            <div style="display: flex; justify-content: space-between;">
-              <div style="flex: 1;">
-                <p style="margin: 3px 0; font-size: 12px;"><strong>M/S:</strong> ${sale.customerName}</p>
-                <p style="margin: 3px 0; font-size: 12px; color: #666;">${sale.customerAddress}</p>
-                <p style="margin: 3px 0; font-size: 12px;"><strong>Phone:</strong> ${sale.customerPhone}</p>
-                ${sale.customerEmail ? `<p style="margin: 3px 0; font-size: 12px;"><strong>Email:</strong> ${sale.customerEmail}</p>` : ''}
-                ${sale.customerGstin ? `<p style="margin: 3px 0; font-size: 12px;"><strong>GSTIN:</strong> ${sale.customerGstin}</p>` : ''}
-                ${sale.customerPan ? `<p style="margin: 3px 0; font-size: 12px;"><strong>PAN:</strong> ${sale.customerPan}</p>` : ''}
-              </div>
-              <div style="flex: 1; text-align: right;">
-                <p style="margin: 3px 0; font-size: 12px;"><strong>Place of Supply:</strong> ${sale.placeOfSupply || 'Tamil Nadu (33)'}</p>
-              </div>
-            </div>
-          </div>
-          
+          </header>
+
+          <!-- Top strip -->
+          <table style="border-collapse: collapse; width: 100%; border: 1px solid #0070c0;">
+            <tr style="border:1px; border-bottom: solid 0px;">
+              <td style="width:40%; border: 0;">
+                <b>GSTIN :</b> 33AVLPV6754C3Z8
+              </td>
+              <td style="text-align: center; width: 30%; border:0;color: #0072BC;font-weight: bold;font-size:18px;">
+                BYPRODUCT INVOICE
+              </td>
+              <td style="width: 30%; border:0;justify-content: space-between;text-align: right;">
+                <b>ORIGINAL FOR RECIPIENT</b>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Vendor detail table -->
+          <table style="border-collapse: collapse; width: 100%; border: 1px solid #0070c0;">
+            <tr style="border: 1px solid #0070c0;">
+              <th colspan="2" style="text-align:center; border: 1px solid #0070c0; padding: 5px; vertical-align: top;">Vendor Detail</th>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">Invoice No.</td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${invoiceNumber}</td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">Invoice Date</td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${currentDate}</td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>M/S</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${sale.customerName}</td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">Reverse Charge</td>
+              <td colspan="3" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">No</td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>Address</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${sale.customerAddress}</td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>Phone</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${sale.customerPhone}</td>
+              <td colspan="4" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"></td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>GSTIN</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${sale.customerGstin || '-'}</td>
+              <td colspan="4" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"></td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>PAN</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${sale.customerPan || '-'}</td>
+              <td colspan="4" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"></td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>Place of Supply</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${sale.placeOfSupply || 'Tamil Nadu (33)'}</td>
+              <td colspan="4" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"></td>
+            </tr>
+          </table>
+
+          <div style="border-left:1px solid #0070c0;border-right: 1px solid #0070c0;"><br></div>
+
           <!-- Items Table -->
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #333;">
+          <table style="width: 100%; border-collapse: collapse;">
             <thead>
-              <tr style="background-color: #f4f4f4;">
-                <th style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;">Sr. No.</th>
-                <th style="border: 1px solid #333; padding: 8px; text-align: left; font-size: 10px; font-weight: bold;">Name of Product/Service</th>
-                <th style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;">HSN/SAC</th>
-                <th style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;">Qty</th>
-                <th style="border: 1px solid #333; padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">Rate</th>
-                <th style="border: 1px solid #333; padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">Taxable Value</th>
-                <th style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;">CGST</th>
-                <th style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;">SGST</th>
-                <th style="border: 1px solid #333; padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">Total</th>
+              <tr style="background: #eaf3fa;">
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Sr. No.</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Name of Product / Service</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">HSN / SAC</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Qty</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Rate</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Taxable Value</th>
+                <th colspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">CGST</th>
+                <th colspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">SGST</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Total</th>
               </tr>
-              <tr style="background-color: #f4f4f4;">
-                <th style="border: 1px solid #333; padding: 4px; text-align: center; font-size: 8px; font-weight: bold;"></th>
-                <th style="border: 1px solid #333; padding: 4px; text-align: center; font-size: 8px; font-weight: bold;"></th>
-                <th style="border: 1px solid #333; padding: 4px; text-align: center; font-size: 8px; font-weight: bold;"></th>
-                <th style="border: 1px solid #333; padding: 4px; text-align: center; font-size: 8px; font-weight: bold;"></th>
-                <th style="border: 1px solid #333; padding: 4px; text-align: center; font-size: 8px; font-weight: bold;"></th>
-                <th style="border: 1px solid #333; padding: 4px; text-align: center; font-size: 8px; font-weight: bold;"></th>
-                <th style="border: 1px solid #333; padding: 4px; text-align: center; font-size: 8px; font-weight: bold;">%</th>
-                <th style="border: 1px solid #333; padding: 4px; text-align: center; font-size: 8px; font-weight: bold;">%</th>
-                <th style="border: 1px solid #333; padding: 4px; text-align: center; font-size: 8px; font-weight: bold;"></th>
+              <tr style="background: #eaf3fa;">
+                <th style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">%</th>
+                <th style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Amount</th>
+                <th style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">%</th>
+                <th style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px;">1</td>
-                <td style="border: 1px solid #333; padding: 8px; font-size: 10px;">${sale.riceVariety.toUpperCase()}</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px;">10064000</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px;">${sale.quantity.toFixed(2)}</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: right; font-size: 10px;">${sale.unitPrice.toLocaleString()}.00</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: right; font-size: 10px;">${sale.totalAmount.toLocaleString()}.00</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px;">0</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px;">0</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: right; font-size: 10px;">${sale.totalAmount.toLocaleString()}.00</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">1</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">${sale.riceVariety ? sale.riceVariety.toUpperCase() : 'RICE BRAN'}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">10064000</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">${sale.quantity ? sale.quantity.toFixed(2) : '500'}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">${sale.unitPrice ? sale.unitPrice.toLocaleString() : '25'}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px; background-color: #eaf3fa;">${sale.totalAmount ? sale.totalAmount.toLocaleString() : '12,500'}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0.00</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0.00</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px; background-color: #eaf3fa;">${sale.totalAmount ? sale.totalAmount.toLocaleString() : '12,500'}</td>
               </tr>
             </tbody>
             <tfoot>
-              <tr style="background-color: #f4f4f4;">
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;" colspan="3">Total</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;">${sale.quantity.toFixed(2)}</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;"></td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">${sale.totalAmount.toLocaleString()}.00</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;">0.00</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: center; font-size: 10px; font-weight: bold;">0.00</td>
-                <td style="border: 1px solid #333; padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">${sale.totalAmount.toLocaleString()}.00</td>
+              <tr style="border: 0px; background-color: #eaf3fa">
+                <td colspan="3" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Total</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">${sale.quantity ? sale.quantity.toFixed(2) : '500'}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;"></td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">${sale.totalAmount ? sale.totalAmount.toLocaleString() : '12,500'}</td>
+                <td colspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0.00</td>
+                <td colspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0.00</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">${sale.totalAmount ? sale.totalAmount.toLocaleString() : '12,500'}</td>
               </tr>
             </tfoot>
           </table>
-          
-          <!-- Financial Summary -->
-          <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-            <div style="flex: 1;">
-              <p style="margin: 5px 0; font-size: 12px;"><strong>Total in words:</strong> ${numberToWords(Math.round(grandTotal))} RUPEES ONLY</p>
-            </div>
-            <div style="flex: 1; text-align: right;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;"><strong>Taxable Amount:</strong></td>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;">${taxableAmount.toLocaleString()}.00</td>
-                </tr>
-                <tr>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;"><strong>Add: CGST:</strong></td>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;">0</td>
-                </tr>
-                <tr>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;"><strong>Add: SGST:</strong></td>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;">0</td>
-                </tr>
-                <tr>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;"><strong>Total Tax:</strong></td>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;">0.00</td>
-                </tr>
-                <tr>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;"><strong>Discount:</strong></td>
-                  <td style="padding: 4px; text-align: right; font-size: 12px; border-bottom: 1px solid #ccc;">-0.00</td>
-                </tr>
-                <tr style="background-color: #f4f4f4;">
-                  <td style="padding: 8px; text-align: right; font-size: 14px; font-weight: bold;"><strong>Total Amount After Tax:</strong></td>
-                  <td style="padding: 8px; text-align: right; font-size: 14px; font-weight: bold;">₹${grandTotal.toLocaleString()}.00</td>
-                </tr>
-              </table>
-              <p style="margin: 5px 0; font-size: 10px; text-align: center;">(E & O.E.)</p>
-            </div>
-          </div>
-          
-          <!-- Certification -->
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
-            <p style="margin: 5px 0; font-size: 12px;"><strong>Certification:</strong> Certified that the particulars given above are true and correct.</p>
-            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-              <div style="flex: 1;">
-                <p style="margin: 5px 0; font-size: 12px;"><strong>For:</strong> SREE ESWAR HI-TECH MODERN RICE MILL</p>
-              </div>
-              <div style="flex: 1; text-align: right;">
-                <p style="margin: 5px 0; font-size: 12px;"><strong>Authorised Signatory</strong></p>
-                <div style="width: 150px; height: 50px; border: 1px solid #ccc; margin-left: auto; margin-top: 10px;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+
+          <!-- Summary table -->
+          <table style="border-collapse: collapse; width: 100%;">
+            <tr style="background-color: #eaf3fa">
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: center; width: 50%; border-bottom: none;"><b>Total in words</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Taxable Amount</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none;">
+                ${sale.totalAmount ? sale.totalAmount.toLocaleString() : '12,500'}
+              </td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #0070c0; padding: 8px; justify-content: space-around; font-size: smaller; text-align: center;" rowspan="2">
+                <br>${numberToWords(Math.round(sale.totalAmount || 12500))} RUPEES ONLY
+              </td>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Add : CGST</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none;">0.00</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Add : SGST</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none;">0.00</td>
+            </tr>
+            <tr style="background-color: #eaf3fa">
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: center; border-bottom: none;"><b>Terms & Condition</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Total Tax</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none;">0.00</td>
+            </tr>
+            <tr>
+              <td rowspan="6" style="border: 1px solid #0070c0; padding: 8px;"></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Discount</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none;">-0.00</td>
+            </tr>
+            <tr style="background-color: #eaf3fa">
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Total Amount After Tax</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none; font-weight: bold;">
+                <b>₹${sale.totalAmount ? sale.totalAmount.toLocaleString() : '12,500'}</b>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="border: 1px solid #0070c0; padding: 8px; text-align: end;"><b>(E & O.E.)</b></td>
+            </tr>
+            <tr style="border-right: 1px solid;">
+              <td colspan="2" style="border: 1px solid #0070c0; padding: 8px; text-align: center; width: 100%;">
+                Certified that the particulars given above are true and correct.<br>
+                <b>For SREE ESWAR HI-TECH MODERN RICE MILL</b>
+              </td>
+            </tr>
+            <tr><td colspan="3" style="height: 100px; border: 1px solid #0070c0; padding: 8px;"></td></tr>
+            <tr><td colspan="3" style="border: 1px solid #0070c0; padding: 8px; text-align: center;"><b>Authorised Signatory</b></td></tr>
+          </table>
+        </section>
       `;
       
       // Add to document temporarily
@@ -1246,78 +1280,230 @@ const SalesDispatch = () => {
       // Generate invoice number if not exists
       const invoiceNumber = byproduct.invoiceNumber || generateByproductInvoiceNumber();
       
-      // Calculate tax amounts (assuming 18% IGST for inter-state)
-      const taxableAmount = byproduct.totalAmount;
-      const igstAmount = (taxableAmount * 18) / 100;
-      const grandTotal = taxableAmount + igstAmount;
+      // Call the backend API to generate PDF
+      const response = await fetch(`/api/byproducts/${byproduct._id}/print-pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Get the PDF blob
+      const pdfBlob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Byproduct-Invoice-${invoiceNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      alert('Byproduct invoice PDF downloaded successfully!');
+      
+    } catch (error) {
+      console.error('Error downloading byproduct invoice:', error);
+      setError('Error downloading byproduct invoice: ' + error.message);
+      
+      // Fallback to HTML generation if PDF fails
+      try {
+        alert('PDF generation failed, generating HTML invoice instead...');
+        await downloadByproductInvoiceHTML(byproduct);
+      } catch (fallbackError) {
+        console.error('Fallback HTML generation also failed:', fallbackError);
+        setError('Both PDF and HTML generation failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadByproductInvoiceHTML = async (byproduct) => {
+    try {
+      // Generate invoice number if not exists
+      const invoiceNumber = byproduct.invoiceNumber || generateByproductInvoiceNumber();
       
       // Get current date for invoice
       const currentDate = new Date().toLocaleDateString();
       
-      // Create HTML invoice for download
+      // Create HTML invoice for download using the new template
       const invoiceHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Byproduct Invoice - ${invoiceNumber}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-            .invoice-info { margin: 20px 0; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-            th { background-color: #f4f4f4; }
-            .totals { margin: 20px 0; }
-            .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>SREE ESWAR HI-TECH MODERN RICE MILL</h1>
-            <p>99, REDHILLS MAIN ROAD, KILANUR VILLAGE, THIRUVALLUR, THIRUVALLUR, Tamil Nadu (33) - 602021</p>
-            <p>GSTIN: 33AVLPV6754C3Z8</p>
-          </div>
-          
-          <div class="invoice-info">
-            <h3>Invoice Details:</h3>
-            <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
-            <p><strong>Date:</strong> ${currentDate}</p>
-            <p><strong>Vendor:</strong> ${byproduct.vendorName}</p>
-            <p><strong>Phone:</strong> ${byproduct.vendorPhone}</p>
-          </div>
-          
-          <table>
+        <section style="border:1px solid #0070c0; padding: 0px 15px;">
+          <!-- header -->
+          <header style="padding: 18px 20px; border-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="max-width: 63%; text-align: left">
+              <h1 style="margin: 0; font-size: 26px; letter-spacing: 0.6px; font-weight: 700;">SREE ESWAR HI-TECH MODERN RICE MILL</h1>
+              <div style="margin-top: 8px; font-size: 13px; color: #6b7280; line-height: 1.35;">99, REDHILLS MAIN ROAD, KILANUR VILLAGE, THIRUVALLUR<br>THIRUVALLUR, Tamil Nadu (33) - 602021</div>
+            </div>
+            <div style="text-align: right; font-size: 13px; color: #6b7280; line-height: 0.5;">
+              <p style="color: #12202b;"><b>Name: </b>VIKRAMSELVAM</p>
+              <p style="color: #12202b;"><b>Phone: </b>8608012345</p>
+              <p style="color: #12202b;"><b>Email: </b>eswarofficial@gmail.com</p>
+            </div>
+          </header>
+
+          <!-- Top strip -->
+          <table style="border-collapse: collapse; width: 100%; border: 1px solid #0070c0;">
+            <tr style="border:1px; border-bottom: solid 0px;">
+              <td style="width:40%; border: 0;">
+                <b>GSTIN :</b> 33AVLPV6754C3Z8
+              </td>
+              <td style="text-align: center; width: 30%; border:0;color: #0072BC;font-weight: bold;font-size:18px;">
+                BYPRODUCT INVOICE
+              </td>
+              <td style="width: 30%; border:0;justify-content: space-between;text-align: right;">
+                <b>ORIGINAL FOR RECIPIENT</b>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Vendor detail table -->
+          <table style="border-collapse: collapse; width: 100%; border: 1px solid #0070c0;">
+            <tr style="border: 1px solid #0070c0;">
+              <th colspan="2" style="text-align:center; border: 1px solid #0070c0; padding: 5px; vertical-align: top;">Vendor Detail</th>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">Invoice No.</td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${invoiceNumber}</td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">Invoice Date</td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${currentDate}</td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>M/S</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${byproduct.vendorName}</td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">Reverse Charge</td>
+              <td colspan="3" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">No</td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>Address</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${byproduct.vendorAddress || 'Address not provided'}</td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>Phone</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${byproduct.vendorPhone}</td>
+              <td colspan="4" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"></td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>GSTIN</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${byproduct.vendorGstin || '-'}</td>
+              <td colspan="4" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"></td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>PAN</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">${byproduct.vendorPan || '-'}</td>
+              <td colspan="4" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"></td>
+            </tr>
+            <tr style="border: 1px solid #0070c0;">
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"><b>Place of Supply</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;">Tamil Nadu (33)</td>
+              <td colspan="4" style="border: 1px solid #0070c0; padding: 5px; vertical-align: top;"></td>
+            </tr>
+          </table>
+
+          <div style="border-left:1px solid #0070c0;border-right: 1px solid #0070c0;"><br></div>
+
+          <!-- Items Table -->
+          <table style="width: 100%; border-collapse: collapse;">
             <thead>
-              <tr>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total</th>
+              <tr style="background: #eaf3fa;">
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Sr. No.</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Name of Product / Service</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">HSN / SAC</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Qty</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Rate</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Taxable Value</th>
+                <th colspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">CGST</th>
+                <th colspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">SGST</th>
+                <th rowspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Total</th>
+              </tr>
+              <tr style="background: #eaf3fa;">
+                <th style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">%</th>
+                <th style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Amount</th>
+                <th style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">%</th>
+                <th style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>${byproduct.material}</td>
-                <td>${byproduct.weight} ${byproduct.unit}</td>
-                <td>₹${byproduct.rate}</td>
-                <td>₹${byproduct.totalAmount.toLocaleString()}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">1</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">${byproduct.material ? byproduct.material.toUpperCase() : 'RICE BRAN'}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">10064000</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">${byproduct.weight} ${byproduct.unit}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">₹${byproduct.rate}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px; background-color: #eaf3fa;">₹${byproduct.totalAmount.toLocaleString()}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0.00</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0.00</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px; background-color: #eaf3fa;">₹${byproduct.totalAmount.toLocaleString()}</td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr style="border: 0px; background-color: #eaf3fa">
+                <td colspan="3" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">Total</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">${byproduct.weight} ${byproduct.unit}</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;"></td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">₹${byproduct.totalAmount.toLocaleString()}</td>
+                <td colspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0.00</td>
+                <td colspan="2" style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">0.00</td>
+                <td style="border: 1px solid #0070c0; padding: 5px; text-align: center; font-size: 13px;">₹${byproduct.totalAmount.toLocaleString()}</td>
+              </tr>
+            </tfoot>
           </table>
-          
-          <div class="totals">
-            <p><strong>Subtotal:</strong> ₹${byproduct.totalAmount.toLocaleString()}</p>
-            <p><strong>IGST (18%):</strong> ₹${igstAmount.toLocaleString()}</p>
-            <p><strong>Total:</strong> ₹${grandTotal.toLocaleString()}</p>
-            <p><strong>Amount in Words:</strong> ${numberToWords(Math.round(grandTotal))} Rupees Only</p>
-          </div>
-          
-          <div class="footer">
-            <p>Thank you for your business!</p>
-            <p>Generated on: ${new Date().toLocaleString()}</p>
-          </div>
-        </body>
-        </html>
+
+          <!-- Summary table -->
+          <table style="border-collapse: collapse; width: 100%;">
+            <tr style="background-color: #eaf3fa">
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: center; width: 50%; border-bottom: none;"><b>Total in words</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Taxable Amount</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none;">
+                ₹${byproduct.totalAmount.toLocaleString()}
+              </td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #0070c0; padding: 8px; justify-content: space-around; font-size: smaller; text-align: center;" rowspan="2">
+                <br>${numberToWords(Math.round(byproduct.totalAmount))} RUPEES ONLY
+              </td>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Add : CGST</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none;">0.00</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Add : SGST</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none;">0.00</td>
+            </tr>
+            <tr style="background-color: #eaf3fa">
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: center; border-bottom: none;"><b>Terms & Condition</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Total Tax</b></td>
+              <td style="border: 1px solid #0070c0; padding: 5px; text-align: right; border-left: none;">0.00</td>
+            </tr>
+            <tr>
+              <td rowspan="6" style="border: 1px solid #0070c0; padding: 8px;"></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Discount</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none;">-0.00</td>
+            </tr>
+            <tr style="background-color: #eaf3fa">
+              <td style="border: 1px solid #0070c0; padding: 8px; border-right: none;"><b>Total Amount After Tax</b></td>
+              <td style="border: 1px solid #0070c0; padding: 8px; text-align: right; border-left: none; font-weight: bold;">
+                <b>₹${byproduct.totalAmount.toLocaleString()}</b>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="border: 1px solid #0070c0; padding: 8px; text-align: end;"><b>(E & O.E.)</b></td>
+            </tr>
+            <tr style="border-right: 1px solid;">
+              <td colspan="2" style="border: 1px solid #0070c0; padding: 8px; text-align: center; width: 100%;">
+                Certified that the particulars given above are true and correct.<br>
+                <b>For SREE ESWAR HI-TECH MODERN RICE MILL</b>
+              </td>
+            </tr>
+            <tr><td colspan="3" style="height: 100px; border: 1px solid #0070c0; padding: 8px;"></td></tr>
+            <tr><td colspan="3" style="border: 1px solid #0070c0; padding: 8px; text-align: center;"><b>Authorised Signatory</b></td></tr>
+          </table>
+        </section>
       `;
 
       // Create blob and download HTML
@@ -1331,12 +1517,10 @@ const SalesDispatch = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       
-      alert('Byproduct invoice downloaded successfully!');
+      alert('Byproduct invoice HTML downloaded successfully!');
       
     } catch (error) {
-      setError('Error downloading byproduct invoice: ' + error.message);
-    } finally {
-      setLoading(false);
+      setError('Error downloading byproduct invoice HTML: ' + error.message);
     }
   };
 
@@ -1434,6 +1618,16 @@ const SalesDispatch = () => {
       renderCell: (value) => <span className="font-medium">{value}</span>
     },
     { 
+      key: "paymentType", 
+      label: "Payment Method",
+      renderCell: (value) => (
+        <div className="flex items-center gap-1">
+          <span className="text-muted-foreground">{getPaymentMethodIcon(value)}</span>
+          <span className="text-foreground">{mapPaymentType(value)}</span>
+        </div>
+      )
+    },
+    { 
       key: "paymentStatus", 
       label: "Payment Status",
       renderCell: (value) => (
@@ -1462,27 +1656,27 @@ const SalesDispatch = () => {
   if (loading) return <LoadingSpinner fullPage />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
+      <div className="bg-card shadow-sm border-b border-border px-4 py-6 sm:px-6">
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">
               Byproducts Sales & Dispatch
             </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage byproduct sales and dispatch operations</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage byproduct sales and dispatch operations</p>
           </div>
           <div className="flex justify-center sm:justify-start space-x-2">
             {/* Only show Add button when a specific branch is selected (not "All Branches") */}
             {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') || 
               (!user?.isSuperAdmin && user?.branch?.id)) && (
-            <Button
+            <UIButton
                 onClick={() => openByproductsModal()}
-              variant="success"
-              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
             >
-                📦 Add New Byproduct Sale
-            </Button>
+                <Icon name="add" className="mr-2 h-4 w-4" />
+                Add New Byproduct Sale
+            </UIButton>
             )}
           </div>
         </div>
@@ -1492,74 +1686,55 @@ const SalesDispatch = () => {
       <div className="px-4 py-6 sm:px-6">
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-red-700 font-medium">{error}</span>
+          <div className="mb-4 p-4 bg-muted border border-border rounded-lg">
+            <div className="text-foreground">
+              <div className="font-medium">Error:</div>
+              <div className="text-muted-foreground">{error}</div>
             </div>
+            <button
+              onClick={() => setError(null)}
+              className="mt-2 text-muted-foreground hover:text-foreground text-sm"
+            >
+              ✕ Dismiss
+            </button>
           </div>
         )}
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-blue-600 text-lg">📊</span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">
-                  Total Byproduct Sales
-                </p>
-                <p className="text-xl font-bold text-gray-900">
-                  {byproducts.length}
-                </p>
-              </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="rounded-lg border border-border bg-muted p-4">
+            <div className="text-center">
+              <p className="text-sm font-medium text-muted-foreground">Total Byproduct Sales</p>
+              <p className="text-2xl font-bold text-foreground">
+                {byproducts.length}
+              </p>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-green-600 text-lg">💰</span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-xl font-bold text-gray-900">
-                  ₹{byproducts.reduce((sum, byproduct) => sum + byproduct.totalAmount, 0).toLocaleString()}
-                </p>
-              </div>
+          
+          <div className="rounded-lg border border-border bg-muted p-4">
+            <div className="text-center">
+              <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
+              <p className="text-2xl font-bold text-foreground">
+                ₹{byproducts.reduce((sum, byproduct) => sum + byproduct.totalAmount, 0).toLocaleString()}
+              </p>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-yellow-600 text-lg">📦</span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">
-                  Pending Payment
-                </p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {byproducts.filter(byproduct => byproduct.paymentStatus === 'pending').length}
-                </p>
-              </div>
+          
+          <div className="rounded-lg border border-border bg-muted p-4">
+            <div className="text-center">
+              <p className="text-sm font-medium text-muted-foreground">Pending Payment</p>
+              <p className="text-2xl font-bold text-foreground">
+                {byproducts.filter(byproduct => byproduct.paymentStatus === 'pending').length}
+              </p>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-purple-600 text-lg">✅</span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">
-                  Completed
-                </p>
-                <p className="text-2xl font-bold text-green-600">
-                  {byproducts.filter(byproduct => byproduct.paymentStatus === 'completed').length}
-                </p>
-              </div>
+          
+          <div className="rounded-lg border border-border bg-muted p-4">
+            <div className="text-center">
+              <p className="text-sm font-medium text-muted-foreground">Completed Sales</p>
+              <p className="text-2xl font-bold text-foreground">
+                {byproducts.filter(byproduct => byproduct.paymentStatus === 'completed').length}
+              </p>
             </div>
           </div>
         </div>
@@ -1567,34 +1742,39 @@ const SalesDispatch = () => {
      
 
         {/* Desktop Table View - Byproducts Only */}
-        <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
+        <div className="hidden lg:block bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="text-lg font-semibold text-foreground">Byproducts Sales Records</h3>
+            <p className="text-sm text-muted-foreground mt-1">Total: {filteredByproducts.length} records</p>
             {/* Filters moved inside table header */}
-            <div className="mt-4">
-              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
-                <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
-                  <BranchFilter />
+            <div className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Branch</label>
+                  <div className="relative">
+                    <BranchFilter />
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                   <DateRangeFilter
+                <div className="space-y-2">
+                  <DateRangeFilter
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
-                    onStartDateChange={(date) => setDateRange(prev => ({ ...prev, startDate: date }))}
-                    onEndDateChange={(date) => setDateRange(prev => ({ ...prev, endDate: date }))}
+                    onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                    onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                    startDateLabel="Date From"
+                    endDateLabel="Date To"
                   />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                  <input
-                    type="text"
-                    placeholder="Search byproduct sales..."
-                    value={byproductsFilter}
-                    onChange={(e) => setByproductsFilter(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Search</label>
+                  <div className="relative">
+                    <TableFilters
+                      searchValue={byproductsFilter}
+                      onSearchChange={setByproductsFilter}
+                      searchPlaceholder="Search byproducts..."
+                      className="w-full"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1603,85 +1783,123 @@ const SalesDispatch = () => {
             data={filteredByproducts}
             columns={byproductColumns}
             actions={(byproduct) => [
-              <Button
+              <UIButton
                 key="edit"
                 onClick={() => editByproduct(byproduct)}
-                variant="info"
-                icon="edit"
-                className="text-xs px-2 py-1"
+                variant="ghost"
+                size="sm"
+                className="mr-2 hover:bg-muted flex items-center justify-center"
               >
-                Edit
-              </Button>,
-              <Button
+                <Icon name="edit" className="mr-1.5 h-3.5 w-3.5" />
+                <span>Edit</span>
+              </UIButton>,
+              <UIButton
+                key="generate-invoice"
+                onClick={() => openByproductInvoiceModal(byproduct)}
+                variant="ghost"
+                size="sm"
+                className="mr-2 hover:bg-muted flex items-center justify-center"
+              >
+                <Icon name="file-text" className="mr-1.5 h-3.5 w-3.5" />
+                <span>Invoice</span>
+              </UIButton>,
+              <UIButton
                 key="delete"
                 onClick={() => deleteByproduct(byproduct._id)}
-                variant="danger"
-                icon="delete"
-                className="text-xs px-2 py-1"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive flex items-center justify-center"
               >
-                Delete
-              </Button>
+                <Icon name="trash" className="mr-1.5 h-3.5 w-3.5" />
+                <span>Delete</span>
+              </UIButton>
             ]}
           />
         </div>
 
         {/* Mobile Table View - Byproducts Only */}
-        <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Byproducts Sales Records</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredByproducts.length} records</p>
+        <div className="lg:hidden bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+          <div className="px-4 py-4 border-b border-border">
+            <h3 className="text-lg font-semibold text-foreground">Byproducts Sales Records</h3>
+            <p className="text-sm text-muted-foreground mt-1">Total: {filteredByproducts.length} records</p>
+            
+            <div className="mt-4 space-y-4">
+              <div className="relative">
+                <label className="block text-sm font-medium text-foreground mb-1.5">Search</label>
+                <TableFilters
+                  searchValue={byproductsFilter}
+                  onSearchChange={setByproductsFilter}
+                  searchPlaceholder="Search byproducts..."
+                />
+              </div>
+              <div className="relative">
+                <label className="block text-sm font-medium text-foreground mb-1.5">Branch</label>
+                <BranchFilter />
+              </div>
+            </div>
           </div>
           
           <div className="p-4">
             {filteredByproducts.length === 0 ? (
               <div className="text-center py-8">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No byproduct sales records</h3>
-                <p className="mt-1 text-sm text-gray-500">Get started by creating a new byproduct sale record.</p>
+                <div className="mx-auto h-12 w-12 text-muted-foreground">
+                  <Icon name="package" className="h-12 w-12" />
+                </div>
+                <h3 className="mt-2 text-sm font-medium text-foreground">No byproduct sales records</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Get started by creating a new byproduct sale record.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredByproducts.map((byproduct) => (
-                  <div key={byproduct._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div key={byproduct._id} className="border border-border rounded-lg overflow-hidden">
                     <div 
-                      className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="bg-card p-3 cursor-pointer hover:bg-muted transition-colors"
                       onClick={() => setExpandedByproduct(expandedByproduct === byproduct._id ? null : byproduct._id)}
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="font-medium text-blue-600">{byproduct.vehicleNumber}</div>
-                          <div className="text-sm text-gray-600">{byproduct.vendorName}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="font-medium text-foreground">{byproduct.vehicleNumber}</div>
+                          <div className="text-sm text-foreground">{byproduct.vendorName}</div>
+                          <div className="text-xs text-muted-foreground">
                             {byproduct.material} • {byproduct.weight} {byproduct.unit} • ₹{byproduct.totalAmount}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button
+                          <UIButton
                             onClick={(e) => {
                               e.stopPropagation();
                               editByproduct(byproduct);
                             }}
-                            variant="info"
-                            icon="edit"
-                            className="text-xs px-2 py-1"
+                            variant="ghost"
+                            size="sm"
+                            className="hover:bg-muted h-8 w-8 p-0"
                           >
-                            Edit
-                          </Button>
-                          <Button
+                            <Icon name="edit" className="h-3.5 w-3.5" />
+                          </UIButton>
+                          <UIButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openByproductInvoiceModal(byproduct);
+                            }}
+                            variant="ghost"
+                            size="sm"
+                            className="hover:bg-muted h-8 w-8 p-0"
+                          >
+                            <Icon name="file-text" className="h-3.5 w-3.5" />
+                          </UIButton>
+                          <UIButton
                             onClick={(e) => {
                               e.stopPropagation();
                               deleteByproduct(byproduct._id);
                             }}
-                            variant="danger"
-                            icon="delete"
-                            className="text-xs px-2 py-1"
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0"
                           >
-                            Delete
-                          </Button>
+                            <Icon name="trash" className="h-3.5 w-3.5" />
+                          </UIButton>
                           <svg 
-                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                            className={`w-4 h-4 text-muted-foreground transition-transform ${
                               expandedByproduct === byproduct._id ? 'rotate-180' : ''
                             }`}
                             fill="none" 
@@ -1695,57 +1913,68 @@ const SalesDispatch = () => {
                     </div>
 
                     {expandedByproduct === byproduct._id && (
-                      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 border-t border-gray-200">
+                      <div className="bg-muted p-4 border-t border-border">
                         <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                           <div>
-                            <span className="text-gray-600">Date:</span>
-                            <span className="ml-1 font-medium text-gray-900">{formatDate(byproduct.date)}</span>
+                            <span className="text-muted-foreground">Date:</span>
+                            <span className="ml-1 font-medium text-foreground">{formatDate(byproduct.date)}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Vehicle:</span>
-                            <span className="ml-1 font-medium text-gray-900">{byproduct.vehicleNumber}</span>
+                            <span className="text-muted-foreground">Vehicle:</span>
+                            <span className="ml-1 font-medium text-foreground">{byproduct.vehicleNumber}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Material:</span>
-                            <span className="ml-1 font-medium text-green-600">{byproduct.material}</span>
+                            <span className="text-muted-foreground">Material:</span>
+                            <span className="ml-1 font-medium text-foreground">{byproduct.material}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Weight:</span>
-                            <span className="ml-1 font-medium text-gray-900">{byproduct.weight} {byproduct.unit}</span>
+                            <span className="text-muted-foreground">Weight:</span>
+                            <span className="ml-1 font-medium text-foreground">{byproduct.weight} {byproduct.unit}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Rate:</span>
-                            <span className="ml-1 font-medium text-gray-900">₹{byproduct.rate}</span>
+                            <span className="text-muted-foreground">Rate:</span>
+                            <span className="ml-1 font-medium text-foreground">₹{byproduct.rate}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Total:</span>
-                            <span className="ml-1 font-medium text-green-600">{formatCurrency(byproduct.totalAmount)}</span>
+                            <span className="text-muted-foreground">Total:</span>
+                            <span className="ml-1 font-medium text-foreground">{formatCurrency(byproduct.totalAmount)}</span>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                           <div>
-                            <span className="text-gray-600">Vendor:</span>
-                            <span className="ml-1 font-medium text-gray-900">{byproduct.vendorName}</span>
+                            <span className="text-muted-foreground">Vendor:</span>
+                            <span className="ml-1 font-medium text-foreground">{byproduct.vendorName}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Phone:</span>
-                            <span className="ml-1 font-medium text-gray-900">{byproduct.vendorPhone}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Email:</span>
-                            <span className="ml-1 font-medium text-gray-900">{byproduct.vendorEmail}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Payment:</span>
-                            <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(byproduct.paymentStatus)}`}>
-                              {byproduct.paymentStatus?.charAt(0).toUpperCase() + byproduct.paymentStatus?.slice(1)}
+                            <span className="text-muted-foreground">Payment:</span>
+                            <span className="ml-1 font-medium text-foreground flex items-center gap-1">
+                              <span className="text-muted-foreground">{getPaymentMethodIcon(byproduct.paymentType)}</span>
+                              <span>{mapPaymentType(byproduct.paymentType)}</span>
                             </span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Status:</span>
+                            <span className={`ml-1 font-medium ${byproduct.paymentStatus === 'completed' ? 'text-primary' : 'text-destructive'}`}>
+                              {byproduct.paymentStatus === 'completed' ? 'Paid' : 'Pending'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Branch:</span>
+                            <span className="ml-1 font-medium text-foreground">{byproduct.branch?.name || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Phone:</span>
+                            <span className="ml-1 font-medium text-foreground">{byproduct.vendorPhone}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Email:</span>
+                            <span className="ml-1 font-medium text-foreground">{byproduct.vendorEmail}</span>
                           </div>
                         </div>
                         {byproduct.notes && (
-                          <div className="p-3 bg-white rounded-lg border border-gray-200">
-                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Notes</h4>
-                            <p className="text-gray-700 text-sm">{byproduct.notes}</p>
+                          <div className="p-3 bg-card rounded-lg border border-border">
+                            <h4 className="text-sm font-semibold text-foreground mb-1">Notes</h4>
+                            <p className="text-muted-foreground text-sm">{byproduct.notes}</p>
                           </div>
                         )}
                       </div>

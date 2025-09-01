@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import GroupedTable from '../components/common/GroupedTable';
-import Button from '../components/common/Button';
+import { Button as UIButton } from '../components/ui/button';
+import Icon from '../components/common/Icon';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FormInput from '../components/common/FormInput';
 import FormSelect from '../components/common/FormSelect';
@@ -258,21 +259,21 @@ const VendorManagement = () => {
   const tableData = transformVendorDataForTable(filteredVendors);
   
   const renderVendorDetail = (vendor) => (
-    <div className="p-4 bg-gray-50 rounded-lg">
+    <div className="p-4 bg-muted rounded-lg">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h4 className="font-semibold text-gray-800 mb-2">Contact Information</h4>
+          <h4 className="font-semibold text-foreground mb-2">Contact Information</h4>
           <p><span className="font-medium">Email:</span> {vendor.email}</p>
           <p><span className="font-medium">Address:</span> {vendor.address}</p>
           <p><span className="font-medium">City:</span> {vendor.city}, {vendor.state} - {vendor.pincode}</p>
         </div>
         <div>
-          <h4 className="font-semibold text-gray-800 mb-2">Financial Summary</h4>
+          <h4 className="font-semibold text-foreground mb-2">Financial Summary</h4>
           <p><span className="font-medium">Credit Limit:</span> ₹{vendor.creditLimit?.toLocaleString()}</p>
           <p><span className="font-medium">Payments Given:</span> ₹{vendor.totalPaymentsGiven?.toLocaleString()}</p>
           <p><span className="font-medium">Payments Received:</span> ₹{vendor.totalPaymentsReceived?.toLocaleString()}</p>
           <p><span className="font-medium">Current Balance:</span> 
-            <span className={`ml-2 font-bold ${vendor.currentBalance > 0 ? 'text-green-600' : vendor.currentBalance < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+            <span className={`ml-2 font-bold text-foreground`}>
               ₹{Math.abs(vendor.currentBalance)?.toLocaleString()} 
               {vendor.currentBalance > 0 ? ' (Vendor owes us)' : vendor.currentBalance < 0 ? ' (We owe vendor)' : ' (Settled)'}
             </span>
@@ -281,7 +282,7 @@ const VendorManagement = () => {
       </div>
       {vendor.documents && vendor.documents.length > 0 && (
         <div className="mt-4">
-          <h4 className="font-semibold text-gray-800 mb-2">Documents</h4>
+          <h4 className="font-semibold text-foreground mb-2">Documents</h4>
           <FileDisplay files={vendor.documents} />
         </div>
       )}
@@ -290,30 +291,33 @@ const VendorManagement = () => {
 
   const renderVendorActions = (vendor) => (
     <div className="flex flex-wrap gap-2">
-      <Button
+      <UIButton
         onClick={() => openVendorModal(vendor)}
         variant="secondary"
         size="sm"
-        icon="edit"
+        className="h-8 px-2 gap-1"
       >
-        Edit
-      </Button>
-      <Button
+        <Icon name="edit" className="h-4 w-4" />
+        <span className="hidden sm:inline">Edit</span>
+      </UIButton>
+      <UIButton
         onClick={() => openTransactionModal(vendor)}
-        variant="primary"
+        variant="default"
         size="sm"
-        icon="money"
+        className="h-8 px-2 gap-1"
       >
-        Transaction
-      </Button>
-      <Button
+        <Icon name="add" className="h-4 w-4" />
+        <span className="hidden sm:inline">Transaction</span>
+      </UIButton>
+      <UIButton
         onClick={() => handleDeleteVendor(vendor._id)}
-        variant="danger"
+        variant="destructive"
         size="sm"
-        icon="delete"
+        className="h-8 px-2 gap-1"
       >
-        Delete
-      </Button>
+        <Icon name="delete" className="h-4 w-4" />
+        <span className="hidden sm:inline">Delete</span>
+      </UIButton>
     </div>
   );
 
@@ -323,32 +327,33 @@ const VendorManagement = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Vendor Management</h1>
-          <p className="text-gray-600 mt-2">Manage vendor information and financial transactions</p>
+          <h1 className="text-3xl font-bold text-foreground">Vendor Management</h1>
+          <p className="text-muted-foreground mt-2">Manage vendor information and financial transactions</p>
         </div>
         {((user?.isSuperAdmin && currentBranchId && currentBranchId !== 'all') ||
           (!user?.isSuperAdmin && user?.branch?.id)) && (
-          <Button onClick={() => openVendorModal()} variant="primary" icon="add" className="w-full sm:w-auto">
-            Add New Vendor
-          </Button>
+          <UIButton onClick={() => openVendorModal()} variant="default" className="w-full sm:w-auto gap-2">
+            <Icon name="add" className="h-4 w-4" />
+            <span>Add New Vendor</span>
+          </UIButton>
         )}
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-muted border border-border text-foreground px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        <div className="bg-muted border border-border text-foreground px-4 py-3 rounded mb-4">
           {successMessage}
         </div>
       )}
 
       {!currentBranchId && !user?.isSuperAdmin ? (
         <div className="text-center py-8">
-          <p className="text-gray-500 text-lg">Please select a branch to view vendors</p>
+          <p className="text-muted-foreground text-lg">Please select a branch to view vendors</p>
         </div>
       ) : (
         <>
@@ -385,14 +390,10 @@ const VendorManagement = () => {
                         
                         return (
                           <div className="text-center">
-                            <span className={`font-semibold ${
-                              isPositive ? 'text-green-600' : 
-                              isNegative ? 'text-red-600' : 
-                              'text-gray-600'
-                            }`}>
+                            <span className="font-semibold text-foreground">
                               ₹{Math.abs(balance).toLocaleString()}
                             </span>
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-muted-foreground mt-1">
                               {isPositive ? 'Vendor owes us' : 
                                isNegative ? 'We owe vendor' : 
                                'Settled'}
@@ -408,23 +409,23 @@ const VendorManagement = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   {/* Search Filter */}
                   <div className="min-w-[200px] flex-shrink-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Search</label>
                     <input
                       type="text"
                       placeholder="Search vendors..."
                       value={searchFilter}
                       onChange={(e) => setSearchFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm"
+                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-colors shadow-sm bg-background text-foreground"
                     />
                   </div>
                   
                   {/* Vendor Type Filter */}
                   <div className="min-w-[180px] flex-shrink-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vendor Type</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Vendor Type</label>
                     <select
                       value={vendorTypeFilter}
                       onChange={(e) => setVendorTypeFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white shadow-sm"
+                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-colors bg-background text-foreground shadow-sm"
                     >
                       <option value="">All Types</option>
                       <option value="supplier">Supplier</option>
@@ -434,15 +435,15 @@ const VendorManagement = () => {
                     </select>
                   </div>
                   
-                 
+                  
                   
                   {/* Balance Status Filter */}
                   <div className="min-w-[200px] flex-shrink-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Balance Status</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Balance Status</label>
                     <select
                       value={balanceStatusFilter}
                       onChange={(e) => setBalanceStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white shadow-sm"
+                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-colors bg-background text-foreground shadow-sm"
                     >
                       <option value="">All Balances</option>
                       <option value="settled">Settled</option>
@@ -451,7 +452,7 @@ const VendorManagement = () => {
                     </select>
                   </div>
 
-                 
+                  
                 </div>
               }
               renderDetail={renderVendorDetail}
@@ -459,7 +460,7 @@ const VendorManagement = () => {
               emptyMessage={
                 filteredVendors.length === 0 && !loading ? (
                   <div className="text-center py-8">
-                    <p className="text-gray-500 text-lg">
+                    <p className="text-muted-foreground text-lg">
                       {vendors.length === 0 ? 'No vendors found' : 'No vendors match the current filters'}
                     </p>
                   </div>
@@ -602,7 +603,7 @@ const VendorManagement = () => {
           />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Documents</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Documents</label>
             <FileUpload
               onFilesSelected={setSelectedFiles}
               uploadedFiles={uploadedFiles}
@@ -612,16 +613,16 @@ const VendorManagement = () => {
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button
+            <UIButton
               type="button"
               variant="secondary"
               onClick={() => setShowVendorModal(false)}
             >
               Cancel
-            </Button>
-            <Button type="submit" variant="primary">
+            </UIButton>
+            <UIButton type="submit" variant="default">
               {editingVendor ? 'Update Vendor' : 'Create Vendor'}
-            </Button>
+            </UIButton>
           </div>
         </form>
       </DialogBox>
@@ -634,9 +635,9 @@ const VendorManagement = () => {
         size="md"
       >
         <form onSubmit={handleTransactionSubmit} className="space-y-4">
-          <div className="bg-blue-50 p-4 rounded-lg mb-4">
-            <h4 className="font-semibold text-blue-800 mb-2">Vendor: {selectedVendorForTransaction?.vendorName}</h4>
-            <p className="text-blue-700 text-sm">
+          <div className="bg-muted p-4 rounded-lg mb-4">
+            <h4 className="font-semibold text-foreground mb-2">Vendor: {selectedVendorForTransaction?.vendorName}</h4>
+            <p className="text-muted-foreground text-sm">
               Current Balance: ₹{selectedVendorForTransaction?.currentBalance?.toLocaleString()}
             </p>
           </div>
@@ -698,16 +699,16 @@ const VendorManagement = () => {
           />
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button
+            <UIButton
               type="button"
               variant="secondary"
               onClick={() => setShowTransactionModal(false)}
             >
               Cancel
-            </Button>
-            <Button type="submit" variant="primary">
+            </UIButton>
+            <UIButton type="submit" variant="default">
               Add Transaction
-            </Button>
+            </UIButton>
           </div>
         </form>
       </DialogBox>

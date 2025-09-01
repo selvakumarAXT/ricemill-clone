@@ -123,17 +123,18 @@ const CreatableSelect = ({
   return (
     <div className={`relative ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-foreground mb-1">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-destructive ml-1">*</span>}
         </label>
       )}
       
       <div className="relative" ref={dropdownRef}>
         <div
-          className={`relative cursor-pointer ${
-            disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:bg-gray-50'
-          } border border-gray-300 rounded-md shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500`}
+          className={`relative cursor-pointer border rounded-md shadow-sm
+            border-input bg-background text-foreground
+            ${disabled ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'hover:bg-muted/50'}
+            focus-within:ring-2 focus-within:ring-ring focus-within:border-ring`}
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
           <div className="flex items-center justify-between px-3 py-2">
@@ -147,35 +148,35 @@ const CreatableSelect = ({
                   onKeyDown={handleKeyDown}
                   placeholder={placeholder}
                   maxLength={maxLength}
-                  className="w-full border-none outline-none bg-transparent text-sm"
+                  className="w-full border-none outline-none bg-transparent text-sm placeholder:text-muted-foreground"
                   autoFocus
                 />
               ) : (
-                <span className={`block truncate text-sm ${value ? 'text-gray-900' : 'text-gray-500'}`}>
+                <span className={`block truncate text-sm ${value ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {getDisplayValue() || placeholder}
                 </span>
               )}
             </div>
-            <Icon 
-              name={isOpen ? "chevronUp" : "chevronDown"} 
-              className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" 
+            <Icon
+              name={isOpen ? "chevronUp" : "chevronDown"}
+              className="w-4 h-4 text-muted-foreground flex-shrink-0 ml-2"
             />
           </div>
         </div>
 
         {/* Dropdown */}
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+          <div className="absolute z-50 w-full mt-1 bg-popover text-foreground border border-border rounded-md shadow-lg max-h-60 overflow-auto">
             {/* Existing options */}
             {filteredOptions.map((option, index) => (
               <div
                 key={option.value}
-                className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 flex items-center"
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-muted flex items-center"
                 onClick={() => handleOptionSelect(option)}
               >
                 <span className="flex-1">{option.label}</span>
                 {option.value === value && (
-                  <Icon name="check" className="w-4 h-4 text-blue-600" />
+                  <Icon name="check" className="w-4 h-4 text-primary" />
                 )}
               </div>
             ))}
@@ -183,11 +184,11 @@ const CreatableSelect = ({
             {/* Create new option */}
             {isCreating && (
               <div
-                className="px-3 py-2 text-sm cursor-pointer bg-green-50 hover:bg-green-100 border-t border-gray-200 flex items-center"
+                className="px-3 py-2 text-sm cursor-pointer bg-primary/10 hover:bg-primary/20 border-t border-border flex items-center"
                 onClick={handleCreateOption}
               >
-                <Icon name="add" className="w-4 h-4 text-green-600 mr-2" />
-                <span className="text-green-700">
+                <Icon name="add" className="w-4 h-4 text-primary mr-2" />
+                <span className="text-primary">
                   Create "{inputValue}"
                 </span>
               </div>
@@ -195,7 +196,7 @@ const CreatableSelect = ({
             
             {/* No options message */}
             {filteredOptions.length === 0 && !isCreating && inputValue && (
-              <div className="px-3 py-2 text-sm text-gray-500">
+              <div className="px-3 py-2 text-sm text-muted-foreground">
                 No options found
               </div>
             )}

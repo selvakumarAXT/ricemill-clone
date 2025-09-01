@@ -3,7 +3,6 @@ import { useSelector } from 'react-redux';
 import TableFilters from '../components/common/TableFilters';
 import BranchFilter from '../components/common/BranchFilter';
 import TableList from '../components/common/TableList';
-import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 import FormInput from '../components/common/FormInput';
@@ -12,6 +11,8 @@ import DialogBox from '../components/common/DialogBox';
 import FileUpload from '../components/common/FileUpload';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 import financialService from '../services/financialService';
+import { Button as UIButton } from '../components/ui/button';
+import Icon from '../components/common/Icon';
 
 const FinancialLedger = () => {
   const [transactions, setTransactions] = useState([]);
@@ -190,24 +191,24 @@ const FinancialLedger = () => {
   const getTransactionTypeColor = (type) => {
     switch (type) {
       case 'income':
-        return 'text-green-600 bg-green-100';
+        return 'text-secondary-foreground bg-secondary';
       case 'expense':
-        return 'text-red-600 bg-red-100';
+        return 'text-destructive bg-destructive/10';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'text-muted-foreground bg-muted';
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return 'text-green-600 bg-green-100';
+        return 'text-secondary-foreground bg-secondary';
       case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
+        return 'text-muted-foreground bg-muted';
       case 'cancelled':
-        return 'text-red-600 bg-red-100';
+        return 'text-destructive bg-destructive/10';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'text-muted-foreground bg-muted';
     }
   };
 
@@ -313,24 +314,20 @@ const FinancialLedger = () => {
   if (loading) return <LoadingSpinner fullPage />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
+      <div className="bg-card shadow-sm border-b border-border px-4 py-6 sm:px-6">
         <div className="flex flex-col space-y-4">
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Financial Ledger
             </h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage financial transactions and reports</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage financial transactions and reports</p>
           </div>
           <div className="flex justify-center sm:justify-start space-x-2">
-            <Button
-              onClick={() => openTransactionModal()}
-              variant="success"
-              className="px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              💰 Add Transaction
-            </Button>
+            <UIButton onClick={() => openTransactionModal()} size="lg">
+              <Icon name="add" className="mr-2 h-4 w-4" /> Add Transaction
+            </UIButton>
           </div>
         </div>
       </div>
@@ -339,76 +336,76 @@ const FinancialLedger = () => {
       <div className="px-4 py-6 sm:px-6">
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg">
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-destructive mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-red-700 font-medium">{error}</span>
+              <span className="text-destructive font-medium">{error}</span>
             </div>
           </div>
         )}
 
         {/* Financial Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-green-600 text-lg">📈</span>
+              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center mr-3">
+                <span className="text-muted-foreground text-lg">📈</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Income</p>
-                <p className="text-xl font-bold text-green-600">₹{totalIncome.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total Income</p>
+                <p className="text-xl font-bold text-foreground">₹{totalIncome.toLocaleString()}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-red-600 text-lg">📉</span>
+              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center mr-3">
+                <span className="text-muted-foreground text-lg">📉</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Expenses</p>
-                <p className="text-xl font-bold text-red-600">₹{totalExpenses.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total Expenses</p>
+                <p className="text-xl font-bold text-foreground">₹{totalExpenses.toLocaleString()}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-blue-600 text-lg">💰</span>
+              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center mr-3">
+                <span className="text-muted-foreground text-lg">💰</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Net Profit</p>
-                <p className={`text-xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className="text-sm text-muted-foreground">Net Profit</p>
+                <p className={`text-xl font-bold text-foreground`}>
                   ₹{netProfit.toLocaleString()}
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-card rounded-lg p-4 shadow-sm border border-border">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-purple-600 text-lg">📊</span>
+              <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center mr-3">
+                <span className="text-muted-foreground text-lg">📊</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Transactions</p>
-                <p className="text-xl font-bold text-gray-900">{transactions.length}</p>
+                <p className="text-sm text-muted-foreground">Total Transactions</p>
+                <p className="text-xl font-bold text-foreground">{transactions.length}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Financial Transactions</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredTransactions.length} records</p>
+        <div className="hidden lg:block bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">Financial Transactions</h3>
+            <p className="text-sm text-muted-foreground mt-1">Total: {filteredTransactions.length} records</p>
             {/* Filters moved inside table header */}
             <div className="mt-4">
               <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Search</label>
                   <TableFilters
                     searchValue={transactionFilter}
                     searchPlaceholder="Search by description, category, reference..."
@@ -417,7 +414,7 @@ const FinancialLedger = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Branch</label>
                   <BranchFilter
                     value={currentBranchId || ''}
                     onChange={(value) => {
@@ -442,77 +439,77 @@ const FinancialLedger = () => {
             data={filteredTransactions}
             columns={columns}
             actions={(transaction) => [
-              <Button
+              <UIButton
                 key="edit"
                 onClick={() => {
                   console.log('🔘 Edit button clicked for transaction:', transaction);
                   openTransactionModal(transaction);
                 }}
-                variant="info"
-                icon="edit"
+                variant="secondary"
+                size="sm"
               >
-                Edit
-              </Button>,
-              <Button
+                <Icon name="edit" className="mr-2 h-4 w-4" /> Edit
+              </UIButton>,
+              <UIButton
                 key="delete"
                 onClick={() => deleteTransaction(transaction._id)}
-                variant="danger"
-                icon="delete"
+                variant="destructive"
+                size="sm"
               >
-                Delete
-              </Button>,
+                <Icon name="delete" className="mr-2 h-4 w-4" /> Delete
+              </UIButton>,
             ]}
             renderDetail={(transaction) => (
-              <div className="p-6 bg-gradient-to-br from-green-50 to-blue-50 border-l-4 border-green-500">
+              <div className="p-6 bg-muted border-l border-border">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Date:</span>
-                      <span className="text-gray-900 font-medium">{new Date(transaction.transactionDate).toLocaleDateString()}</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Date:</span>
+                      <span className="text-foreground font-medium">{new Date(transaction.transactionDate).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Type:</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Type:</span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTransactionTypeColor(transaction.transactionType)}`}>
                         {transaction.transactionType.charAt(0).toUpperCase() + transaction.transactionType.slice(1)}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Category:</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Category:</span>
                       <span className="flex items-center">
                         <span className="mr-1">{getCategoryIcon(transaction.category)}</span>
-                        <span className="text-gray-900 font-medium capitalize">{transaction.category.replace('_', ' ')}</span>
+                        <span className="text-foreground font-medium capitalize">{transaction.category.replace('_', ' ')}</span>
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Amount:</span>
-                      <span className={`font-bold ${transaction.transactionType === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Amount:</span>
+                      <span className={`font-bold ${transaction.transactionType === 'income' ? 'text-foreground' : 'text-destructive'}`}>
                         ₹{transaction.amount.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Payment Method:</span>
-                      <span className="text-gray-900 font-medium capitalize">{transaction.paymentMethod.replace('_', ' ')}</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Payment Method:</span>
+                      <span className="text-foreground font-medium capitalize">{transaction.paymentMethod.replace('_', ' ')}</span>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Reference:</span>
-                      <span className="text-gray-900 font-medium">{transaction.reference}</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Reference:</span>
+                      <span className="text-foreground font-medium">{transaction.reference}</span>
                     </div>
                     {transaction.vendor && (
                       <div className="flex items-center">
-                        <span className="w-24 text-sm font-medium text-gray-600">Vendor:</span>
-                        <span className="text-gray-900 font-medium">{transaction.vendor}</span>
+                        <span className="w-24 text-sm font-medium text-muted-foreground">Vendor:</span>
+                        <span className="text-foreground font-medium">{transaction.vendor}</span>
                       </div>
                     )}
                     {transaction.customer && (
                       <div className="flex items-center">
-                        <span className="w-24 text-sm font-medium text-gray-600">Customer:</span>
-                        <span className="text-gray-900 font-medium">{transaction.customer}</span>
+                        <span className="w-24 text-sm font-medium text-muted-foreground">Customer:</span>
+                        <span className="text-foreground font-medium">{transaction.customer}</span>
                       </div>
                     )}
                     <div className="flex items-center">
-                      <span className="w-24 text-sm font-medium text-gray-600">Status:</span>
+                      <span className="w-24 text-sm font-medium text-muted-foreground">Status:</span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(transaction.status)}`}>
                         {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
                       </span>
@@ -521,9 +518,9 @@ const FinancialLedger = () => {
                 </div>
                 
                 {transaction.remarks && (
-                  <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
-                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Remarks</h4>
-                    <p className="text-gray-700 text-sm">{transaction.remarks}</p>
+                  <div className="mt-4 p-3 bg-card rounded-lg border border-border">
+                    <h4 className="text-sm font-semibold text-foreground mb-1">Remarks</h4>
+                    <p className="text-muted-foreground text-sm">{transaction.remarks}</p>
                   </div>
                 )}
               </div>
@@ -532,10 +529,10 @@ const FinancialLedger = () => {
         </div>
 
         {/* Mobile Table View */}
-        <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Financial Transactions</h3>
-            <p className="text-sm text-gray-600 mt-1">Total: {filteredTransactions.length} records</p>
+        <div className="lg:hidden bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
+          <div className="px-4 py-4 border-b border-border bg-muted">
+            <h3 className="text-lg font-semibold text-foreground">Financial Transactions</h3>
+            <p className="text-sm text-muted-foreground mt-1">Total: {filteredTransactions.length} records</p>
           </div>
           
           <div className="p-4">
@@ -544,53 +541,51 @@ const FinancialLedger = () => {
                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions</h3>
-                <p className="mt-1 text-sm text-gray-500">Get started by creating a new transaction.</p>
+                <h3 className="mt-2 text-sm font-medium text-foreground">No transactions</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Get started by creating a new transaction.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredTransactions.map((transaction) => (
-                  <div key={transaction._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div key={transaction._id} className="border border-border rounded-lg overflow-hidden">
                     <div 
-                      className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="bg-card p-3 cursor-pointer hover:bg-accent transition-colors"
                       onClick={() => setExpandedTransaction(expandedTransaction === transaction._id ? null : transaction._id)}
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{transaction.description}</div>
-                          <div className="text-sm text-gray-600">{new Date(transaction.transactionDate).toLocaleDateString()}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="font-medium text-foreground">{transaction.description}</div>
+                          <div className="text-sm text-muted-foreground">{new Date(transaction.transactionDate).toLocaleDateString()}</div>
+                          <div className="text-xs text-muted-foreground">
                             {transaction.category.replace('_', ' ')} • {transaction.paymentMethod.replace('_', ' ')}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className={`font-semibold ${transaction.transactionType === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                          <span className={`font-semibold ${transaction.transactionType === 'income' ? 'text-foreground' : 'text-destructive'}`}>
                             ₹{transaction.amount.toLocaleString()}
                           </span>
-                          <Button
+                          <UIButton
                             onClick={(e) => {
                               e.stopPropagation();
                               openTransactionModal(transaction);
                             }}
-                            variant="info"
-                            icon="edit"
-                            className="text-xs px-2 py-1"
+                            variant="secondary"
+                            size="sm"
                           >
-                            Edit
-                          </Button>
-                          <Button
+                            <Icon name="edit" className="mr-1 h-4 w-4" /> Edit
+                          </UIButton>
+                          <UIButton
                             onClick={(e) => {
                               e.stopPropagation();
                               deleteTransaction(transaction._id);
                             }}
-                            variant="danger"
-                            icon="delete"
-                            className="text-xs px-2 py-1"
+                            variant="destructive"
+                            size="sm"
                           >
-                            Delete
-                          </Button>
+                            <Icon name="delete" className="mr-1 h-4 w-4" /> Delete
+                          </UIButton>
                           <svg 
-                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                            className={`w-4 h-4 text-muted-foreground transition-transform ${
                               expandedTransaction === transaction._id ? 'rotate-180' : ''
                             }`}
                             fill="none" 
@@ -604,33 +599,33 @@ const FinancialLedger = () => {
                     </div>
 
                     {expandedTransaction === transaction._id && (
-                      <div className="bg-gradient-to-br from-green-50 to-blue-50 p-4 border-t border-gray-200">
+                      <div className="bg-muted p-4 border-t border-border">
                         <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                           <div>
-                            <span className="text-gray-600">Type:</span>
+                            <span className="text-muted-foreground">Type:</span>
                             <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getTransactionTypeColor(transaction.transactionType)}`}>
                               {transaction.transactionType.charAt(0).toUpperCase() + transaction.transactionType.slice(1)}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Category:</span>
-                            <span className="ml-1 font-medium text-gray-900 capitalize">{transaction.category.replace('_', ' ')}</span>
+                            <span className="text-muted-foreground">Category:</span>
+                            <span className="ml-1 font-medium text-foreground capitalize">{transaction.category.replace('_', ' ')}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Reference:</span>
-                            <span className="ml-1 font-medium text-gray-900">{transaction.reference}</span>
+                            <span className="text-muted-foreground">Reference:</span>
+                            <span className="ml-1 font-medium text-foreground">{transaction.reference}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Status:</span>
+                            <span className="text-muted-foreground">Status:</span>
                             <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(transaction.status)}`}>
                               {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
                             </span>
                           </div>
                         </div>
                         {transaction.remarks && (
-                          <div className="p-3 bg-white rounded-lg border border-gray-200">
-                            <h5 className="text-sm font-semibold text-gray-800 mb-1">Remarks</h5>
-                            <p className="text-gray-700 text-sm">{transaction.remarks}</p>
+                          <div className="p-3 bg-card rounded-lg border border-border">
+                            <h5 className="text-sm font-semibold text-foreground mb-1">Remarks</h5>
+                            <p className="text-muted-foreground text-sm">{transaction.remarks}</p>
                           </div>
                         )}
                       </div>
@@ -788,11 +783,11 @@ const FinancialLedger = () => {
           {/* Show existing uploaded files */}
           {uploadedFiles.length > 0 && (
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-gray-700">Existing Documents</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">Existing Documents</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {uploadedFiles.map((file, index) => (
                   <div key={index} className="relative group">
-                    <div className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+                    <div className="bg-card border border-border rounded-lg p-3 hover:shadow-md transition-shadow">
                       {/* File Preview */}
                       <div className="relative mb-2">
                         {file.mimetype?.startsWith('image/') ? (
@@ -804,18 +799,18 @@ const FinancialLedger = () => {
                           />
                         ) : (
                           <div 
-                            className="w-full h-24 bg-gradient-to-br from-blue-50 to-indigo-50 rounded border flex flex-col items-center justify-center cursor-pointer hover:bg-gradient-to-br hover:from-blue-100 hover:to-indigo-100 transition-colors"
+                            className="w-full h-24 bg-muted rounded border flex flex-col items-center justify-center cursor-pointer transition-colors"
                             onClick={() => openPreview(file)}
                           >
                             <span className="text-3xl mb-1">{getFileIcon(file)}</span>
-                            <span className="text-xs text-gray-600 text-center px-1">
+                            <span className="text-xs text-muted-foreground text-center px-1">
                               {file.originalName?.split('.').pop()?.toUpperCase() || 'FILE'}
                             </span>
                           </div>
                         )}
                         
                         {/* Preview Overlay */}
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded flex items-center justify-center">
+                        <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-all duration-200 rounded flex items-center justify-center">
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                             <span className="text-white text-sm font-medium">Click to Preview</span>
                           </div>
@@ -824,32 +819,28 @@ const FinancialLedger = () => {
                       
                       {/* File Info */}
                       <div className="text-center">
-                        <p className="text-xs font-medium text-gray-800 truncate" title={file.originalName}>
+                        <p className="text-xs font-medium text-foreground truncate" title={file.originalName}>
                           {file.originalName}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           {(file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
                       
                       {/* Action Buttons */}
                       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => openPreview(file)}
-                          className="bg-blue-600 text-white p-1 rounded text-xs hover:bg-blue-700 transition-colors"
-                          title="Preview"
-                        >
-                          👁️
-                        </button>
-                        <a
-                          href={`${import.meta.env.VITE_API_URL}${file.url}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-green-600 text-white p-1 rounded text-xs hover:bg-green-700 transition-colors"
-                          title="Download"
-                        >
-                          ⬇️
-                        </a>
+                        <UIButton size="icon" variant="secondary" onClick={() => openPreview(file)} title="Preview">
+                          <Icon name="eye" className="h-4 w-4" />
+                        </UIButton>
+                        <UIButton size="icon" variant="secondary" asChild title="Download">
+                          <a
+                            href={`${import.meta.env.VITE_API_URL}${file.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Icon name="download" className="h-4 w-4" />
+                          </a>
+                        </UIButton>
                       </div>
                     </div>
                   </div>
@@ -859,12 +850,12 @@ const FinancialLedger = () => {
           )}
           
           <div className="flex justify-end space-x-3 pt-4">
-            <Button type="button" onClick={closeTransactionModal} variant="secondary">
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              {editingTransaction ? 'Update Transaction' : 'Create Transaction'}
-            </Button>
+            <UIButton type="button" onClick={closeTransactionModal} variant="secondary">
+              <Icon name="close" className="mr-2 h-4 w-4" /> Cancel
+            </UIButton>
+            <UIButton type="submit">
+              <Icon name="save" className="mr-2 h-4 w-4" /> {editingTransaction ? 'Update Transaction' : 'Create Transaction'}
+            </UIButton>
           </div>
         </form>
       </DialogBox>
@@ -879,23 +870,23 @@ const FinancialLedger = () => {
         >
           <div className="space-y-4">
             {/* File Info */}
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-muted p-4 rounded-lg">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-gray-700">File Name:</span>
-                  <p className="text-gray-900">{previewFile.originalName}</p>
+                  <span className="font-medium text-muted-foreground">File Name:</span>
+                  <p className="text-foreground">{previewFile.originalName}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">File Size:</span>
-                  <p className="text-gray-900">{(previewFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <span className="font-medium text-muted-foreground">File Size:</span>
+                  <p className="text-foreground">{(previewFile.size / 1024 / 1024).toFixed(2)} MB</p>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">File Type:</span>
-                  <p className="text-gray-900">{previewFile.mimetype}</p>
+                  <span className="font-medium text-muted-foreground">File Type:</span>
+                  <p className="text-foreground">{previewFile.mimetype}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">Uploaded:</span>
-                  <p className="text-gray-900">
+                  <span className="font-medium text-muted-foreground">Uploaded:</span>
+                  <p className="text-foreground">
                     {previewFile.uploadedAt ? new Date(previewFile.uploadedAt).toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
@@ -921,67 +912,73 @@ const FinancialLedger = () => {
                   />
                 </div>
               ) : previewFile.mimetype?.includes('text') || previewFile.mimetype?.includes('csv') ? (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-2">Text files cannot be previewed directly.</p>
-                  <a
-                    href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    📄 Open in New Tab
-                  </a>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-6xl mb-4">{getFileIcon(previewFile)}</div>
-                  <p className="text-lg font-medium text-gray-800 mb-2">{previewFile.originalName}</p>
-                  <p className="text-gray-600 mb-4">This file type cannot be previewed directly.</p>
-                  <div className="flex gap-3 justify-center">
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-2">Text files cannot be previewed directly.</p>
+                  <UIButton asChild>
                     <a
                       href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="inline-flex items-center"
                     >
-                      📄 Open in New Tab
+                      <Icon name="fileText" className="mr-2 h-4 w-4" /> Open in New Tab
                     </a>
-                    <a
-                      href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
-                      download={previewFile.originalName}
-                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      ⬇️ Download
-                    </a>
+                  </UIButton>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">{getFileIcon(previewFile)}</div>
+                  <p className="text-lg font-medium text-foreground mb-2">{previewFile.originalName}</p>
+                  <p className="text-muted-foreground mb-4">This file type cannot be previewed directly.</p>
+                  <div className="flex gap-3 justify-center">
+                    <UIButton asChild>
+                      <a
+                        href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center"
+                      >
+                        <Icon name="fileText" className="mr-2 h-4 w-4" /> Open in New Tab
+                      </a>
+                    </UIButton>
+                    <UIButton asChild variant="secondary">
+                      <a
+                        href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
+                        download={previewFile.originalName}
+                        className="inline-flex items-center"
+                      >
+                        <Icon name="download" className="mr-2 h-4 w-4" /> Download
+                      </a>
+                    </UIButton>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 pt-4 border-t">
-              <Button
-                onClick={closePreview}
-                variant="secondary"
-                icon="close"
-              >
-                Close
-              </Button>
-              <a
-                href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                📄 Open in New Tab
-              </a>
-              <a
-                href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
-                download={previewFile.originalName}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                ⬇️ Download
-              </a>
+            <div className="flex justify-end space-x-3 pt-4 border-t border-border">
+              <UIButton onClick={closePreview} variant="secondary">
+                <Icon name="close" className="mr-2 h-4 w-4" /> Close
+              </UIButton>
+              <UIButton asChild>
+                <a
+                  href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center"
+                >
+                  <Icon name="fileText" className="mr-2 h-4 w-4" /> Open in New Tab
+                </a>
+              </UIButton>
+              <UIButton asChild variant="secondary">
+                <a
+                  href={`${import.meta.env.VITE_API_URL}${previewFile.url}`}
+                  download={previewFile.originalName}
+                  className="inline-flex items-center"
+                >
+                  <Icon name="download" className="mr-2 h-4 w-4" /> Download
+                </a>
+              </UIButton>
             </div>
           </div>
         </DialogBox>

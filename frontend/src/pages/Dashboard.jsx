@@ -1,13 +1,34 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import ReactApexChart from 'react-apexcharts';
-import Button from '../components/common/Button';
+import { Button } from '../components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import BranchFilter from '../components/common/BranchFilter';
-import OutstandingProgressBar from '../components/common/OutstandingProgressBar';
 import SouthIndiaSalesChart from '../components/charts/SouthIndiaSalesChart';
 
 import { dashboardService } from '../services/dashboardService';
+
+// Resolve CSS variable HSL values to CSS color strings usable by ApexCharts
+// Converts space-separated HSL (CSS Color 4) to comma-separated HSL/HSLA
+const resolveVar = (name) => {
+  if (typeof window === 'undefined') return undefined;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (!raw) return undefined;
+  // If already comma-separated, return as hsl()
+  if (raw.includes(',')) return `hsl(${raw})`;
+  // Support optional alpha like: "220 90% 50% / 0.6"
+  const [hslPart, alphaPart] = raw.split('/').map((s) => s && s.trim());
+  const parts = (hslPart || '').split(/\s+/).filter(Boolean);
+  if (parts.length >= 3) {
+    const [h, s, l] = parts;
+    if (alphaPart) {
+      return `hsla(${h}, ${s}, ${l}, ${alphaPart})`;
+    }
+    return `hsl(${h}, ${s}, ${l})`;
+  }
+  // Fallback to raw if unexpected
+  return raw;
+};
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -18,11 +39,33 @@ const Dashboard = () => {
     startDate: '2025-01-01',
     endDate: '2025-06-30'
   });
-  const [activeTab, setActiveTab] = useState('analytics');
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(false);
   const { currentBranchId } = useSelector((state) => state.branch);
   const { user } = useSelector((state) => state.auth);
+
+  // Track theme changes to recompute chart colors when .dark class toggles
+  const [, setThemeVersion] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const observer = new MutationObserver(() => setThemeVersion((v) => v + 1));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  // Theme-aware chart colors
+  const themeColors = {
+    primary: resolveVar('--primary') || '#10b981',
+    accent: resolveVar('--accent') || '#3b82f6',
+    secondary: resolveVar('--secondary') || '#8b5cf6',
+    warning: resolveVar('--warning') || '#f59e0b',
+    destructive: resolveVar('--destructive') || '#ef4444',
+    border: resolveVar('--border') || '#e5e7eb',
+    mutedFg: resolveVar('--muted-foreground') || '#6b7280',
+  };
+
+  // ApexCharts theme mode (sync with class-based dark mode)
+  const apexMode = (typeof window !== 'undefined' && document.documentElement.classList.contains('dark')) ? 'dark' : 'light';
 
   // Memoized fetch function to prevent unnecessary re-renders
   const fetchDashboardData = useCallback(async () => {
@@ -105,38 +148,8 @@ const Dashboard = () => {
       maximumFractionDigits: 0
     }).format(amount || 0);
   };
-
   const formatNumber = (number) => {
     return new Intl.NumberFormat('en-IN').format(number || 0);
-  };
-
-  // Chart configurations
-  const salesChartOptions = {
-    chart: {
-      type: 'bar',
-      height: 100,
-      toolbar: { show: false },
-      sparkline: { enabled: true }
-    },
-    plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: '100%',
-        borderRadius: 4
-      }
-    },
-    dataLabels: { enabled: false },
-    stroke: { width: 0 },
-    colors: ['#10B981'],
-    grid: { show: false },
-    xaxis: { labels: { show: false } },
-    yaxis: { labels: { show: false } },
-    tooltip: { enabled: false }
-  };
-
-  const purchaseChartOptions = {
-    ...salesChartOptions,
-    colors: ['#3B82F6']
   };
 
   if (loading) return <LoadingSpinner fullPage />;
@@ -158,7 +171,6 @@ const Dashboard = () => {
   const {
     totalRevenue = 0,
     totalExpenses = 0,
-    gstAmount = 0,
     totalPurchase = 0,
     totalIncome = 0
   } = overview;
@@ -193,12 +205,6 @@ const Dashboard = () => {
   // Use real month data from backend if available, otherwise fallback to generated labels
   const monthLabels = dashboardData.sales?.months || generateMonthLabels(salesData.length);
   
-  // Debug: Log the month data being used
-  console.log('🔍 Month Data Debug:');
-  console.log('  Backend months:', dashboardData.sales?.months);
-  console.log('  Generated months:', generateMonthLabels(salesData.length));
-  console.log('  Final monthLabels:', monthLabels);
-  console.log('  salesData length:', salesData.length);
 
   const {
     salesOutstanding = {
@@ -233,12 +239,49 @@ const Dashboard = () => {
   const totalSalesOutstanding = salesOutstanding.current + salesOutstanding.overdue_1_15 + salesOutstanding.overdue_16_30 + salesOutstanding.overdue_30_plus;
   const totalPurchaseOutstanding = purchaseOutstanding.current + purchaseOutstanding.overdue_1_15 + purchaseOutstanding.overdue_16_30 + purchaseOutstanding.overdue_30_plus;
 
+  // Helpers for Key Metrics trends and progress
+  const getDeltaPct = (arr) => {
+    if (!Array.isArray(arr) || arr.length < 2) return null;
+    const prev = arr[arr.length - 2] || 0;
+    const curr = arr[arr.length - 1] || 0;
+    if (prev === 0) return null;
+    return ((curr - prev) / Math.abs(prev)) * 100;
+  };
+
+  const getLastVsMaxPct = (arr) => {
+    if (!Array.isArray(arr) || arr.length === 0) return 0;
+    const curr = arr[arr.length - 1] || 0;
+    const max = Math.max(...arr);
+    if (max <= 0) return 0;
+    return (curr / max) * 100;
+  };
+
+  const salesDelta = getDeltaPct(salesData);
+  const purchaseDelta = getDeltaPct(purchaseData);
+  const salesProgress = Math.max(0, Math.min(100, getLastVsMaxPct(salesData)));
+  const purchaseProgress = Math.max(0, Math.min(100, getLastVsMaxPct(purchaseData)));
+
+  // Series for outstanding donut chart
+  const salesOutstandingSeries = [
+    salesOutstanding.current || 0,
+    salesOutstanding.overdue_1_15 || 0,
+    salesOutstanding.overdue_16_30 || 0,
+    salesOutstanding.overdue_30_plus || 0,
+  ];
+  const purchaseOutstandingSeries = [
+    purchaseOutstanding.current || 0,
+    purchaseOutstanding.overdue_1_15 || 0,
+    purchaseOutstanding.overdue_16_30 || 0,
+    purchaseOutstanding.overdue_30_plus || 0,
+  ];
+
   // Chart configurations
   const newVsExistingChartOptions = {
     chart: {
       type: 'bar',
       height: 300,
-      toolbar: { show: false }
+      toolbar: { show: false },
+      stacked: true
     },
     plotOptions: {
       bar: {
@@ -249,31 +292,34 @@ const Dashboard = () => {
     },
     dataLabels: { enabled: false },
     stroke: { width: 0 },
-    colors: ['#10B981', '#6B7280'],
+    colors: [themeColors.primary, themeColors.accent],
     grid: {
-      borderColor: '#E5E7EB',
+      borderColor: themeColors.border,
       strokeDashArray: 4
     },
     xaxis: {
       categories: monthLabels,
-      labels: { style: { colors: '#6B7280', fontSize: '12px' } }
+      labels: { style: { colors: themeColors.mutedFg, fontSize: '12px' } }
     },
     yaxis: {
       labels: { 
-        style: { colors: '#6B7280', fontSize: '12px' },
-        formatter: (value) => `${value.toFixed(1)}`
+        style: { colors: themeColors.mutedFg, fontSize: '12px' },
+        formatter: (value) => formatCurrency(value * 1000)
       }
     },
     legend: {
       position: 'top',
       horizontalAlign: 'right',
-      labels: { colors: '#6B7280' }
+      labels: { colors: themeColors.mutedFg }
     },
     tooltip: {
+      shared: true,
+      intersect: false,
       y: {
-        formatter: (value) => `${value.toFixed(1)}%`
+        formatter: (value) => formatCurrency(value * 1000)
       }
-    }
+    },
+    theme: { mode: apexMode }
   };
 
   const invoiceCountChartOptions = {
@@ -284,37 +330,38 @@ const Dashboard = () => {
     },
     plotOptions: {
       bar: {
-        horizontal: false,
+        horizontal: true,
         columnWidth: '55%',
         borderRadius: 4
       }
     },
     dataLabels: { enabled: false },
     stroke: { width: 0 },
-    colors: ['#10B981', '#6B7280'],
+    colors: [themeColors.primary, themeColors.accent],
     grid: {
-      borderColor: '#E5E7EB',
+      borderColor: themeColors.border,
       strokeDashArray: 4
     },
     xaxis: {
       categories: monthLabels,
-      labels: { style: { colors: '#6B7280', fontSize: '12px' } }
+      labels: { style: { colors: themeColors.mutedFg, fontSize: '12px' } }
     },
     yaxis: {
       labels: { 
-        style: { colors: '#6B7280', fontSize: '12px' }
+        style: { colors: themeColors.mutedFg, fontSize: '12px' }
       }
     },
     legend: {
       position: 'top',
       horizontalAlign: 'right',
-      labels: { colors: '#6B7280' }
-    }
+      labels: { colors: themeColors.mutedFg }
+    },
+    theme: { mode: apexMode }
   };
 
   const invoiceAmountChartOptions = {
     chart: {
-      type: 'line',
+      type: 'area',
       height: 300,
       toolbar: { show: false }
     },
@@ -322,513 +369,425 @@ const Dashboard = () => {
       curve: 'smooth',
       width: [3, 2]
     },
-    colors: ['#10B981', '#6B7280'],
+    colors: [themeColors.primary, themeColors.accent],
+    fill: {
+      type: 'gradient',
+      gradient: {
+        shadeIntensity: 0.3,
+        opacityFrom: 0.45,
+        opacityTo: 0.05,
+        stops: [0, 90, 100]
+      }
+    },
+    markers: { size: 3 },
     grid: {
-      borderColor: '#E5E7EB',
+      borderColor: themeColors.border,
       strokeDashArray: 4
     },
     xaxis: {
       categories: monthLabels,
-      labels: { style: { colors: '#6B7280', fontSize: '12px' } }
+      labels: { style: { colors: themeColors.mutedFg, fontSize: '12px' } }
     },
     yaxis: {
       labels: { 
-        style: { colors: '#6B7280', fontSize: '12px' },
-        formatter: (value) => `${value}K`
+        style: { colors: themeColors.mutedFg, fontSize: '12px' },
+        formatter: (value) => formatCurrency(value * 1000)
       }
     },
     legend: {
       position: 'top',
       horizontalAlign: 'right',
-      labels: { colors: '#6B7280' }
+      labels: { colors: themeColors.mutedFg }
     },
     tooltip: {
       y: {
-        formatter: (value) => `₹${value}K`
+        formatter: (value) => formatCurrency(value * 1000)
       }
-    }
+    },
+    theme: { mode: apexMode }
+  };
+
+  const outstandingDonutOptions = {
+    chart: { type: 'donut' },
+    labels: ['Current', 'Overdue 1-15', 'Overdue 16-30', '30+ Days'],
+    colors: [themeColors.primary, themeColors.accent, themeColors.warning, themeColors.destructive],
+    legend: { position: 'bottom', labels: { colors: themeColors.mutedFg } },
+    dataLabels: { enabled: false },
+    stroke: { width: 0 },
+    tooltip: { y: { formatter: (value) => formatCurrency(value) } },
+    theme: { mode: apexMode }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-    
-
+    <div className="bg-background">
       {/* Main Dashboard */}
-      <div className="px-6 pb-6">
-        {/* Tabs and Controls */}
-        <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
-          <div className="flex items-center justify-end mb-6">
-            {/* <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setActiveTab('analytics')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'analytics' 
-                    ? 'bg-white text-gray-900 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Analytics
-              </button>
-              <button
-                onClick={() => setActiveTab('quickLinks')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'quickLinks' 
-                    ? 'bg-white text-gray-900 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Quick Links
-              </button>
-            </div> */}
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Last Updated: {lastUpdated.toLocaleTimeString()}
-              </span>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="date"
-                  value={dateRange.startDate}
-                  onChange={(e) => handleDateRangeChange({ ...dateRange, startDate: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-                <span className="text-gray-500">To</span>
-                <input
-                  type="date"
-                  value={dateRange.endDate}
-                  onChange={(e) => handleDateRangeChange({ ...dateRange, endDate: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
+      <div className="space-y-6">
+        {/* Stack */}
+        <div className="flex flex-col gap-6">
+          {/* Controls + Summary */}
+          <div className="space-y-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-semibold tracking-tight text-foreground">Dashboard</h1>
+                {user?.role === 'superadmin' && currentBranchId && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 text-xs">
+                    <span className="w-2 h-2 bg-primary rounded-full" />
+                    Branch filter
+                    <button onClick={() => window.location.reload()} className="ml-1 underline decoration-primary/40 hover:decoration-primary">
+                      Clear
+                    </button>
+                  </span>
+                )}
               </div>
-              <Button 
-                variant="secondary" 
-                onClick={handleManualRefresh} 
-                className="px-3 py-1.5 text-md"
-                disabled={loading}
-              >
-                {loading ? '🔄 Loading...' : '🔄 Refresh'}
-              </Button>
-              <Button 
-                variant={autoRefresh ? "primary" : "secondary"}
-                onClick={toggleAutoRefresh} 
-                className="px-3 py-1.5 text-md"
-              >
-                {autoRefresh ? '⏸️ Stop Auto-refresh' : '▶️ Auto-refresh'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Branch Filter Indicator */}
-          {user?.role === 'superadmin' && currentBranchId && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-blue-800">
-                    Branch Filter Active
-                  </span>
-                  <span className="text-sm text-blue-600">
-                    Showing data for selected branch only
-                  </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Last Updated: {lastUpdated.toLocaleTimeString()}</span>
+                <div className="flex items-center gap-2">
+                  <input type="date" value={dateRange.startDate} onChange={(e) => handleDateRangeChange({ ...dateRange, startDate: e.target.value })} className="px-3 py-2 border border-input bg-background rounded-lg text-sm" />
+                  <span className="text-muted-foreground">To</span>
+                  <input type="date" value={dateRange.endDate} onChange={(e) => handleDateRangeChange({ ...dateRange, endDate: e.target.value })} className="px-3 py-2 border border-input bg-background rounded-lg text-sm" />
                 </div>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => window.location.reload()} 
-                  className="px-3 py-1.5 text-sm text-blue-700 border-blue-300 hover:bg-blue-100"
-                >
-                  Clear Filter
+                <Button variant="outline" onClick={handleManualRefresh} size="sm" disabled={loading}>
+                  {loading ? 'Loading...' : 'Refresh'}
+                </Button>
+                <Button variant={autoRefresh ? 'default' : 'outline'} onClick={toggleAutoRefresh} size="sm">
+                  {autoRefresh ? 'Stop Auto-refresh' : 'Auto-refresh'}
                 </Button>
               </div>
             </div>
-          )}
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {/* Sales */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Sale</h3>
-              <div className="text-lg font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
-              <div className="text-sm text-gray-600">+GST {formatCurrency(gstAmount)}</div>
-            </div>
+            
 
-            {/* Purchase */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Purchase</h3>
-              <div className="text-lg font-bold text-gray-900">{formatCurrency(totalPurchase)}</div>
-            </div>
-
-            {/* Expense */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Expense</h3>
-              <div className="text-lg font-bold text-gray-900">{formatCurrency(totalExpenses)}</div>
-            </div>
-
-            {/* Income */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Income</h3>
-              <div className="text-lg font-bold text-gray-900">{formatCurrency(totalIncome)}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Outstanding Balances Progress Bars */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Sales Outstanding */}
-          <OutstandingProgressBar
-            title="Sales Outstanding"
-            data={salesOutstanding}
-            total={totalSalesOutstanding}
-          />
-
-          {/* Purchase Outstanding */}
-          <OutstandingProgressBar
-            title="Purchase Outstanding"
-            data={purchaseOutstanding}
-            total={totalPurchaseOutstanding}
-          />
-        </div>
-
-        {/* Outstanding Balances and Sales Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-          {/* Sales Outstanding */}
-          {/* <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Sales Outstanding</h3>
-            <div className="text-2xl font-bold text-gray-900 mb-4">
-              Total Receivables {formatCurrency(totalSalesOutstanding)}
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">CURRENT</span>
-                </div>
-                <span className="text-sm font-medium">{formatCurrency(salesOutstanding.current)}</span>
+            {/* Error Alert */}
+            {error && (
+              <div className="flex items-center bg-destructive/10 text-destructive border border-destructive/30 rounded-lg p-3">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium">{error}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">OVERDUE 1-15 Days</span>
-                </div>
-                <span className="text-sm font-medium">{formatCurrency(salesOutstanding.overdue_1_15)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">16-30 Days</span>
-                </div>
-                <span className="text-sm font-medium">{formatCurrency(salesOutstanding.overdue_16_30)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">30+ Days</span>
-                </div>
-                <span className="text-sm font-medium">{formatCurrency(salesOutstanding.overdue_30_plus)}</span>
-              </div>
-            </div>
-          </div> */}
+            )}
 
-          {/* Purchase Outstanding */}
-          {/* <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase Outstanding</h3>
-            <div className="text-2xl font-bold text-gray-900 mb-4">
-              Total Payables {formatCurrency(totalPurchaseOutstanding)}
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">CURRENT</span>
-                </div>
-                <span className="text-sm font-medium">{formatCurrency(purchaseOutstanding.current)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">OVERDUE 1-15 Days</span>
-                </div>
-                <span className="text-sm font-medium">{formatCurrency(purchaseOutstanding.overdue_1_15)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">16-30 Days</span>
-                </div>
-                <span className="text-sm font-medium">{formatCurrency(purchaseOutstanding.overdue_16_30)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">30+ Days</span>
-                </div>
-                <span className="text-sm font-medium">{formatCurrency(purchaseOutstanding.overdue_30_plus)}</span>
-              </div>
-            </div>
-          </div> */}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-  {/* South India Sales Chart */}
-  <div className="mb-6">
-          <SouthIndiaSalesChart 
-            data={geographical}
-            title="South India Sales Overview"
-            height={300}
-          />
-        </div>
-
-        {/* New VS Existing Customer Sale */}
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">New VS Existing Customer Sale</h3>
-          <ReactApexChart
-            options={newVsExistingChartOptions}
-            series={[
-              { name: 'New Customer Sale', data: newCustomerSales },
-              { name: 'Existing Customer Sale', data: existingCustomerSales }
-            ]}
-            type="bar"
-            height={300}
-          />
-        </div>
-          </div>
-      
-
-        {/* Invoice Summaries */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Invoice Count Summary */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Invoice Count Summary</h3>
-            <ReactApexChart
-              options={invoiceCountChartOptions}
-              series={[
-                { name: 'Sale', data: invoiceCounts.sales },
-                { name: 'Purchase', data: invoiceCounts.purchases }
-              ]}
-              type="bar"
-              height={300}
-            />
-          </div>
-
-          {/* Invoice Amount Summary */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Invoice Amount Summary</h3>
-            <ReactApexChart
-              options={invoiceAmountChartOptions}
-              series={[
-                { name: 'Sale', data: invoiceAmounts.sales },
-                { name: 'Purchase', data: invoiceAmounts.purchases }
-              ]}
-              type="line"
-              height={300}
-            />
-          </div>
-        </div>
-
-        {/* Product and Customer/Vendor Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
-          {/* Best Selling Products */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Best Selling Products</h3>
-            <div className="space-y-3">
-              {bestSelling.length > 0 ? (
-                bestSelling.map((product, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">{product.name}</span>
-                    <span className="text-sm font-medium">{formatNumber(product.quantity)}</span>
+            {/* Key Metrics (compact, above grid) */}
+            <Card className="border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base sm:text-lg">Key Metrics</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="rounded-lg bg-muted p-4">
+                    <p className="text-xs text-muted-foreground">Sales</p>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <div className="text-xl font-semibold">{formatCurrency(totalRevenue)}</div>
+                      {salesDelta !== null && (
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full ${salesDelta >= 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
+                          {salesDelta >= 0 ? '▲' : '▼'} {Math.abs(salesDelta).toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 h-2 w-full rounded bg-background/60 border border-border">
+                      <div className="h-full rounded bg-primary" style={{ width: `${salesProgress}%` }} />
+                    </div>
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-4">
-                  No data available
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Least Selling Products */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Least Selling Products</h3>
-            <div className="space-y-3">
-              {leastSelling.length > 0 ? (
-                leastSelling.map((product, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">{product.name}</span>
-                    <span className="text-sm font-medium">{formatNumber(product.quantity)}</span>
+                  <div className="rounded-lg bg-muted p-4">
+                    <p className="text-xs text-muted-foreground">Purchase</p>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <div className="text-xl font-semibold">{formatCurrency(totalPurchase)}</div>
+                      {purchaseDelta !== null && (
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full ${purchaseDelta >= 0 ? 'bg-accent/10 text-accent border border-accent/30' : 'bg-destructive/10 text-destructive'}`}>
+                          {purchaseDelta >= 0 ? '▲' : '▼'} {Math.abs(purchaseDelta).toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 h-2 w-full rounded bg-background/60 border border-border">
+                      <div className="h-full rounded bg-accent" style={{ width: `${purchaseProgress}%` }} />
+                    </div>
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-4">
-                  No data available
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Low Stock */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Low Stock</h3>
-            <div className="space-y-3">
-              {lowStock.length > 0 ? (
-                lowStock.map((product, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">{product.name}</span>
-                    <span className={`text-sm font-medium ${product.quantity < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                      {formatNumber(product.quantity)}
-                    </span>
+                  <div className="rounded-lg bg-muted p-4">
+                    <p className="text-xs text-muted-foreground">Expense</p>
+                    <div className="mt-1 text-xl font-semibold">{formatCurrency(totalExpenses)}</div>
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-4">
-                  No low stock items
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Top Customers */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Customers</h3>
-            <div className="space-y-3">
-              {topCustomers.length > 0 ? (
-                topCustomers.map((customer, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 truncate">{customer.name}</span>
-                    <span className="text-sm font-medium">{formatCurrency(customer.amount)}</span>
+                  <div className="rounded-lg bg-muted p-4">
+                    <p className="text-xs text-muted-foreground">Income</p>
+                    <div className="mt-1 text-xl font-semibold">{formatCurrency(totalIncome)}</div>
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-4">
-                  No customer data
                 </div>
-              )}
-            </div>
-          </div>
+              </CardContent>
+            </Card>
 
-          {/* Top Vendors */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Vendors</h3>
-            <div className="space-y-3">
-              {topVendors.length > 0 ? (
-                topVendors.map((vendor, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 truncate">{vendor.name}</span>
-                    <span className="text-sm font-medium">{formatCurrency(vendor.amount)}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-4">
-                  No vendor data
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+            {/* Bento Grid */}
+            <div className="grid grid-cols-4 md:grid-cols-8 xl:grid-cols-12 gap-6 auto-rows-[160px]">
+              
 
-        {/* Due Invoices */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Sales Invoice Due */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Sales Invoice Due</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Invoice No.</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Company Name</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Name</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due Date</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due From</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Remaining Payment</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {dueInvoices.length > 0 ? (
-                    dueInvoices.map((invoice, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="py-3 px-4 text-sm text-gray-900">{invoice.invoiceNo}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.companyName}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.name}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueDate}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueFrom}</td>
-                        <td className="py-3 px-4 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="text-center text-gray-500 py-4">
-                        No outstanding invoices
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-lg font-bold text-gray-900">
-                Total Outstanding: {formatCurrency(totalSalesOutstanding)}
+              {/* Revenue vs Purchase (Area) */}
+              <div className="col-span-4 md:col-span-8 xl:col-span-8 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Revenue vs Purchase (INR)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ReactApexChart options={invoiceAmountChartOptions} series={[{ name: 'Sale', data: invoiceAmounts.sales }, { name: 'Purchase', data: invoiceAmounts.purchases }]} type="area" height={300} />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Invoice Count (Horizontal Bars) */}
+              <div className="col-span-4 md:col-span-8 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Invoice Count</CardTitle>
+                  </CardHeader>
+                    <CardContent>
+                      <ReactApexChart options={invoiceCountChartOptions} series={[{ name: 'Sale', data: invoiceCounts.sales }, { name: 'Purchase', data: invoiceCounts.purchases }]} type="bar" height={300} />
+                    </CardContent>
+                </Card>
+              </div>
+
+              {/* New vs Existing (Stacked Bar) */}
+              <div className="col-span-4 md:col-span-4 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">New vs Existing Customers</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ReactApexChart options={newVsExistingChartOptions} series={[{ name: 'New Customer Sale', data: newCustomerSales }, { name: 'Existing Customer Sale', data: existingCustomerSales }]} type="bar" height={300} />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* South India Sales */}
+              <div className="col-span-4 md:col-span-4 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardContent className="p-6">
+                    <SouthIndiaSalesChart data={geographical} title="South India Sales Overview" height={300} />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Outstanding Donuts */}
+              <div className="col-span-4 md:col-span-4 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Sales Outstanding</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ReactApexChart options={outstandingDonutOptions} series={salesOutstandingSeries} type="donut" height={300} />
+                    <div className="mt-4 text-sm text-muted-foreground">Total: {formatCurrency(totalSalesOutstanding)}</div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="col-span-4 md:col-span-4 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Purchase Outstanding</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ReactApexChart options={outstandingDonutOptions} series={purchaseOutstandingSeries} type="donut" height={300} />
+                    <div className="mt-4 text-sm text-muted-foreground">Total: {formatCurrency(totalPurchaseOutstanding)}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Lists */}
+              <div className="col-span-4 md:col-span-4 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Best Selling Products</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {bestSelling.length > 0 ? (
+                        bestSelling.map((product, index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground truncate">{product.name}</span>
+                            <span className="text-sm font-medium">{formatNumber(product.quantity)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-muted-foreground py-4">No data available</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="col-span-4 md:col-span-4 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Least Selling Products</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {leastSelling.length > 0 ? (
+                        leastSelling.map((product, index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground truncate">{product.name}</span>
+                            <span className="text-sm font-medium">{formatNumber(product.quantity)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-muted-foreground py-4">No data available</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="col-span-4 md:col-span-4 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Low Stock</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {lowStock.length > 0 ? (
+                        lowStock.map((product, index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground truncate">{product.name}</span>
+                            <span className={`text-sm font-medium ${product.quantity < 0 ? 'text-destructive' : 'text-foreground'}`}>{formatNumber(product.quantity)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-muted-foreground py-4">No low stock items</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Customers/Vendors */}
+              <div className="col-span-4 md:col-span-4 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Top Customers</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {topCustomers.length > 0 ? (
+                        topCustomers.map((customer, index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground truncate">{customer.name}</span>
+                            <span className="text-sm font-medium">{formatCurrency(customer.amount)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-muted-foreground py-4">No customer data</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="col-span-4 md:col-span-4 xl:col-span-4 row-span-3">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Top Vendors</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {topVendors.length > 0 ? (
+                        topVendors.map((vendor, index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground truncate">{vendor.name}</span>
+                            <span className="text-sm font-medium">{formatCurrency(vendor.amount)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-muted-foreground py-4">No vendor data</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Due Invoices */}
+              <div className="col-span-4 md:col-span-8 xl:col-span-6 row-span-4">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Sales Invoice Due</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Invoice No.</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Company Name</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Name</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Due Date</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Due From</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Remaining Payment</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {dueInvoices.length > 0 ? (
+                            dueInvoices.map((invoice, index) => (
+                              <tr key={index} className="hover:bg-muted">
+                                <td className="py-3 px-4 text-sm text-foreground">{invoice.invoiceNo}</td>
+                                <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.companyName}</td>
+                                <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.name}</td>
+                                <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.dueDate}</td>
+                                <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.dueFrom}</td>
+                                <td className="py-3 px-4 text-sm font-medium text-foreground">{formatCurrency(invoice.remainingPayment)}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="6" className="text-center text-muted-foreground py-4">No outstanding invoices</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-4 text-sm text-muted-foreground">Total: {formatCurrency(totalSalesOutstanding)}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="col-span-4 md:col-span-8 xl:col-span-6 row-span-4">
+                <Card className="border h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Purchase Invoice Due</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Invoice No.</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Company Name</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Name</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Due Date</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Due From</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 px-4">Remaining Payment</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {purchaseInvoices.length > 0 ? (
+                            purchaseInvoices.map((invoice, index) => (
+                              <tr key={index} className="hover:bg-muted">
+                                <td className="py-3 px-4 text-sm text-foreground">{invoice.invoiceNo}</td>
+                                <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.companyName}</td>
+                                <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.name}</td>
+                                <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.dueDate}</td>
+                                <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.dueFrom}</td>
+                                <td className="py-3 px-4 text-sm font-medium text-foreground">{formatCurrency(invoice.remainingPayment)}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="6" className="text-center text-muted-foreground py-4">No outstanding purchase invoices</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-4 text-sm text-muted-foreground">Total: {formatCurrency(totalPurchaseOutstanding)}</div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
-
-          {/* Purchase Invoice Due */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase Invoice Due</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Invoice No.</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Company Name</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Name</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due Date</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Due From</th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2 px-4">Remaining Payment</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {purchaseInvoices.length > 0 ? (
-                    purchaseInvoices.map((invoice, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="py-3 px-4 text-sm text-gray-900">{invoice.invoiceNo}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.companyName}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.name}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueDate}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{invoice.dueFrom}</td>
-                        <td className="py-3 px-4 text-sm font-medium text-gray-900">{formatCurrency(invoice.remainingPayment)}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="text-center text-gray-500 py-4">
-                        No outstanding purchase invoices
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-lg font-bold text-gray-900">
-                Total Outstanding: {formatCurrency(totalPurchaseOutstanding)}
-              </div>
-            </div>
-          </div>
         </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-red-700 font-medium">{error}</span>
-            </div>
-          </div>
-        )}
       </div>
-
-     
     </div>
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

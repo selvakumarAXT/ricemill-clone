@@ -61,7 +61,7 @@ const Layout = ({ children }) => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-background">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} branches={branches} selectedBranchId={currentBranchId} onBranchChange={handleBranchChange} />
 
@@ -73,8 +73,8 @@ const Layout = ({ children }) => {
         />
 
         {/* Page content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
-          <div className="container mx-auto">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">
+          <div className="container py-6">
             {/* Pass selectedBranchId as context or prop if needed */}
             {children}
           </div>

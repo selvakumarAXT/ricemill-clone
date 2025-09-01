@@ -4,11 +4,13 @@ const OutstandingProgressBar = ({
   title = "Outstanding Balances",
   data = {},
   total = 0,
+  className = "",
   colors = {
-    current: 'bg-green-500',
-    overdue_1_15: 'bg-yellow-500',
-    overdue_16_30: 'bg-orange-500',
-    overdue_30_plus: 'bg-red-500'
+    // Use theme tokens for a consistent palette
+    current: 'bg-primary',
+    overdue_1_15: 'bg-accent',
+    overdue_16_30: 'bg-secondary',
+    overdue_30_plus: 'bg-destructive'
   },
   labels = {
     overdue_1_15: '1-15 Days',
@@ -33,25 +35,25 @@ const OutstandingProgressBar = ({
   };
 
   return (
-    <div className={`bg-white rounded-lg p-6 shadow-sm border border-gray-200 `}>
+    <div className={`rounded-lg border bg-card text-card-foreground p-6 shadow-sm ${className}`}>
       {/* Title */}
       {title && (
-        <h3 className="text-md font-semibold text-gray-500 mb-4">{title}</h3>
+        <h3 className="text-md font-semibold text-muted-foreground mb-4">{title}</h3>
       )}
       
       {/* Total Amount Above */}
       <div className="text-start mb-4">
-        <div className="text-md font-normal text-gray-500">
-          {title==='Sales Outstanding'?'Total Receivables': 'Total Payables'} :{formatAmount(total)}
+        <div className="text-md font-normal text-muted-foreground">
+          {title==='Sales Outstanding'?"Total Receivables": 'Total Payables'} :{formatAmount(total)}
         </div>
       </div>
 
       {/* Custom Horizontal Bar */}
-      <div className={`w-full h-4 bg-gray-200 rounded-md  overflow-hidden mb-4`}>
+      <div className={`w-full h-4 bg-muted rounded-md overflow-hidden mb-4`}>
         <div className="flex h-full">
           {/* Current */}
           <div 
-            className={`h-full ${colors.current} flex items-center justify-center text-white text-[10px] font-medium transition-all duration-300 relative group cursor-pointer`}
+            className={`h-full ${colors.current} flex items-center justify-center text-primary-foreground text-[10px] font-medium transition-all duration-300 relative group cursor-pointer`}
             style={{ width: `${getPercentage(data.current || 0)}%` }}
             title={`Current: ${formatAmount(data.current || 0)}`}
           >
@@ -60,7 +62,7 @@ const OutstandingProgressBar = ({
           
           {/* 1-15 Days Overdue */}
           <div 
-            className={`h-full ${colors.overdue_1_15} flex items-center justify-center text-white text-[10px] font-medium transition-all duration-300 relative group cursor-pointer`}
+            className={`h-full ${colors.overdue_1_15} flex items-center justify-center text-accent-foreground text-[10px] font-medium transition-all duration-300 relative group cursor-pointer`}
             style={{ width: `${getPercentage(data.overdue_1_15 || 0)}%` }}
             title={`1-15 Days Overdue: ${formatAmount(data.overdue_1_15 || 0)}`}
           >
@@ -70,7 +72,7 @@ const OutstandingProgressBar = ({
           
           {/* 16-30 Days Overdue */}
           <div 
-            className={`h-full ${colors.overdue_16_30} flex items-center justify-center text-white text-[10px] font-medium transition-all duration-300 relative group cursor-pointer`}
+            className={`h-full ${colors.overdue_16_30} flex items-center justify-center text-secondary-foreground text-[10px] font-medium transition-all duration-300 relative group cursor-pointer`}
             style={{ width: `${getPercentage(data.overdue_16_30 || 0)}%` }}
             title={`16-30 Days Overdue: ${formatAmount(data.overdue_16_30 || 0)}`}
           >
@@ -78,7 +80,7 @@ const OutstandingProgressBar = ({
           
           {/* 30+ Days Overdue */}
           <div 
-            className={`h-full ${colors.overdue_30_plus} flex items-center justify-center text-white text-[10px] font-medium transition-all duration-300 relative group cursor-pointer`}
+            className={`h-full ${colors.overdue_30_plus} flex items-center justify-center text-destructive-foreground text-[10px] font-medium transition-all duration-300 relative group cursor-pointer`}
             style={{ width: `${getPercentage(data.overdue_30_plus || 0)}%` }}
             title={`30+ Days Overdue: ${formatAmount(data.overdue_30_plus || 0)}`}
           >
@@ -89,9 +91,9 @@ const OutstandingProgressBar = ({
       </div>
 
             {/* Labels Below */}
-      <div className="flex  items-center justify-between text-xs">
+      <div className="flex items-center justify-between text-xs">
         <div className="flex flex-col items-center space-y-1">
-          <span className="text-black font-medium">Current</span>
+          <span className="text-foreground font-medium">Current</span>
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 ${colors.current} rounded-sm`}></div>
             <span className="font-medium">{formatAmount(data.current || 0)}</span>
@@ -99,13 +101,13 @@ const OutstandingProgressBar = ({
         </div>
         
         <div className="flex flex-col items-center space-y-1">
-        <span className="text-black font-medium">Over Due</span>
+        <span className="text-foreground font-medium">Over Due</span>
 
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 ${colors.overdue_1_15} rounded-sm`}></div>
             <span className="font-medium">{formatAmount(data.overdue_1_15 || 0)}</span>
           </div>
-          <span className="text-gray-400 font-medium">{labels.overdue_1_15}</span>
+          <span className="text-muted-foreground font-medium">{labels.overdue_1_15}</span>
 
         </div>
         
@@ -114,7 +116,7 @@ const OutstandingProgressBar = ({
             <div className={`w-3 h-3 ${colors.overdue_16_30} rounded-sm`}></div>
             <span className="font-medium">{formatAmount(data.overdue_16_30 || 0)}</span>
           </div>
-          <span className="text-gray-400 font-medium">{labels.overdue_16_30}</span>
+          <span className="text-muted-foreground font-medium">{labels.overdue_16_30}</span>
 
         </div>
         
@@ -124,7 +126,7 @@ const OutstandingProgressBar = ({
             <span className="font-medium">{formatAmount(data.overdue_30_plus || 0)}</span>
 
           </div>
-          <span className="text-gray-400 font-medium">{labels.overdue_30_plus}</span>
+          <span className="text-muted-foreground font-medium">{labels.overdue_30_plus}</span>
 
         </div>
       </div>

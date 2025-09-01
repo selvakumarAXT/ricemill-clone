@@ -121,16 +121,12 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="bg-background">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6 sm:px-6">
-        <div className="text-center sm:text-left">
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Settings
-          </h1>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">
-            Configure system settings and preferences
-          </p>
+      <div className="px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground">Configure system settings and preferences</p>
         </div>
       </div>
 
@@ -138,28 +134,28 @@ const Settings = () => {
       <div className="px-4 py-6 sm:px-6">
         {/* Status Messages */}
         {error && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl shadow-sm">
+          <div className="mb-6 p-4 bg-destructive/10 text-destructive border border-destructive/30 rounded-lg">
             <div className="flex items-start">
               <div className="flex-shrink-0 mt-0.5">
-                <Icon name="error" className="h-5 w-5 text-red-400" />
+                <Icon name="error" className="h-5 w-5 text-destructive" />
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <div className="mt-1 text-sm text-red-700">{error}</div>
+                <h3 className="text-sm font-medium text-destructive">Error</h3>
+                <div className="mt-1 text-sm text-destructive">{error}</div>
               </div>
             </div>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl shadow-sm">
+          <div className="mb-6 p-4 bg-primary/10 text-primary border border-primary/30 rounded-lg">
             <div className="flex items-start">
               <div className="flex-shrink-0 mt-0.5">
-                <Icon name="success" className="h-5 w-5 text-green-400" />
+                <Icon name="success" className="h-5 w-5 text-primary" />
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-green-800">Success</h3>
-                <div className="mt-1 text-sm text-green-700">{success}</div>
+                <h3 className="text-sm font-medium text-primary">Success</h3>
+                <div className="mt-1 text-sm text-primary">{success}</div>
               </div>
             </div>
           </div>
@@ -167,9 +163,9 @@ const Settings = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Profile Settings */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-              <h3 className="text-lg font-semibold text-gray-800">Profile Settings</h3>
+          <div className="bg-card rounded-lg border border-border overflow-hidden">
+            <div className="px-6 py-3 border-b border-border bg-muted/50">
+              <h3 className="text-lg font-semibold text-foreground">Profile Settings</h3>
             </div>
             <div className="p-6">
               <form onSubmit={handleProfileUpdate} className="space-y-4">
@@ -207,15 +203,15 @@ const Settings = () => {
           </div>
 
           {/* Security Settings */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-              <h3 className="text-lg font-semibold text-gray-800">Security Settings</h3>
+          <div className="bg-card rounded-lg border border-border overflow-hidden">
+            <div className="px-6 py-3 border-b border-border bg-muted/50">
+              <h3 className="text-lg font-semibold text-foreground">Security Settings</h3>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Change Password</h4>
-                  <p className="text-sm text-gray-500">Update your account password</p>
+                  <h4 className="text-sm font-medium text-foreground">Change Password</h4>
+                  <p className="text-sm text-muted-foreground">Update your account password</p>
                 </div>
                 <Button
                   onClick={() => setShowPasswordModal(true)}
@@ -228,8 +224,8 @@ const Settings = () => {
               
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Two-Factor Authentication</h4>
-                  <p className="text-sm text-gray-500">Add an extra layer of security</p>
+                  <h4 className="text-sm font-medium text-foreground">Two-Factor Authentication</h4>
+                  <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -238,113 +234,138 @@ const Settings = () => {
                     onChange={(e) => handleSecuritySettingChange('twoFactorAuth', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Session Timeout</h4>
-                  <p className="text-sm text-gray-500">Auto-logout after inactivity</p>
+                  <h4 className="text-sm font-medium text-foreground">Session Timeout</h4>
+                  <p className="text-sm text-muted-foreground">Auto-logout after inactivity</p>
                 </div>
-                <select
-                  value={securitySettings.sessionTimeout}
-                  onChange={(e) => handleSecuritySettingChange('sessionTimeout', parseInt(e.target.value))}
-                  className="border border-gray-300 rounded-md px-3 py-1 text-sm"
-                >
-                  <option value={15}>15 minutes</option>
-                  <option value={30}>30 minutes</option>
-                  <option value={60}>1 hour</option>
-                  <option value={120}>2 hours</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={securitySettings.sessionTimeout}
+                    onChange={(e) => handleSecuritySettingChange('sessionTimeout', parseInt(e.target.value))}
+                    className="border border-input bg-background text-foreground rounded-md px-3 py-1 text-sm appearance-none pr-8"
+                  >
+                    <option value={15}>15 minutes</option>
+                    <option value={30}>30 minutes</option>
+                    <option value={60}>1 hour</option>
+                    <option value={120}>2 hours</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 pr-2 flex items-center">
+                    <Icon name="chevronDown" className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* System Configuration */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-              <h3 className="text-lg font-semibold text-gray-800">System Configuration</h3>
+          <div className="bg-card rounded-lg border border-border overflow-hidden">
+            <div className="px-6 py-3 border-b border-border bg-muted/50">
+              <h3 className="text-lg font-semibold text-foreground">System Configuration</h3>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Language</h4>
-                  <p className="text-sm text-gray-500">Interface language</p>
+                  <h4 className="text-sm font-medium text-foreground">Language</h4>
+                  <p className="text-sm text-muted-foreground">Interface language</p>
                 </div>
-                <select
-                  value={systemSettings.language}
-                  onChange={(e) => handleSystemSettingChange('language', e.target.value)}
-                  className="border border-gray-300 rounded-md px-3 py-1 text-sm"
-                >
-                  <option value="en">English</option>
-                  <option value="es">Spanish</option>
-                  <option value="fr">French</option>
-                  <option value="hi">Hindi</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={systemSettings.language}
+                    onChange={(e) => handleSystemSettingChange('language', e.target.value)}
+                    className="border border-input bg-background text-foreground rounded-md px-3 py-1 text-sm appearance-none pr-8"
+                  >
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="hi">Hindi</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 pr-2 flex items-center">
+                    <Icon name="chevronDown" className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Theme</h4>
-                  <p className="text-sm text-gray-500">Interface appearance</p>
+                  <h4 className="text-sm font-medium text-foreground">Theme</h4>
+                  <p className="text-sm text-muted-foreground">Interface appearance</p>
                 </div>
-                <select
-                  value={systemSettings.theme}
-                  onChange={(e) => handleSystemSettingChange('theme', e.target.value)}
-                  className="border border-gray-300 rounded-md px-3 py-1 text-sm"
-                >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                  <option value="auto">Auto</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={systemSettings.theme}
+                    onChange={(e) => handleSystemSettingChange('theme', e.target.value)}
+                    className="border border-input bg-background text-foreground rounded-md px-3 py-1 text-sm appearance-none pr-8"
+                  >
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="auto">Auto</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 pr-2 flex items-center">
+                    <Icon name="chevronDown" className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Currency</h4>
-                  <p className="text-sm text-gray-500">Default currency</p>
+                  <h4 className="text-sm font-medium text-foreground">Currency</h4>
+                  <p className="text-sm text-muted-foreground">Default currency</p>
                 </div>
-                <select
-                  value={systemSettings.currency}
-                  onChange={(e) => handleSystemSettingChange('currency', e.target.value)}
-                  className="border border-gray-300 rounded-md px-3 py-1 text-sm"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="INR">INR (₹)</option>
-                  <option value="GBP">GBP (£)</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={systemSettings.currency}
+                    onChange={(e) => handleSystemSettingChange('currency', e.target.value)}
+                    className="border border-input bg-background text-foreground rounded-md px-3 py-1 text-sm appearance-none pr-8"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="GBP">GBP (£)</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 pr-2 flex items-center">
+                    <Icon name="chevronDown" className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Date Format</h4>
-                  <p className="text-sm text-gray-500">Date display format</p>
+                  <h4 className="text-sm font-medium text-foreground">Date Format</h4>
+                  <p className="text-sm text-muted-foreground">Date display format</p>
                 </div>
-                <select
-                  value={systemSettings.dateFormat}
-                  onChange={(e) => handleSystemSettingChange('dateFormat', e.target.value)}
-                  className="border border-gray-300 rounded-md px-3 py-1 text-sm"
-                >
-                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                  <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                  <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={systemSettings.dateFormat}
+                    onChange={(e) => handleSystemSettingChange('dateFormat', e.target.value)}
+                    className="border border-input bg-background text-foreground rounded-md px-3 py-1 text-sm appearance-none pr-8"
+                  >
+                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 pr-2 flex items-center">
+                    <Icon name="chevronDown" className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Notification Preferences */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-              <h3 className="text-lg font-semibold text-gray-800">Notification Preferences</h3>
+          <div className="bg-card rounded-lg border border-border overflow-hidden">
+            <div className="px-6 py-3 border-b border-border bg-muted/50">
+              <h3 className="text-lg font-semibold text-foreground">Notification Preferences</h3>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Email Notifications</h4>
-                  <p className="text-sm text-gray-500">Receive notifications via email</p>
+                  <h4 className="text-sm font-medium text-foreground">Email Notifications</h4>
+                  <p className="text-sm text-muted-foreground">Receive notifications via email</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -353,16 +374,14 @@ const Settings = () => {
                     onChange={(e) => handleNotificationSettingChange('emailNotifications', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
 
-
-
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Inventory Alerts</h4>
-                  <p className="text-sm text-gray-500">Low stock and inventory notifications</p>
+                  <h4 className="text-sm font-medium text-foreground">Inventory Alerts</h4>
+                  <p className="text-sm text-muted-foreground">Low stock and inventory notifications</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -371,14 +390,14 @@ const Settings = () => {
                     onChange={(e) => handleNotificationSettingChange('inventoryAlerts', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Quality Alerts</h4>
-                  <p className="text-sm text-gray-500">Quality control notifications</p>
+                  <h4 className="text-sm font-medium text-foreground">Quality Alerts</h4>
+                  <p className="text-sm text-muted-foreground">Quality control notifications</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -387,7 +406,7 @@ const Settings = () => {
                     onChange={(e) => handleNotificationSettingChange('qualityAlerts', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
             </div>
