@@ -980,11 +980,11 @@ const GunnyManagement = () => {
                   gunnyBalanceStats.totalDirectGunny.total}
               </p>
             </div>
-            <div className="bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-200 text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-blue-600 mb-1">
+            <div className="bg-accent/50 p-3 sm:p-4 rounded-lg border border-accent text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                 FRK Gunny
               </h4>
-              <p className="text-lg sm:text-2xl font-bold text-blue-700">
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
                 {gunnyBalanceStats.frkGunny.total}
               </p>
               <p className="text-xs text-blue-500">

@@ -994,41 +994,45 @@ const RiceManagement = () => {
           </div>
 
           {/* FRK Specific Stats */}
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="rounded-lg border border-border bg-muted p-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-blue-600">FRK Records</p>
-              <p className="text-2xl font-bold text-blue-700">
+              <p className="text-sm font-medium text-muted-foreground">
+                FRK Records
+              </p>
+              <p className="text-2xl font-bold text-foreground">
                 {stats.frkCount}
               </p>
             </div>
           </div>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="rounded-lg border border-border bg-muted p-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-blue-600">FRK Rice Bags</p>
-              <p className="text-2xl font-bold text-blue-700">
+              <p className="text-sm font-medium text-muted-foreground">
+                FRK Rice Bags
+              </p>
+              <p className="text-2xl font-bold text-foreground">
                 {stats.frkRiceBags}
               </p>
             </div>
           </div>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="rounded-lg border border-border bg-muted p-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-blue-600">
+              <p className="text-sm font-medium text-muted-foreground">
                 FRK Rice Weight
               </p>
-              <p className="text-2xl font-bold text-blue-700">
+              <p className="text-2xl font-bold text-foreground">
                 {formatWeight(stats.frkRiceWeight)}
               </p>
             </div>
           </div>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="rounded-lg border border-border bg-muted p-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-blue-600">
+              <p className="text-sm font-medium text-muted-foreground">
                 FRK Gunny Bags
               </p>
-              <p className="text-2xl font-bold text-blue-700">
+              <p className="text-2xl font-bold text-foreground">
                 {stats.frkGunnyBags}
               </p>
             </div>
@@ -1071,11 +1075,11 @@ const RiceManagement = () => {
 
                 {/* FRK Rice Additional */}
                 <div className="text-center">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-accent/50 border border-accent rounded-lg p-4">
                     <div className="text-xl font-bold text-blue-700 mb-1">
                       {formatWeight(riceComparison.frkRiceOutput || 0)}
                     </div>
-                    <div className="text-sm font-medium text-blue-600">
+                    <div className="text-sm font-medium text-muted-foreground">
                       FRK Rice
                     </div>
                     <div className="text-xs text-blue-500 mt-1">
@@ -1197,7 +1201,7 @@ const RiceManagement = () => {
                   </div>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="bg-accent/50 border border-accent rounded-lg p-3">
                   <div className="font-medium text-blue-700 mb-1">
                     FRK Rice Details
                   </div>

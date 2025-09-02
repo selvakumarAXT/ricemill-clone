@@ -2611,31 +2611,31 @@ const SalesDispatch = () => {
         {selectedSaleForInvoice && (
           <div className="space-y-6">
             {/* Sale Information Summary */}
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-800 mb-3">
+            <div className="bg-accent/50 p-4 rounded-lg border border-accent">
+              <h3 className="text-lg font-semibold text-accent-foreground mb-3">
                 Sale Information
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-600">Order #:</span>
+                  <span className="text-muted-foreground">Order #:</span>
                   <span className="ml-2 font-medium">
                     {selectedSaleForInvoice.orderNumber}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Customer:</span>
+                  <span className="text-muted-foreground">Customer:</span>
                   <span className="ml-2 font-medium">
                     {selectedSaleForInvoice.customerName}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Rice Variety:</span>
+                  <span className="text-muted-foreground">Rice Variety:</span>
                   <span className="ml-2 font-medium text-green-600">
                     {selectedSaleForInvoice.riceVariety}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Total Amount:</span>
+                  <span className="text-muted-foreground">Total Amount:</span>
                   <span className="ml-2 font-medium text-green-600">
                     ₹{selectedSaleForInvoice.totalAmount.toLocaleString()}
                   </span>
@@ -2770,31 +2770,35 @@ const SalesDispatch = () => {
               </div>
 
               {/* Invoice Totals */}
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <h4 className="text-md font-semibold text-green-800 mb-3">
+              <div className="bg-green-500/10 p-4 rounded-lg border border-green-500/20">
+                <h4 className="text-md font-semibold text-green-600 dark:text-green-400 mb-3">
                   Invoice Totals
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-600">Taxable Amount:</span>
+                    <span className="text-muted-foreground">
+                      Taxable Amount:
+                    </span>
                     <span className="ml-2 font-medium">
                       ₹{invoiceForm.totalTaxable.toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Total Tax:</span>
+                    <span className="text-muted-foreground">Total Tax:</span>
                     <span className="ml-2 font-medium">
                       ₹{invoiceForm.totalTax.toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Grand Total:</span>
-                    <span className="ml-2 font-medium text-green-600">
+                    <span className="text-muted-foreground">Grand Total:</span>
+                    <span className="ml-2 font-medium text-green-600 dark:text-green-400">
                       ₹{invoiceForm.grandTotal.toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Amount in Words:</span>
+                    <span className="text-muted-foreground">
+                      Amount in Words:
+                    </span>
                     <span className="ml-2 font-medium text-xs">
                       {invoiceForm.amountInWords}
                     </span>
@@ -2958,19 +2962,19 @@ const SalesDispatch = () => {
 
             {/* Vendor Selection Dropdown */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Select Vendor
               </label>
 
               {/* Help text */}
-              <div className="mt-1 text-xs text-gray-600">
+              <div className="mt-1 text-xs text-muted-foreground">
                 💡 Type to search vendors by name, code, or contact person.
                 Select a vendor to auto-populate details.
               </div>
 
               {/* Vendor count */}
               {vendors.length > 0 && (
-                <div className="mt-1 text-xs text-gray-500">
+                <div className="mt-1 text-xs text-muted-foreground">
                   {vendors.length} vendor{vendors.length !== 1 ? "s" : ""}{" "}
                   available
                 </div>
@@ -2979,11 +2983,11 @@ const SalesDispatch = () => {
 
             {/* Selected Vendor Info Display */}
             {byproductForm.vendor_id && getSelectedVendor() && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="mb-4 p-3 bg-accent/50 border border-accent rounded-md">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <svg
-                      className="w-5 h-5 text-blue-600 mr-2"
+                      className="w-5 h-5 text-accent-foreground mr-2"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -2995,19 +2999,19 @@ const SalesDispatch = () => {
                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                       />
                     </svg>
-                    <span className="font-medium text-blue-800">
+                    <span className="font-medium text-accent-foreground">
                       Selected Vendor: {getSelectedVendor()?.vendorName}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={clearVendorSelection}
-                    className="text-sm text-red-600 hover:text-red-800 underline"
+                    className="text-sm text-destructive hover:text-destructive/80 underline"
                   >
                     Change Vendor
                   </button>
                 </div>
-                <div className="mt-2 text-xs text-blue-700">
+                <div className="mt-2 text-xs text-accent-foreground">
                   ℹ️ Vendor details are now auto-populated. You can still edit
                   these fields if needed.
                 </div>
@@ -3017,9 +3021,9 @@ const SalesDispatch = () => {
             {/* Vendor Information Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {vendorsLoading ? (
-                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 flex items-center justify-center">
+                <div className="w-full px-3 py-2 border border-input rounded-md bg-muted flex items-center justify-center">
                   <LoadingSpinner size="sm" className="mr-2" />
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">
                     Loading vendors...
                   </span>
                 </div>
@@ -3044,13 +3048,13 @@ const SalesDispatch = () => {
                         setShowVendorDropdown(false);
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-ring focus:border-ring bg-background text-foreground"
                   />
 
                   {/* Search Icon */}
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                     <svg
-                      className="h-5 w-5 text-gray-400"
+                      className="h-5 w-5 text-muted-foreground"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -3071,23 +3075,23 @@ const SalesDispatch = () => {
                         filteredVendors.map((vendor) => (
                           <div
                             key={vendor._id}
-                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            className="px-3 py-2 hover:bg-accent cursor-pointer border-b border-border last:border-b-0"
                             onClick={() => selectVendor(vendor)}
                           >
-                            <div className="font-medium text-gray-900">
+                            <div className="font-medium text-foreground">
                               {vendor.vendorCode} - {vendor.vendorName}
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-muted-foreground">
                               {vendor.phone} • {vendor.city}, {vendor.state}
                             </div>
                           </div>
                         ))
                       ) : vendorSearchTerm ? (
-                        <div className="px-3 py-2 text-gray-500 text-sm">
+                        <div className="px-3 py-2 text-muted-foreground text-sm">
                           No vendors found matching "{vendorSearchTerm}"
                         </div>
                       ) : (
-                        <div className="px-3 py-2 text-gray-500 text-sm">
+                        <div className="px-3 py-2 text-muted-foreground text-sm">
                           Start typing to search vendors...
                         </div>
                       )}
@@ -3107,7 +3111,7 @@ const SalesDispatch = () => {
                 placeholder="+91 9876543210"
                 icon="phone"
                 className={
-                  byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""
+                  byproductForm.vendor_id ? "bg-accent/50 border-accent" : ""
                 }
               />
               <FormInput
@@ -3119,7 +3123,7 @@ const SalesDispatch = () => {
                 placeholder="vendor@example.com"
                 icon="envelope"
                 className={
-                  byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""
+                  byproductForm.vendor_id ? "bg-accent/50 border-accent" : ""
                 }
               />
               <FormInput
@@ -3130,7 +3134,7 @@ const SalesDispatch = () => {
                 placeholder="22AAAAA0000A1Z5"
                 icon="id-card"
                 className={
-                  byproductForm.vendor_id ? "bg-blue-50 border-blue-300" : ""
+                  byproductForm.vendor_id ? "bg-accent/50 border-accent" : ""
                 }
               />
               <FormInput
@@ -3162,8 +3166,8 @@ const SalesDispatch = () => {
 
             {/* Auto-populated indicator */}
             {byproductForm.vendor_id && (
-              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
-                <div className="flex items-center text-sm text-green-700">
+              <div className="mt-3 p-2 bg-green-500/10 border border-green-500/20 rounded-md">
+                <div className="flex items-center text-sm text-green-600 dark:text-green-400">
                   <svg
                     className="w-4 h-4 mr-2"
                     fill="none"

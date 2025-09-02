@@ -1,23 +1,23 @@
-import { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
-import TableFilters from '../components/common/TableFilters';
-import BranchFilter from '../components/common/BranchFilter';
-import TableList from '../components/common/TableList';
-import Button from '../components/common/Button';
-import LoadingSpinner from '../components/common/LoadingSpinner';
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import TableFilters from "../components/common/TableFilters";
+import BranchFilter from "../components/common/BranchFilter";
+import TableList from "../components/common/TableList";
+import Button from "../components/common/Button";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
-import FormInput from '../components/common/FormInput';
-import FormSelect from '../components/common/FormSelect';
-import DialogBox from '../components/common/DialogBox';
-import FileUpload from '../components/common/FileUpload';
-import qcService from '../services/qcService';
-import riceDepositService from '../services/riceDepositService';
+import FormInput from "../components/common/FormInput";
+import FormSelect from "../components/common/FormSelect";
+import DialogBox from "../components/common/DialogBox";
+import FileUpload from "../components/common/FileUpload";
+import qcService from "../services/qcService";
+import riceDepositService from "../services/riceDepositService";
 
 const QCDataEntry = () => {
   const [qcRecords, setQcRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [qcFilter, setQcFilter] = useState('');
+  const [error, setError] = useState("");
+  const [qcFilter, setQcFilter] = useState("");
   const [showQcModal, setShowQcModal] = useState(false);
   const [editingQc, setEditingQc] = useState(null);
   const [expandedQc, setExpandedQc] = useState(null);
@@ -30,9 +30,9 @@ const QCDataEntry = () => {
   const [selectedRiceDeposit, setSelectedRiceDeposit] = useState(null);
 
   const initialQcForm = {
-    batchNumber: '',
-    riceVariety: '',
-    sampleDate: '',
+    batchNumber: "",
+    riceVariety: "",
+    sampleDate: "",
     moistureContent: 0,
     brokenRice: 0,
     foreignMatter: 0,
@@ -41,11 +41,11 @@ const QCDataEntry = () => {
     damagedKernels: 0,
     headRice: 0,
     totalDefects: 0,
-    qualityGrade: 'A',
-    testMethod: 'manual',
-    testerName: '',
-    remarks: '',
-    status: 'pending'
+    qualityGrade: "A",
+    testMethod: "manual",
+    testerName: "",
+    remarks: "",
+    status: "pending",
   };
 
   const [qcForm, setQcForm] = useState(initialQcForm);
@@ -65,14 +65,14 @@ const QCDataEntry = () => {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const data = await qcService.getAllQC();
       setQcRecords(data.data || []);
     } catch (err) {
-      setError(err.message || 'Failed to fetch QC data');
+      setError(err.message || "Failed to fetch QC data");
     } finally {
       setLoading(false);
     }
@@ -84,48 +84,56 @@ const QCDataEntry = () => {
       // Fetch rice deposits to get available varieties and data
       const riceData = await riceDepositService.getAllRiceDeposits();
       setRiceDeposits(riceData.data || riceData || []);
-      
+
       // Extract unique rice varieties
-      const varieties = [...new Set(riceData.data?.map(rice => rice.variety) || riceData?.map(rice => rice.variety) || [])];
+      const varieties = [
+        ...new Set(
+          riceData.data?.map((rice) => rice.variety) ||
+            riceData?.map((rice) => rice.variety) ||
+            []
+        ),
+      ];
       setRiceVarieties(varieties);
     } catch (err) {
-      console.error('Error fetching rice data:', err);
+      console.error("Error fetching rice data:", err);
     }
   };
 
   // Auto-generate batch number based on rice variety and date
   const generateBatchNumber = (riceVariety, date) => {
-    if (!riceVariety || !date) return '';
-    
-    const dateStr = new Date(date).toISOString().slice(0, 10).replace(/-/g, '');
+    if (!riceVariety || !date) return "";
+
+    const dateStr = new Date(date).toISOString().slice(0, 10).replace(/-/g, "");
     const varietyCode = riceVariety.toUpperCase();
-    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    
+    const randomSuffix = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+
     return `QC-${varietyCode}-${dateStr}-${randomSuffix}`;
   };
 
   // Auto-populate QC form when rice variety or deposit is selected
   const handleRiceVarietyChange = (variety) => {
-    setQcForm(prev => ({
+    setQcForm((prev) => ({
       ...prev,
-      riceVariety: variety
+      riceVariety: variety,
     }));
 
     // Auto-generate batch number
     if (variety && qcForm.sampleDate) {
       const batchNumber = generateBatchNumber(variety, qcForm.sampleDate);
-      setQcForm(prev => ({
+      setQcForm((prev) => ({
         ...prev,
-        batchNumber
+        batchNumber,
       }));
     }
 
     // Find rice deposit with this variety and auto-populate moisture
-    const riceDeposit = riceDeposits.find(rice => rice.variety === variety);
+    const riceDeposit = riceDeposits.find((rice) => rice.variety === variety);
     if (riceDeposit && riceDeposit.moisture !== undefined) {
-      setQcForm(prev => ({
+      setQcForm((prev) => ({
         ...prev,
-        moistureContent: riceDeposit.moisture
+        moistureContent: riceDeposit.moisture,
       }));
     }
   };
@@ -137,17 +145,20 @@ const QCDataEntry = () => {
       return;
     }
 
-    const deposit = riceDeposits.find(rice => rice._id === depositId);
+    const deposit = riceDeposits.find((rice) => rice._id === depositId);
     if (deposit) {
       setSelectedRiceDeposit(deposit);
-      
+
       // Auto-populate form fields
-      setQcForm(prev => ({
+      setQcForm((prev) => ({
         ...prev,
-        riceVariety: deposit.variety || '',
+        riceVariety: deposit.variety || "",
         moistureContent: deposit.moisture || 0,
-        batchNumber: generateBatchNumber(deposit.variety, qcForm.sampleDate || new Date()),
-        remarks: `QC for Rice Deposit: ${deposit.truckMemo} - ${deposit.ackNo}`
+        batchNumber: generateBatchNumber(
+          deposit.variety,
+          qcForm.sampleDate || new Date()
+        ),
+        remarks: `QC for Rice Deposit: ${deposit.truckMemo} - ${deposit.ackNo}`,
       }));
     }
   };
@@ -156,21 +167,23 @@ const QCDataEntry = () => {
     setEditingQc(qc);
     if (qc) {
       // Format date for HTML date input (YYYY-MM-DD)
-      const formattedSampleDate = new Date(qc.sampleDate).toISOString().split('T')[0];
+      const formattedSampleDate = new Date(qc.sampleDate)
+        .toISOString()
+        .split("T")[0];
       const formData = {
         ...initialQcForm,
         ...qc,
-        sampleDate: formattedSampleDate
+        sampleDate: formattedSampleDate,
       };
       setQcForm(formData);
     } else {
       // For new QC record, auto-populate some fields
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
       const formData = {
         ...initialQcForm,
         sampleDate: today,
-        testerName: user?.name || '',
-        batchNumber: generateBatchNumber('', today)
+        testerName: user?.name || "",
+        batchNumber: generateBatchNumber("", today),
       };
       setQcForm(formData);
     }
@@ -187,39 +200,51 @@ const QCDataEntry = () => {
 
   const handleQcFormChange = (e) => {
     const { name, value } = e.target;
-    setQcForm(prev => {
+    setQcForm((prev) => {
       const updated = { ...prev, [name]: value };
-      
+
       // Auto-calculate total defects and head rice
-      if (['brokenRice', 'foreignMatter', 'yellowKernels', 'immatureKernels', 'damagedKernels'].includes(name)) {
-        const totalDefects = parseFloat(updated.brokenRice || 0) + 
-                           parseFloat(updated.foreignMatter || 0) + 
-                           parseFloat(updated.yellowKernels || 0) + 
-                           parseFloat(updated.immatureKernels || 0) + 
-                           parseFloat(updated.damagedKernels || 0);
+      if (
+        [
+          "brokenRice",
+          "foreignMatter",
+          "yellowKernels",
+          "immatureKernels",
+          "damagedKernels",
+        ].includes(name)
+      ) {
+        const totalDefects =
+          parseFloat(updated.brokenRice || 0) +
+          parseFloat(updated.foreignMatter || 0) +
+          parseFloat(updated.yellowKernels || 0) +
+          parseFloat(updated.immatureKernels || 0) +
+          parseFloat(updated.damagedKernels || 0);
         updated.totalDefects = totalDefects.toFixed(1);
         updated.headRice = (100 - totalDefects).toFixed(1);
       }
-      
+
       // Auto-assign quality grade based on total defects
       const totalDefects = parseFloat(updated.totalDefects || 0);
       if (totalDefects <= 3) {
-        updated.qualityGrade = 'A';
+        updated.qualityGrade = "A";
       } else if (totalDefects <= 7) {
-        updated.qualityGrade = 'B';
+        updated.qualityGrade = "B";
       } else if (totalDefects <= 12) {
-        updated.qualityGrade = 'C';
+        updated.qualityGrade = "C";
       } else {
-        updated.qualityGrade = 'D';
+        updated.qualityGrade = "D";
       }
 
       // Auto-generate batch number when rice variety or sample date changes
-      if (name === 'riceVariety' || name === 'sampleDate') {
+      if (name === "riceVariety" || name === "sampleDate") {
         if (updated.riceVariety && updated.sampleDate) {
-          updated.batchNumber = generateBatchNumber(updated.riceVariety, updated.sampleDate);
+          updated.batchNumber = generateBatchNumber(
+            updated.riceVariety,
+            updated.sampleDate
+          );
         }
       }
-      
+
       return updated;
     });
   };
@@ -230,52 +255,58 @@ const QCDataEntry = () => {
 
   const saveQc = async (e) => {
     e.preventDefault();
-    
+
     if (!currentBranchId) {
-      setError('Please select a branch before saving QC record');
+      setError("Please select a branch before saving QC record");
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       // Add loading timeout to prevent infinite loading
       const loadingTimeout = setTimeout(() => {
-        setError('QC creation is taking longer than expected. Please check your connection and try again.');
+        setError(
+          "QC creation is taking longer than expected. Please check your connection and try again."
+        );
         setLoading(false);
       }, 20000); // 20 seconds timeout
-      
+
       // Add branch_id to form data
       const formDataWithBranch = {
         ...qcForm,
-        branch_id: currentBranchId
+        branch_id: currentBranchId,
       };
-      
+
       if (editingQc) {
-        await qcService.updateQC(editingQc._id, formDataWithBranch, selectedFiles);
+        await qcService.updateQC(
+          editingQc._id,
+          formDataWithBranch,
+          selectedFiles
+        );
       } else {
         await qcService.createQC(formDataWithBranch, selectedFiles);
       }
-      
+
       clearTimeout(loadingTimeout);
       fetchQcData(); // Refresh data after save
       closeQcModal();
       setSelectedFiles([]); // Clear selected files
     } catch (error) {
-      setError('Error saving QC record: ' + error.message);
+      setError("Error saving QC record: " + error.message);
     } finally {
       setLoading(false);
     }
   };
 
   const deleteQc = async (qcId) => {
-    if (window.confirm('Are you sure you want to delete this QC record?')) {
+    if (window.confirm("Are you sure you want to delete this QC record?")) {
       try {
         setLoading(true);
         await qcService.deleteQC(qcId);
         fetchQcData(); // Refresh data after delete
       } catch (error) {
-        setError('Error deleting QC record: ' + error.message);
+        setError("Error deleting QC record: " + error.message);
       } finally {
         setLoading(false);
       }
@@ -284,27 +315,38 @@ const QCDataEntry = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'under_review': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "approved":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "under_review":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getGradeColor = (grade) => {
     switch (grade) {
-      case 'A': return 'bg-green-100 text-green-800';
-      case 'B': return 'bg-blue-100 text-blue-800';
-      case 'C': return 'bg-yellow-100 text-yellow-800';
-      case 'D': return 'bg-orange-100 text-orange-800';
-      case 'Rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "A":
+        return "bg-green-100 text-green-800";
+      case "B":
+        return "bg-blue-100 text-blue-800";
+      case "C":
+        return "bg-yellow-100 text-yellow-800";
+      case "D":
+        return "bg-orange-100 text-orange-800";
+      case "Rejected":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   // Filter QC records based on search
-  const filteredQcRecords = qcRecords.filter(qc => {
+  const filteredQcRecords = qcRecords.filter((qc) => {
     if (!qcFilter) return true;
     const searchTerm = qcFilter.toLowerCase();
     return (
@@ -317,12 +359,24 @@ const QCDataEntry = () => {
 
   // Table columns configuration
   const columns = [
-    { key: 'batchNumber', label: 'Batch Number' },
-    { key: 'riceVariety', label: 'Rice Variety' },
-    { key: 'sampleDate', label: 'Sample Date', render: (value) => new Date(value).toLocaleDateString() },
-    { key: 'qualityGrade', label: 'Quality Grade', render: (value) => `Grade ${value}` },
-    { key: 'status', label: 'Status', render: (value) => value.charAt(0).toUpperCase() + value.slice(1) },
-    { key: 'testerName', label: 'Tester' }
+    { key: "batchNumber", label: "Batch Number" },
+    { key: "riceVariety", label: "Rice Variety" },
+    {
+      key: "sampleDate",
+      label: "Sample Date",
+      render: (value) => new Date(value).toLocaleDateString(),
+    },
+    {
+      key: "qualityGrade",
+      label: "Quality Grade",
+      render: (value) => `Grade ${value}`,
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (value) => value.charAt(0).toUpperCase() + value.slice(1),
+    },
+    { key: "testerName", label: "Tester" },
   ];
 
   if (loading) {
@@ -336,8 +390,12 @@ const QCDataEntry = () => {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">QC Data Entry</h1>
-              <p className="text-gray-600 mt-2">Manage quality control records for rice batches</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                QC Data Entry
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Manage quality control records for rice batches
+              </p>
             </div>
             <Button
               onClick={() => openQcModal()}
@@ -371,8 +429,12 @@ const QCDataEntry = () => {
                   <span className="text-yellow-600 text-lg">⚠️</span>
                 </div>
                 <div>
-                  <p className="text-yellow-800 font-medium">No Branch Selected</p>
-                  <p className="text-yellow-700 text-sm">Please select a branch to view and manage QC records.</p>
+                  <p className="text-yellow-800 font-medium">
+                    No Branch Selected
+                  </p>
+                  <p className="text-yellow-700 text-sm">
+                    Please select a branch to view and manage QC records.
+                  </p>
                 </div>
               </div>
             </div>
@@ -385,7 +447,9 @@ const QCDataEntry = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Total Tests</p>
-                    <p className="text-xl font-bold text-gray-900">{qcRecords.length}</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {qcRecords.length}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -396,7 +460,12 @@ const QCDataEntry = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Approved</p>
-                    <p className="text-xl font-bold text-gray-900">{qcRecords.filter(qc => qc.status === 'approved').length}</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {
+                        qcRecords.filter((qc) => qc.status === "approved")
+                          .length
+                      }
+                    </p>
                   </div>
                 </div>
               </div>
@@ -407,7 +476,9 @@ const QCDataEntry = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Pending</p>
-                    <p className="text-xl font-bold text-gray-900">{qcRecords.filter(qc => qc.status === 'pending').length}</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {qcRecords.filter((qc) => qc.status === "pending").length}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -418,7 +489,12 @@ const QCDataEntry = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Rejected</p>
-                    <p className="text-xl font-bold text-gray-900">{qcRecords.filter(qc => qc.status === 'rejected').length}</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {
+                        qcRecords.filter((qc) => qc.status === "rejected")
+                          .length
+                      }
+                    </p>
                   </div>
                 </div>
               </div>
@@ -429,22 +505,32 @@ const QCDataEntry = () => {
           {!currentBranchId ? (
             <div className="hidden lg:block bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800">QC Records</h3>
-                <p className="text-sm text-gray-600 mt-1">Please select a branch to view QC records</p>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  QC Records
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Please select a branch to view QC records
+                </p>
               </div>
               <div className="p-8 text-center text-gray-500">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🔬</span>
                 </div>
                 <p className="text-lg font-medium">No Branch Selected</p>
-                <p className="text-sm">Select a branch from the filter above to view QC records</p>
+                <p className="text-sm">
+                  Select a branch from the filter above to view QC records
+                </p>
               </div>
             </div>
           ) : (
             <div className="hidden lg:block bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800">QC Records</h3>
-                <p className="text-sm text-gray-600 mt-1">Total: {filteredQcRecords.length} records</p>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  QC Records
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Total: {filteredQcRecords.length} records
+                </p>
                 {/* Filters moved inside table header */}
                 <div className="mt-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -455,9 +541,9 @@ const QCDataEntry = () => {
                       showSelect={false}
                     />
                     <BranchFilter
-                      value={currentBranchId || ''}
+                      value={currentBranchId || ""}
                       onChange={(value) => {
-                        console.log('Branch changed in QC:', value);
+                        console.log("Branch changed in QC:", value);
                       }}
                     />
                   </div>
@@ -484,75 +570,124 @@ const QCDataEntry = () => {
                     className="text-xs px-2 py-1"
                   >
                     Delete
-                  </Button>
+                  </Button>,
                 ]}
                 renderDetail={(qc) => (
                   <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-3">
                         <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Batch #:</span>
-                          <span className="text-gray-900 font-medium">{qc.batchNumber}</span>
+                          <span className="w-24 text-sm font-medium text-gray-600">
+                            Batch #:
+                          </span>
+                          <span className="text-gray-900 font-medium">
+                            {qc.batchNumber}
+                          </span>
                         </div>
                         <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Rice Variety:</span>
-                          <span className="text-green-600 font-medium">{qc.riceVariety}</span>
+                          <span className="w-24 text-sm font-medium text-gray-600">
+                            Rice Variety:
+                          </span>
+                          <span className="text-green-600 font-medium">
+                            {qc.riceVariety}
+                          </span>
                         </div>
                         <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Sample Date:</span>
-                          <span className="text-gray-900 font-medium">{new Date(qc.sampleDate).toLocaleDateString()}</span>
+                          <span className="w-24 text-sm font-medium text-gray-600">
+                            Sample Date:
+                          </span>
+                          <span className="text-gray-900 font-medium">
+                            {new Date(qc.sampleDate).toLocaleDateString()}
+                          </span>
                         </div>
                         <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Tester:</span>
-                          <span className="text-gray-900 font-medium">{qc.testerName}</span>
+                          <span className="w-24 text-sm font-medium text-gray-600">
+                            Tester:
+                          </span>
+                          <span className="text-gray-900 font-medium">
+                            {qc.testerName}
+                          </span>
                         </div>
                       </div>
                       <div className="space-y-3">
                         <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Quality Grade:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getGradeColor(qc.qualityGrade)}`}>
+                          <span className="w-24 text-sm font-medium text-gray-600">
+                            Quality Grade:
+                          </span>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getGradeColor(
+                              qc.qualityGrade
+                            )}`}
+                          >
                             Grade {qc.qualityGrade}
                           </span>
                         </div>
                         <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Status:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(qc.status)}`}>
-                            {qc.status.charAt(0).toUpperCase() + qc.status.slice(1)}
+                          <span className="w-24 text-sm font-medium text-gray-600">
+                            Status:
+                          </span>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                              qc.status
+                            )}`}
+                          >
+                            {qc.status.charAt(0).toUpperCase() +
+                              qc.status.slice(1)}
                           </span>
                         </div>
                         <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-gray-600">Test Method:</span>
-                          <span className="text-gray-900 font-medium">{qc.testMethod}</span>
+                          <span className="w-24 text-sm font-medium text-gray-600">
+                            Test Method:
+                          </span>
+                          <span className="text-gray-900 font-medium">
+                            {qc.testMethod}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Quality Metrics */}
                     <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="text-sm font-semibold text-gray-800 mb-3">Quality Metrics (%)</h4>
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">
+                        Quality Metrics (%)
+                      </h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="text-center">
                           <div className="text-sm text-gray-600">Moisture</div>
-                          <div className="text-lg font-semibold text-indigo-600">{qc.moistureContent}</div>
+                          <div className="text-lg font-semibold text-indigo-600">
+                            {qc.moistureContent}
+                          </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-sm text-gray-600">Broken Rice</div>
-                          <div className="text-lg font-semibold text-orange-600">{qc.brokenRice}</div>
+                          <div className="text-sm text-gray-600">
+                            Broken Rice
+                          </div>
+                          <div className="text-lg font-semibold text-orange-600">
+                            {qc.brokenRice}
+                          </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-sm text-gray-600">Foreign Matter</div>
-                          <div className="text-lg font-semibold text-red-600">{qc.foreignMatter}</div>
+                          <div className="text-sm text-gray-600">
+                            Foreign Matter
+                          </div>
+                          <div className="text-lg font-semibold text-red-600">
+                            {qc.foreignMatter}
+                          </div>
                         </div>
                         <div className="text-center">
                           <div className="text-sm text-gray-600">Head Rice</div>
-                          <div className="text-lg font-semibold text-green-600">{qc.headRice}</div>
+                          <div className="text-lg font-semibold text-green-600">
+                            {qc.headRice}
+                          </div>
                         </div>
                       </div>
                     </div>
-                    
+
                     {qc.remarks && (
                       <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
-                        <h4 className="text-sm font-semibold text-gray-800 mb-1">Remarks</h4>
+                        <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                          Remarks
+                        </h4>
                         <p className="text-gray-700 text-sm">{qc.remarks}</p>
                       </div>
                     )}
@@ -566,47 +701,81 @@ const QCDataEntry = () => {
           {!currentBranchId ? (
             <div className="lg:hidden bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800">QC Records</h3>
-                <p className="text-sm text-gray-600 mt-1">Please select a branch to view QC records</p>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  QC Records
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Please select a branch to view QC records
+                </p>
               </div>
               <div className="p-8 text-center text-gray-500">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🔬</span>
                 </div>
                 <p className="text-lg font-medium">No Branch Selected</p>
-                <p className="text-sm">Select a branch from the filter above to view QC records</p>
+                <p className="text-sm">
+                  Select a branch from the filter above to view QC records
+                </p>
               </div>
             </div>
           ) : (
             <div className="lg:hidden bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
               <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800">QC Records</h3>
-                <p className="text-sm text-gray-600 mt-1">Total: {filteredQcRecords.length} records</p>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  QC Records
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Total: {filteredQcRecords.length} records
+                </p>
               </div>
-              
+
               <div className="p-4">
                 {filteredQcRecords.length === 0 ? (
                   <div className="text-center py-8">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No QC records</h3>
-                    <p className="mt-1 text-sm text-gray-500">Get started by creating a new QC record.</p>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">
+                      No QC records
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Get started by creating a new QC record.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {filteredQcRecords.map((qc) => (
-                      <div key={qc._id} className="border border-gray-200 rounded-lg overflow-hidden">
-                        <div 
+                      <div
+                        key={qc._id}
+                        className="border border-gray-200 rounded-lg overflow-hidden"
+                      >
+                        <div
                           className="bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => setExpandedQc(expandedQc === qc._id ? null : qc._id)}
+                          onClick={() =>
+                            setExpandedQc(expandedQc === qc._id ? null : qc._id)
+                          }
                         >
                           <div className="flex justify-between items-center">
                             <div className="flex-1">
-                              <div className="font-medium text-blue-600">{qc.batchNumber}</div>
-                              <div className="text-sm text-gray-600">{qc.riceVariety}</div>
+                              <div className="font-medium text-blue-600">
+                                {qc.batchNumber}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {qc.riceVariety}
+                              </div>
                               <div className="text-xs text-gray-500">
-                                {new Date(qc.sampleDate).toLocaleDateString()} • Grade {qc.qualityGrade} • {qc.status}
+                                {new Date(qc.sampleDate).toLocaleDateString()} •
+                                Grade {qc.qualityGrade} • {qc.status}
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
@@ -632,15 +801,20 @@ const QCDataEntry = () => {
                               >
                                 Delete
                               </Button>
-                              <svg 
+                              <svg
                                 className={`w-4 h-4 text-gray-400 transition-transform ${
-                                  expandedQc === qc._id ? 'rotate-180' : ''
+                                  expandedQc === qc._id ? "rotate-180" : ""
                                 }`}
-                                fill="none" 
-                                stroke="currentColor" 
+                                fill="none"
+                                stroke="currentColor"
                                 viewBox="0 0 24 24"
                               >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
                               </svg>
                             </div>
                           </div>
@@ -650,39 +824,65 @@ const QCDataEntry = () => {
                           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 border-t border-gray-200">
                             <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                               <div>
-                                <span className="text-gray-600">Rice Variety:</span>
-                                <span className="ml-1 font-medium text-green-600">{qc.riceVariety}</span>
+                                <span className="text-gray-600">
+                                  Rice Variety:
+                                </span>
+                                <span className="ml-1 font-medium text-green-600">
+                                  {qc.riceVariety}
+                                </span>
                               </div>
                               <div>
-                                <span className="text-gray-600">Sample Date:</span>
+                                <span className="text-gray-600">
+                                  Sample Date:
+                                </span>
                                 <span className="ml-1 font-medium text-gray-900">
                                   {new Date(qc.sampleDate).toLocaleDateString()}
                                 </span>
                               </div>
                               <div>
                                 <span className="text-gray-600">Moisture:</span>
-                                <span className="ml-1 font-medium text-indigo-600">{qc.moistureContent}%</span>
+                                <span className="ml-1 font-medium text-indigo-600">
+                                  {qc.moistureContent}%
+                                </span>
                               </div>
                               <div>
-                                <span className="text-gray-600">Head Rice:</span>
-                                <span className="ml-1 font-medium text-green-600">{qc.headRice}%</span>
+                                <span className="text-gray-600">
+                                  Head Rice:
+                                </span>
+                                <span className="ml-1 font-medium text-green-600">
+                                  {qc.headRice}%
+                                </span>
                               </div>
                               <div>
-                                <span className="text-gray-600">Total Defects:</span>
-                                <span className="ml-1 font-medium text-red-600">{qc.totalDefects}%</span>
+                                <span className="text-gray-600">
+                                  Total Defects:
+                                </span>
+                                <span className="ml-1 font-medium text-red-600">
+                                  {qc.totalDefects}%
+                                </span>
                               </div>
                               <div>
-                                <span className="text-gray-600">Quality Grade:</span>
-                                <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getGradeColor(qc.qualityGrade)}`}>
+                                <span className="text-gray-600">
+                                  Quality Grade:
+                                </span>
+                                <span
+                                  className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${getGradeColor(
+                                    qc.qualityGrade
+                                  )}`}
+                                >
                                   Grade {qc.qualityGrade}
                                 </span>
                               </div>
                             </div>
-                            
+
                             {qc.remarks && (
                               <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
-                                <h4 className="text-sm font-semibold text-gray-800 mb-1">Remarks</h4>
-                                <p className="text-gray-700 text-sm">{qc.remarks}</p>
+                                <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                                  Remarks
+                                </h4>
+                                <p className="text-gray-700 text-sm">
+                                  {qc.remarks}
+                                </p>
                               </div>
                             )}
                           </div>
@@ -701,21 +901,29 @@ const QCDataEntry = () => {
       <DialogBox
         show={showQcModal}
         onClose={closeQcModal}
-        title={editingQc ? 'Edit QC Record' : 'Add New QC Record'}
+        title={editingQc ? "Edit QC Record" : "Add New QC Record"}
         size="2xl"
       >
-        <form onSubmit={saveQc} className="space-y-4" key={editingQc ? 'edit' : 'add'}>
+        <form
+          onSubmit={saveQc}
+          className="space-y-4"
+          key={editingQc ? "edit" : "add"}
+        >
           {/* Auto-population Section */}
           {!editingQc && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <h4 className="text-sm font-semibold text-blue-800 mb-3">🚀 Auto-Populate from Rice Data</h4>
+            <div className="bg-accent/50 border border-accent rounded-lg p-4 mb-4">
+              <h4 className="text-sm font-semibold text-accent-foreground mb-3">
+                🚀 Auto-Populate from Rice Data
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-2">Select Rice Deposit (Optional)</label>
+                  <label className="block text-sm font-medium text-accent-foreground mb-2">
+                    Select Rice Deposit (Optional)
+                  </label>
                   <select
-                    value={selectedRiceDeposit?._id || ''}
+                    value={selectedRiceDeposit?._id || ""}
                     onChange={(e) => handleRiceDepositSelection(e.target.value)}
-                    className="block w-full border border-blue-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white"
+                    className="block w-full border border-input rounded-md shadow-sm focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm bg-background text-foreground"
                   >
                     <option value="">Select a rice deposit...</option>
                     {riceDeposits.map((rice) => (
@@ -724,23 +932,30 @@ const QCDataEntry = () => {
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-blue-600 mt-1">This will auto-populate variety, moisture, and generate batch number</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This will auto-populate variety, moisture, and generate
+                    batch number
+                  </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-2">Available Rice Varieties</label>
+                  <label className="block text-sm font-medium text-accent-foreground mb-2">
+                    Available Rice Varieties
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {riceVarieties.map((variety) => (
                       <button
                         key={variety}
                         type="button"
                         onClick={() => handleRiceVarietyChange(variety)}
-                        className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 transition-colors"
+                        className="px-3 py-1 text-xs font-medium bg-accent text-accent-foreground rounded-full hover:bg-accent/80 transition-colors"
                       >
                         {variety}
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-blue-600 mt-1">Click to auto-populate variety and generate batch number</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Click to auto-populate variety and generate batch number
+                  </p>
                 </div>
               </div>
             </div>
@@ -750,7 +965,7 @@ const QCDataEntry = () => {
             <FormInput
               label="Batch Number"
               name="batchNumber"
-              value={qcForm.batchNumber || ''}
+              value={qcForm.batchNumber || ""}
               onChange={handleQcFormChange}
               required
               icon="hash"
@@ -758,7 +973,7 @@ const QCDataEntry = () => {
             <FormInput
               label="Rice Variety"
               name="riceVariety"
-              value={qcForm.riceVariety || ''}
+              value={qcForm.riceVariety || ""}
               onChange={handleQcFormChange}
               required
               icon="grain"
@@ -844,24 +1059,32 @@ const QCDataEntry = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Total Defects (%)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Total Defects (%)
+              </label>
               <input
                 type="text"
                 value={qcForm.totalDefects}
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
-              <p className="text-xs text-gray-500 mt-1">Auto-calculated from individual defect percentages</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Auto-calculated from individual defect percentages
+              </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Head Rice (%)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Head Rice (%)
+              </label>
               <input
                 type="text"
                 value={qcForm.headRice}
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
-              <p className="text-xs text-gray-500 mt-1">Auto-calculated (100% - Total Defects)</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Auto-calculated (100% - Total Defects)
+              </p>
             </div>
           </div>
 
@@ -873,11 +1096,11 @@ const QCDataEntry = () => {
               onChange={handleQcFormChange}
               required
               options={[
-                { value: 'A', label: 'Grade A (≤3% defects)' },
-                { value: 'B', label: 'Grade B (≤7% defects)' },
-                { value: 'C', label: 'Grade C (≤12% defects)' },
-                { value: 'D', label: 'Grade D (>12% defects)' },
-                { value: 'Rejected', label: 'Rejected' }
+                { value: "A", label: "Grade A (≤3% defects)" },
+                { value: "B", label: "Grade B (≤7% defects)" },
+                { value: "C", label: "Grade C (≤12% defects)" },
+                { value: "D", label: "Grade D (>12% defects)" },
+                { value: "Rejected", label: "Rejected" },
               ]}
             />
             <FormSelect
@@ -887,9 +1110,9 @@ const QCDataEntry = () => {
               onChange={handleQcFormChange}
               required
               options={[
-                { value: 'manual', label: 'Manual Testing' },
-                { value: 'automated', label: 'Automated Testing' },
-                { value: 'hybrid', label: 'Hybrid Testing' }
+                { value: "manual", label: "Manual Testing" },
+                { value: "automated", label: "Automated Testing" },
+                { value: "hybrid", label: "Hybrid Testing" },
               ]}
             />
           </div>
@@ -902,16 +1125,18 @@ const QCDataEntry = () => {
               onChange={handleQcFormChange}
               required
               options={[
-                { value: 'pending', label: 'Pending Review' },
-                { value: 'approved', label: 'Approved' },
-                { value: 'rejected', label: 'Rejected' },
-                { value: 'under_review', label: 'Under Review' }
+                { value: "pending", label: "Pending Review" },
+                { value: "approved", label: "Approved" },
+                { value: "rejected", label: "Rejected" },
+                { value: "under_review", label: "Under Review" },
               ]}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Remarks
+            </label>
             <textarea
               name="remarks"
               value={qcForm.remarks}
@@ -923,13 +1148,17 @@ const QCDataEntry = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Documents</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Documents
+            </label>
             <FileUpload
               onFilesChange={handleFilesChange}
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               multiple
             />
-            <p className="text-xs text-gray-500 mt-1">Upload supporting documents (optional)</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Upload supporting documents (optional)
+            </p>
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
@@ -953,8 +1182,10 @@ const QCDataEntry = () => {
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   <span>Saving...</span>
                 </div>
+              ) : editingQc ? (
+                "Update"
               ) : (
-                editingQc ? 'Update' : 'Create'
+                "Create"
               )}
             </Button>
           </div>
@@ -964,4 +1195,4 @@ const QCDataEntry = () => {
   );
 };
 
-export default QCDataEntry; 
+export default QCDataEntry;
