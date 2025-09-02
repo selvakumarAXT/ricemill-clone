@@ -23,11 +23,11 @@ const riceDepositSchema = new mongoose.Schema({
   },
   godownDate: { 
     type: Date, 
-    required: true 
+    required: false 
   },
   ackNo: { 
     type: String, 
-    required: true 
+    required: false 
   },
   riceBag: { 
     type: Number, 
@@ -96,7 +96,7 @@ const riceDepositSchema = new mongoose.Schema({
   paddyReference: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Paddy', 
-    required: true 
+    required: false 
   },
   branch_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -169,8 +169,8 @@ riceDepositSchema.pre('save', async function(next) {
     calculationDate: new Date()
   };
   
-  // Only validate if this is a new document or gunny values have changed
-  if (this.isNew || this.isModified('gunnyUsedFromPaddy') || this.isModified('gunny.onb') || this.isModified('gunny.ss') || this.isModified('gunny.swp')) {
+  // Only validate if this is a new document or gunny values have changed AND paddyReference exists
+  if (this.paddyReference && (this.isNew || this.isModified('gunnyUsedFromPaddy') || this.isModified('gunny.onb') || this.isModified('gunny.ss') || this.isModified('gunny.swp'))) {
     try {
       const Paddy = mongoose.model('Paddy');
       const paddyRecord = await Paddy.findById(this.paddyReference);

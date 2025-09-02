@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import branchManagementService from "../services/branchManagementService";
 import branchService from "../services/branchService";
 import userService from "../services/userService";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { triggerRefresh } from "../store/slices/branchSlice";
 import FormInput from "../components/common/FormInput";
 import FormSelect from "../components/common/FormSelect";
 import DialogBox from "../components/common/DialogBox";
@@ -27,6 +28,7 @@ const TABS = [
 const BranchManagement = () => {
   const { user } = useSelector((state) => state.auth);
   const { currentBranchId } = useSelector((state) => state.branch);
+  const dispatch = useDispatch();
   const [tab, setTab] = useState("branches");
   const [branches, setBranches] = useState([]);
   const [users, setUsers] = useState([]);
@@ -139,6 +141,9 @@ const BranchManagement = () => {
       const branchesRes = await branchService.getAllBranches();
       setBranches(branchesRes.data || []);
       closeBranchModal();
+
+      // Trigger refresh for sidebar branch data
+      dispatch(triggerRefresh());
     } finally {
       setLoading(false);
     }
@@ -154,6 +159,9 @@ const BranchManagement = () => {
       setBranches((prev) => prev.filter((b) => b._id !== branchToDelete._id));
       setShowDeleteBranchDialog(false);
       setBranchToDelete(null);
+
+      // Trigger refresh for sidebar branch data
+      dispatch(triggerRefresh());
     } finally {
       setLoading(false);
     }

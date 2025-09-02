@@ -72,12 +72,7 @@ const createRiceDeposit = async (req, res) => {
       riceDepositData.branch_id = branch_id;
     }
 
-    // Validate that paddyReference is provided
-    if (!riceDepositData.paddyReference) {
-      return res.status(400).json({ 
-        message: 'Paddy reference is required. Please select a paddy record to link this rice deposit.' 
-      });
-    }
+    // Paddy reference is now optional since we removed the requirement
     
     const newRiceDeposit = new RiceDeposit(riceDepositData);
     
@@ -90,8 +85,7 @@ const createRiceDeposit = async (req, res) => {
     
     const populatedRiceDeposit = await RiceDeposit.findById(savedRiceDeposit._id)
       .populate('createdBy', 'name email')
-      .populate('branch_id', 'name')
-      .populate('paddyReference', 'issueMemo lorryNumber paddyFrom paddyVariety gunny');
+      .populate('branch_id', 'name');
     
     res.status(201).json(populatedRiceDeposit);
   } catch (error) {
@@ -128,11 +122,25 @@ const createRiceDeposit = async (req, res) => {
 const updateRiceDeposit = async (req, res) => {
   try {
     const { id } = req.params;
-    const { branch_id } = req.user;
+    const { branch_id, isSuperAdmin } = req.user;
+    
+    // Build query - handle superadmin case
+    let query = { _id: id };
+    
+    if (!isSuperAdmin) {
+      // Regular users can only update records from their assigned branch
+      query.branch_id = branch_id;
+    }
+    // Superadmin can update records from any branch - no branch restriction needed
+    
+    const updateData = {
+      ...req.body,
+      updatedAt: Date.now()
+    };
     
     const updatedRiceDeposit = await RiceDeposit.findOneAndUpdate(
-      { _id: id, branch_id },
-      { ...req.body, updatedAt: Date.now() },
+      query,
+      updateData,
       { new: true, runValidators: true }
     ).populate('createdBy', 'name email')
       .populate('branch_id', 'name');
@@ -145,6 +153,9 @@ const updateRiceDeposit = async (req, res) => {
   } catch (error) {
     console.error('Error updating rice deposit:', error);
     if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
+    if (error.message && error.message.includes('gunny')) {
       return res.status(400).json({ message: error.message });
     }
     res.status(500).json({ message: 'Internal server error' });

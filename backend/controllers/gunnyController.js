@@ -24,6 +24,7 @@ const getAllGunny = async (req, res) => {
     const gunnyRecords = await Gunny.find(query)
       .populate('createdBy', 'name email')
       .populate('branch_id', 'name')
+      .populate('vendor_id', 'vendorName vendorCode vendorType contactPerson phone')
       .sort({ createdAt: -1 });
     
     res.json(gunnyRecords);
@@ -41,7 +42,8 @@ const getGunnyById = async (req, res) => {
     
     const gunnyRecord = await Gunny.findOne({ _id: id, branch_id })
       .populate('createdBy', 'name email')
-      .populate('branch_id', 'name');
+      .populate('branch_id', 'name')
+      .populate('vendor_id', 'vendorName vendorCode vendorType contactPerson phone');
     
     if (!gunnyRecord) {
       return res.status(404).json({ message: 'Gunny record not found' });
@@ -90,7 +92,8 @@ const createGunny = async (req, res) => {
     
     const populatedGunny = await Gunny.findById(savedGunny._id)
       .populate('createdBy', 'name email')
-      .populate('branch_id', 'name');
+      .populate('branch_id', 'name')
+      .populate('vendor_id', 'vendorName vendorCode vendorType contactPerson phone');
     
     res.status(201).json(populatedGunny);
   } catch (error) {
@@ -128,7 +131,8 @@ const updateGunny = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     ).populate('createdBy', 'name email')
-      .populate('branch_id', 'name');
+      .populate('branch_id', 'name')
+      .populate('vendor_id', 'vendorName vendorCode vendorType contactPerson phone');
     
     if (!updatedGunny) {
       return res.status(404).json({ message: 'Gunny record not found' });

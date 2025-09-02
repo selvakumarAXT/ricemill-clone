@@ -6,6 +6,7 @@ const gunnySchema = new mongoose.Schema({
   lorryNumber: { type: String, required: true },
   paddyFrom: { type: String, required: true },
   paddyVariety: { type: String, required: true },
+  vendor_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: false },
   gunny: {
     nb: { type: Number, default: 0 },
     onb: { type: Number, default: 0 },

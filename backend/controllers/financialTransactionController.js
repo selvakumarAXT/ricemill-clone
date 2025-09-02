@@ -40,7 +40,6 @@ const getAllTransactions = asyncHandler(async (req, res) => {
     query.$or = [
       { description: { $regex: search, $options: 'i' } },
       { reference: { $regex: search, $options: 'i' } },
-      { vendor: { $regex: search, $options: 'i' } },
       { customer: { $regex: search, $options: 'i' } },
       { category: { $regex: search, $options: 'i' } }
     ];
@@ -57,6 +56,7 @@ const getAllTransactions = asyncHandler(async (req, res) => {
     FinancialTransaction.find(query)
       .populate('branch_id', 'name millCode')
       .populate('createdBy', 'name email')
+      .populate('vendor_id', 'vendorName vendorCode vendorType contactPerson phone')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit)),
@@ -83,7 +83,8 @@ const getAllTransactions = asyncHandler(async (req, res) => {
 const getTransaction = asyncHandler(async (req, res) => {
   const transaction = await FinancialTransaction.findById(req.params.id)
     .populate('branch_id', 'name millCode')
-    .populate('createdBy', 'name email');
+    .populate('createdBy', 'name email')
+    .populate('vendor_id', 'vendorName vendorCode vendorType contactPerson phone');
   
   if (!transaction) {
     res.status(404);
@@ -114,7 +115,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     amount,
     paymentMethod,
     reference,
-    vendor,
+    vendor_id,
     customer,
     status,
     remarks
@@ -136,7 +137,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     amount,
     paymentMethod,
     reference,
-    vendor,
+    vendor_id,
     customer,
     status,
     remarks,
@@ -146,7 +147,8 @@ const createTransaction = asyncHandler(async (req, res) => {
   
   const populatedTransaction = await FinancialTransaction.findById(transaction._id)
     .populate('branch_id', 'name millCode')
-    .populate('createdBy', 'name email');
+    .populate('createdBy', 'name email')
+    .populate('vendor_id', 'vendorName vendorCode vendorType contactPerson phone');
   
   res.status(201).json({
     success: true,
@@ -176,7 +178,8 @@ const updateTransaction = asyncHandler(async (req, res) => {
     req.body,
     { new: true, runValidators: true }
   ).populate('branch_id', 'name millCode')
-   .populate('createdBy', 'name email');
+   .populate('createdBy', 'name email')
+   .populate('vendor_id', 'vendorName vendorCode vendorType contactPerson phone');
   
   res.status(200).json({
     success: true,

@@ -72,7 +72,6 @@ const ByproductsSales = () => {
     material: "",
     weight: "",
     unit: "kg",
-    rate: "",
     totalAmount: 0,
     vendorName: "",
     vendorPhone: "",
@@ -175,14 +174,6 @@ const ByproductsSales = () => {
     const { name, value } = e.target;
     setByproductForm((prev) => {
       const updated = { ...prev, [name]: value };
-
-      // Auto-calculate total amount
-      if (name === "weight" || name === "rate") {
-        const weight = parseFloat(updated.weight) || 0;
-        const rate = parseFloat(updated.rate) || 0;
-        updated.totalAmount = weight * rate;
-      }
-
       return updated;
     });
   };
@@ -398,7 +389,6 @@ const ByproductsSales = () => {
       label: "Weight",
       render: (value, record) => `${value} ${record.unit}`,
     },
-    { key: "rate", label: "Rate", render: (value) => `₹${value}` },
     {
       key: "totalAmount",
       label: "Total Amount",
@@ -447,7 +437,7 @@ const ByproductsSales = () => {
     {
       label: "Quantity & Pricing",
       columns: validColumns.filter((col) =>
-        ["weight", "rate", "totalAmount"].includes(col.key)
+        ["weight", "totalAmount"].includes(col.key)
       ),
     },
     {
@@ -635,7 +625,7 @@ const ByproductsSales = () => {
               <legend className="text-sm font-semibold text-gray-700 px-2">
                 Quantity & Pricing
               </legend>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormInput
                   label="Weight"
                   name="weight"
@@ -663,24 +653,15 @@ const ByproductsSales = () => {
                   ))}
                 </FormSelect>
                 <FormInput
-                  label="Rate per Unit"
-                  name="rate"
+                  label="Total Amount"
+                  name="totalAmount"
                   type="number"
-                  value={byproductForm.rate}
+                  value={byproductForm.totalAmount}
                   onChange={handleFormChange}
                   required
                   min="0"
                   step="0.01"
                   placeholder="0.00"
-                  icon="currency-rupee"
-                />
-                <FormInput
-                  label="Total Amount"
-                  name="totalAmount"
-                  type="number"
-                  value={byproductForm.totalAmount}
-                  readOnly
-                  className="bg-gray-50"
                   icon="calculator"
                 />
               </div>

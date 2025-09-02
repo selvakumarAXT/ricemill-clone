@@ -70,7 +70,6 @@ const SalesDispatch = () => {
     material: "",
     weight: "",
     unit: "kg",
-    rate: "",
     totalAmount: 0,
     vendor_id: "",
     vendorName: "",
@@ -316,7 +315,6 @@ const SalesDispatch = () => {
       material: invoice.items?.[0]?.productName || "",
       weight: invoice.items?.[0]?.quantity || 0,
       unit: invoice.items?.[0]?.uom || "kg",
-      rate: invoice.items?.[0]?.price || 0,
       totalAmount: invoice.totals?.grandTotal || 0,
       vendorName: invoice.customer?.name || "",
       vendorPhone: invoice.customer?.phoneNo || "",
@@ -395,10 +393,6 @@ const SalesDispatch = () => {
     const { name, value } = e.target;
     setByproductForm((prev) => {
       const updated = { ...prev, [name]: value };
-      // Auto-calculate total amount
-      if (name === "weight" || name === "rate") {
-        updated.totalAmount = updated.weight * updated.rate;
-      }
       return updated;
     });
   };
@@ -611,7 +605,7 @@ const SalesDispatch = () => {
               productName: byproductForm.material,
               quantity: byproductForm.weight,
               uom: byproductForm.unit,
-              price: byproductForm.rate,
+              price: byproductForm.totalAmount,
               hsnSacCode: "23020000",
             },
           ],
@@ -662,7 +656,6 @@ const SalesDispatch = () => {
       material: byproduct.material || "",
       weight: byproduct.weight || 0,
       unit: byproduct.unit || "kg",
-      rate: byproduct.rate || 0,
       totalAmount: byproduct.totalAmount || 0,
       vendorName: byproduct.vendorName || "",
       vendorPhone: byproduct.vendorPhone || "",
@@ -709,7 +702,7 @@ const SalesDispatch = () => {
             productName: byproductForm.material,
             quantity: byproductForm.weight,
             uom: byproductForm.unit,
-            price: byproductForm.rate,
+            price: byproductForm.totalAmount,
             hsnSacCode: "23020000",
           },
         ],
@@ -952,7 +945,6 @@ const SalesDispatch = () => {
         material: selectedSaleForInvoice.material,
         weight: selectedSaleForInvoice.weight,
         unit: selectedSaleForInvoice.unit,
-        rate: selectedSaleForInvoice.rate,
         totalAmount: selectedSaleForInvoice.totalAmount,
         generatedAt: new Date().toISOString(),
       };
@@ -1790,11 +1782,7 @@ const SalesDispatch = () => {
         </span>
       ),
     },
-    {
-      key: "rate",
-      label: "Rate",
-      renderCell: (value) => <span className="font-medium">₹{value}</span>,
-    },
+
     {
       key: "totalAmount",
       label: "Total Amount",
@@ -2226,12 +2214,7 @@ const SalesDispatch = () => {
                               {byproduct.weight} {byproduct.unit}
                             </span>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Rate:</span>
-                            <span className="ml-1 font-medium text-foreground">
-                              ₹{byproduct.rate}
-                            </span>
-                          </div>
+
                           <div>
                             <span className="text-muted-foreground">
                               Total:
@@ -2517,7 +2500,7 @@ const SalesDispatch = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {uploadedFiles.map((file, index) => (
                   <div key={index} className="relative group">
-                                            <div className="bg-card border border-border rounded-lg p-3 hover:shadow-md transition-shadow">
+                    <div className="bg-card border border-border rounded-lg p-3 hover:shadow-md transition-shadow">
                       {/* File Preview */}
                       <div className="relative mb-2">
                         {file.mimetype?.startsWith("image/") ? (
@@ -2930,7 +2913,7 @@ const SalesDispatch = () => {
             <legend className="text-sm font-semibold text-gray-700 px-2">
               Quantity & Pricing
             </legend>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormInput
                 label="Weight"
                 name="weight"
@@ -2953,23 +2936,15 @@ const SalesDispatch = () => {
                 options={UNITS.map((unit) => ({ value: unit, label: unit }))}
               />
               <FormInput
-                label="Rate per Unit"
-                name="rate"
+                label="Total Amount"
+                name="totalAmount"
                 type="number"
-                value={byproductForm.rate}
+                value={byproductForm.totalAmount}
                 onChange={handleByproductFormChange}
                 required
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                icon="currency"
-              />
-              <FormInput
-                label="Total Amount"
-                name="totalAmount"
-                type="number"
-                value={byproductForm.totalAmount}
-                readOnly
                 icon="calculator"
               />
             </div>

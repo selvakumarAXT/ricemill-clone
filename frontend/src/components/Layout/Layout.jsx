@@ -1,51 +1,42 @@
-import { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import Navbar from './Navbar';
-import branchService from '../../services/branchService';
-import { setCurrentBranchId, setAvailableBranches } from '../../store/slices/branchSlice';
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import Sidebar from "./Sidebar";
+import Navbar from "./Navbar";
+import { setCurrentBranchId } from "../../store/slices/branchSlice";
+import { useBranchRefresh } from "../../hooks/useBranchRefresh";
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const { currentBranchId } = useSelector((state) => state.branch);
+  const { currentBranchId, refreshTrigger } = useSelector(
+    (state) => state.branch
+  );
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Branch switcher state
-  const [branches, setBranches] = useState([]);
+  // Use the custom hook for branch management
+  const { refreshBranches, availableBranches, isLoading } = useBranchRefresh();
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/signin');
+      navigate("/signin");
     }
   }, [isAuthenticated, navigate]);
 
+  // Initial fetch of branches when user changes
   useEffect(() => {
-    // Fetch all branches for superadmin
-    const fetchBranches = async () => {
-      if (user?.role === "superadmin") {
-        try {
-          const res = await branchService.getAllBranches();
-          const branchesData = res.data || [];
-          setBranches(branchesData);
-          dispatch(setAvailableBranches(branchesData));
-        } catch (err) {
-          setBranches([]);
-          dispatch(setAvailableBranches([]));
-        }
-      } else if (user?.branch) {
-        const branchesData = [user.branch];
-        setBranches(branchesData);
-        dispatch(setAvailableBranches(branchesData));
-      } else {
-        setBranches([]);
-        dispatch(setAvailableBranches([]));
-      }
-    };
-    fetchBranches();
-  }, [user, dispatch]);
+    if (user) {
+      refreshBranches();
+    }
+  }, [user, refreshBranches]);
+
+  // Listen for refresh triggers (e.g., from branch management operations)
+  useEffect(() => {
+    if (refreshTrigger > 0 && user) {
+      refreshBranches();
+    }
+  }, [refreshTrigger, user, refreshBranches]);
 
   const handleBranchChange = (branchId) => {
     dispatch(setCurrentBranchId(branchId));
@@ -63,14 +54,19 @@ const Layout = ({ children }) => {
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} branches={branches} selectedBranchId={currentBranchId} onBranchChange={handleBranchChange} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        toggleSidebar={toggleSidebar}
+        branches={availableBranches}
+        selectedBranchId={currentBranchId}
+        onBranchChange={handleBranchChange}
+        isLoading={isLoading}
+      />
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         {/* Navbar */}
-        <Navbar
-          toggleSidebar={toggleSidebar}
-        />
+        <Navbar toggleSidebar={toggleSidebar} />
 
         {/* Page content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">
@@ -84,4 +80,4 @@ const Layout = ({ children }) => {
   );
 };
 
-export default Layout; 
+export default Layout;

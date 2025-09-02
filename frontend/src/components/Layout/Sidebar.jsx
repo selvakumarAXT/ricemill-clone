@@ -11,6 +11,7 @@ const Sidebar = ({
   branches = [],
   selectedBranchId,
   onBranchChange,
+  isLoading = false,
 }) => {
   const location = useLocation();
   const dispatch = useDispatch();
@@ -249,13 +250,14 @@ const Sidebar = ({
             <div className="flex-shrink-0 border-t border-border">
               <div className="px-2 py-3">
                 {/* Branches tree for superadmin */}
-                {user?.role === "superadmin" && branches.length > 0 && (
+                {user?.role === "superadmin" && (
                   <div>
                     <button
                       className={`flex items-center w-full px-2 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-md transition-colors duration-150 ${
                         collapsed ? "justify-center" : ""
                       }`}
                       onClick={() => setBranchesOpen((open) => !open)}
+                      disabled={isLoading}
                     >
                       <Icon
                         name="branch"
@@ -264,43 +266,60 @@ const Sidebar = ({
                       {!collapsed && (
                         <>
                           Branches
-                          <span className="ml-auto">
-                            {branchesOpen ? "▼" : "▶"}
-                          </span>
+                          {isLoading ? (
+                            <span className="ml-auto animate-spin">⟳</span>
+                          ) : (
+                            <span className="ml-auto">
+                              {branchesOpen ? "▼" : "▶"}
+                            </span>
+                          )}
                         </>
                       )}
                     </button>
                     {branchesOpen && !collapsed && (
                       <ul className="ml-6 mt-1 space-y-1">
-                        <li key="all-branches">
-                          <button
-                            className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${
-                              !currentBranchId
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                            }`}
-                            onClick={() => handleBranchSelect("")}
-                          >
-                            All Branches
-                          </button>
-                        </li>
-                        {branches
-                          .slice()
-                          .reverse()
-                          .map((branch) => (
-                            <li key={branch._id}>
+                        {isLoading ? (
+                          <li className="px-2 py-1 text-sm text-muted-foreground">
+                            <span className="flex items-center">
+                              <span className="animate-spin mr-2">⟳</span>
+                              Loading branches...
+                            </span>
+                          </li>
+                        ) : (
+                          <>
+                            <li key="all-branches">
                               <button
                                 className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${
-                                  currentBranchId === branch._id
+                                  !currentBranchId
                                     ? "bg-primary text-primary-foreground"
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                 }`}
-                                onClick={() => handleBranchSelect(branch._id)}
+                                onClick={() => handleBranchSelect("")}
                               >
-                                {branch.name} ({branch.millCode})
+                                All Branches
                               </button>
                             </li>
-                          ))}
+                            {branches
+                              .slice()
+                              .reverse()
+                              .map((branch) => (
+                                <li key={branch._id}>
+                                  <button
+                                    className={`w-full text-left px-2 py-1 rounded-md text-sm font-medium transition-colors duration-150 ${
+                                      currentBranchId === branch._id
+                                        ? "bg-primary text-primary-foreground"
+                                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    }`}
+                                    onClick={() =>
+                                      handleBranchSelect(branch._id)
+                                    }
+                                  >
+                                    {branch.name} ({branch.millCode})
+                                  </button>
+                                </li>
+                              ))}
+                          </>
+                        )}
                       </ul>
                     )}
                   </div>

@@ -5,6 +5,7 @@ const initialState = {
   availableBranches: [],
   isLoading: false,
   error: null,
+  refreshTrigger: 0, // Used to trigger refresh in components
 };
 
 const branchSlice = createSlice({
@@ -28,6 +29,9 @@ const branchSlice = createSlice({
     setError: (state, action) => {
       state.error = action.payload;
     },
+    triggerRefresh: (state) => {
+      state.refreshTrigger = state.refreshTrigger + 1;
+    },
   },
 });
 
@@ -37,6 +41,7 @@ export const {
   setAvailableBranches,
   setLoading,
   setError,
+  triggerRefresh,
 } = branchSlice.actions;
 
 export default branchSlice.reducer; 

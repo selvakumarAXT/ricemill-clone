@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import Button from "../components/common/Button";
 import DialogBox from "../components/common/DialogBox";
@@ -16,11 +16,9 @@ import DateRangeFilter from "../components/common/DateRangeFilter";
 import riceDepositService from "../services/riceDepositService";
 import { getAllPaddy } from "../services/paddyService";
 import { formatWeight } from "../utils/calculations";
-import InvoiceTemplate from "../components/common/InvoiceTemplate";
-import PreviewInvoice from "../components/common/PreviewInvoice";
 
 const RiceManagement = () => {
-  const { user } = useSelector((state) => state.auth);
+  const { user: _user } = useSelector((state) => state.auth);
   const { currentBranchId } = useSelector((state) => state.branch);
   const [riceDeposits, setRiceDeposits] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,8 +39,15 @@ const RiceManagement = () => {
     totalGunnyBags: 0,
     totalGunnyWeight: 0,
     count: 0,
+    // FRK specific stats
+    frkRiceBags: 0,
+    frkRiceWeight: 0,
+    frkGunnyBags: 0,
+    frkGunnyWeight: 0,
+    frkCount: 0,
   });
   const [paddyData, setPaddyData] = useState([]);
+  const [varietySummary, setVarietySummary] = useState([]);
   const [riceComparison, setRiceComparison] = useState({
     actualRiceOutput: 0,
     expectedRiceOutput: 0,
@@ -52,15 +57,18 @@ const RiceManagement = () => {
     efficiency: 0,
     difference: 0,
   });
-  const [selectedPaddy, setSelectedPaddy] = useState(null);
-  const [usedGunnyFromPaddy, setUsedGunnyFromPaddy] = useState({
-    nb: 0,
-    onb: 0,
-    ss: 0,
-    swp: 0,
-  });
   const [successMessage, setSuccessMessage] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
+
+  // Optional fields management
+  const [showOptionalFieldsModal, setShowOptionalFieldsModal] = useState(false);
+  const [selectedRiceForOptionalFields, setSelectedRiceForOptionalFields] =
+    useState(null);
+  const [optionalFieldsForm, setOptionalFieldsForm] = useState({
+    godownDate: "",
+    ackNo: "",
+    sampleNumber: "",
+  });
 
   const initialRiceForm = {
     date: "",
@@ -68,48 +76,294 @@ const RiceManagement = () => {
     lorryNumber: "",
     depositGodown: "",
     variety: "",
-    godownDate: "",
-    ackNo: "",
     riceBag: 0,
     riceBagFrk: 0,
     depositWeight: 0,
     depositWeightFrk: 0,
     totalRiceDeposit: 0,
     moisture: 0,
-    sampleNumber: "",
-    paddyReference: "",
-    billRate: 0, // Bill rate per kg for calculation
     gunny: {
-      onb: 0,
-      ss: 0,
-      swp: 0,
-    },
-    gunnyUsedFromPaddy: {
-      nb: 0,
       onb: 0,
       ss: 0,
       swp: 0,
     },
     gunnyBags: 0,
     gunnyWeight: 0,
-    invoiceNumber: "",
-    invoiceGenerated: false,
   };
 
   const [riceForm, setRiceForm] = useState(initialRiceForm);
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [selectedRiceForInvoice, setSelectedRiceForInvoice] = useState(null);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [previewInvoiceData, setPreviewInvoiceData] = useState(null);
+
+  // Calculate variety summary - Expected vs Actual vs Pending
+  const calculateVarietySummary = useCallback(() => {
+    console.log("Calculating variety production analysis:", {
+      paddyData,
+      riceDeposits,
+    }); // Debug log
+    const varietyMap = new Map();
+
+    // Calculate total gunny counts (shared across all varieties)
+    const totalExpectedGunny = paddyData.reduce((total, paddy) => {
+      return (
+        total +
+        ((paddy.gunny?.nb || 0) +
+          (paddy.gunny?.onb || 0) +
+          (paddy.gunny?.ss || 0) +
+          (paddy.gunny?.swp || 0))
+      );
+    }, 0);
+
+    const totalActualGunny = riceDeposits.reduce((total, rice) => {
+      return (
+        total +
+        ((rice.gunny?.onb || 0) +
+          (rice.gunny?.ss || 0) +
+          (rice.gunny?.swp || 0))
+      );
+    }, 0);
+
+    const totalPendingGunny = totalExpectedGunny - totalActualGunny;
+
+    // Calculate expected rice production from paddy data
+    paddyData.forEach((paddy) => {
+      const variety = paddy.paddyVariety || "Unknown";
+      if (!varietyMap.has(variety)) {
+        varietyMap.set(variety, {
+          variety: variety,
+          expectedRiceWeight: 0,
+          actualRiceWeight: 0,
+          actualRiceBags: 0,
+          depositRecords: 0,
+          // Shared gunny totals (same for all varieties)
+          totalExpectedGunny: totalExpectedGunny,
+          totalActualGunny: totalActualGunny,
+          totalPendingGunny: totalPendingGunny,
+        });
+      }
+
+      const summary = varietyMap.get(variety);
+      const paddyWeight = paddy.paddy?.weight || 0;
+
+      // Expected rice from this paddy (67%)
+      summary.expectedRiceWeight += paddyWeight * 0.67;
+    });
+
+    // Calculate actual rice production from rice deposits
+    riceDeposits.forEach((rice) => {
+      const variety = rice.variety || "Unknown";
+      if (!varietyMap.has(variety)) {
+        varietyMap.set(variety, {
+          variety: variety,
+          expectedRiceWeight: 0,
+          actualRiceWeight: 0,
+          actualRiceBags: 0,
+          depositRecords: 0,
+          // Shared gunny totals (same for all varieties)
+          totalExpectedGunny: totalExpectedGunny,
+          totalActualGunny: totalActualGunny,
+          totalPendingGunny: totalPendingGunny,
+        });
+      }
+
+      const summary = varietyMap.get(variety);
+      summary.depositRecords += 1;
+      summary.actualRiceWeight +=
+        (rice.depositWeight || 0) + (rice.depositWeightFrk || 0);
+      summary.actualRiceBags += (rice.riceBag || 0) + (rice.riceBagFrk || 0);
+    });
+
+    // Calculate pending rice and efficiency for each variety
+    const varietyArray = Array.from(varietyMap.values())
+      .map((variety) => ({
+        ...variety,
+        pendingRiceWeight:
+          variety.expectedRiceWeight - variety.actualRiceWeight,
+        efficiency:
+          variety.expectedRiceWeight > 0
+            ? (variety.actualRiceWeight / variety.expectedRiceWeight) * 100
+            : 0,
+      }))
+      .sort((a, b) => a.variety.localeCompare(b.variety));
+
+    console.log("Variety production analysis calculated:", varietyArray); // Debug log
+    setVarietySummary(varietyArray);
+  }, [paddyData, riceDeposits]);
+
+  // Fetch functions defined after calculateVarietySummary
+  const fetchRiceData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await riceDepositService.getAllRiceDeposits();
+      setRiceDeposits(data);
+
+      // Debug: Check for rice/gunny bag mismatches
+      console.log("=== RICE/GUNNY MISMATCH ANALYSIS ===");
+      data.forEach((rice, index) => {
+        const totalRiceBags = (rice.riceBag || 0) + (rice.riceBagFrk || 0);
+        const totalGunnyBags = rice.gunnyBags || 0;
+        const individualGunnyTotal =
+          (rice.gunny?.onb || 0) +
+          (rice.gunny?.ss || 0) +
+          (rice.gunny?.swp || 0);
+
+        if (
+          totalRiceBags !== totalGunnyBags ||
+          totalGunnyBags !== individualGunnyTotal
+        ) {
+          console.log(
+            `⚠️ MISMATCH in Record ${index + 1} (${rice.truckMemo}):`
+          );
+          console.log(
+            `  Rice Bags: ${totalRiceBags} (${rice.riceBag || 0} + ${
+              rice.riceBagFrk || 0
+            })`
+          );
+          console.log(`  Gunny Bags Field: ${totalGunnyBags}`);
+          console.log(
+            `  Individual Gunny: ${individualGunnyTotal} (${
+              rice.gunny?.onb || 0
+            } + ${rice.gunny?.ss || 0} + ${rice.gunny?.swp || 0})`
+          );
+          console.log(
+            `  Difference: Rice-Gunny = ${
+              totalRiceBags - totalGunnyBags
+            }, Gunny-Individual = ${totalGunnyBags - individualGunnyTotal}`
+          );
+        }
+      });
+
+      const totalRice = data.reduce(
+        (sum, rice) => sum + ((rice.riceBag || 0) + (rice.riceBagFrk || 0)),
+        0
+      );
+      const totalGunny = data.reduce(
+        (sum, rice) => sum + (rice.gunnyBags || 0),
+        0
+      );
+      console.log(
+        `TOTALS: Rice Bags = ${totalRice}, Gunny Bags = ${totalGunny}, Difference = ${
+          totalGunny - totalRice
+        }`
+      );
+    } catch (error) {
+      console.error("Error fetching rice deposit data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchRiceStats = useCallback(async () => {
+    try {
+      const data = await riceDepositService.getRiceDepositStats();
+      console.log("Rice deposit stats from backend:", data); // Debug log
+      setStats(data);
+    } catch (error) {
+      console.error("Error fetching rice deposit stats:", error);
+    }
+  }, []);
+
+  // Calculate FRK specific statistics
+  const calculateFrkStats = useCallback(() => {
+    console.log("Calculating FRK stats for rice deposits:", riceDeposits); // Debug log
+
+    const frkStats = riceDeposits.reduce(
+      (acc, rice) => {
+        const frkBags = rice.riceBagFrk || 0;
+        const frkWeight = rice.depositWeightFrk || 0;
+        const regularBags = rice.riceBag || 0;
+        const regularWeight = rice.depositWeight || 0;
+
+        if (frkBags > 0 || frkWeight > 0) {
+          acc.frkCount += 1;
+          acc.frkRiceBags += frkBags;
+          acc.frkRiceWeight += frkWeight;
+
+          // Calculate gunny bags proportional to FRK rice
+          const totalRiceBags = regularBags + frkBags;
+          const totalRiceWeight = regularWeight + frkWeight;
+
+          // Use the gunnyBags field (total) for calculation, not individual gunny types
+          const totalGunnyBags = rice.gunnyBags || 0;
+          const individualGunnyTotal =
+            (rice.gunny?.onb || 0) +
+            (rice.gunny?.ss || 0) +
+            (rice.gunny?.swp || 0);
+
+          console.log(
+            `Rice ${rice._id}: gunnyBags=${totalGunnyBags}, individual total=${individualGunnyTotal}, FRK bags=${frkBags}, regular bags=${regularBags}`
+          );
+
+          if (totalRiceBags > 0 && totalGunnyBags > 0) {
+            // Proportional gunny allocation based on FRK rice bags
+            const frkGunnyProportion = frkBags / totalRiceBags;
+            const allocatedFrkGunny = Math.round(
+              totalGunnyBags * frkGunnyProportion
+            );
+            acc.frkGunnyBags += allocatedFrkGunny;
+            console.log(
+              `FRK gunny allocation: ${allocatedFrkGunny} (${(
+                frkGunnyProportion * 100
+              ).toFixed(1)}% of ${totalGunnyBags})`
+            );
+          } else if (totalRiceWeight > 0 && totalGunnyBags > 0) {
+            // Proportional gunny allocation based on FRK rice weight
+            const frkGunnyProportion = frkWeight / totalRiceWeight;
+            const allocatedFrkGunny = Math.round(
+              totalGunnyBags * frkGunnyProportion
+            );
+            acc.frkGunnyBags += allocatedFrkGunny;
+            console.log(
+              `FRK gunny allocation (by weight): ${allocatedFrkGunny} (${(
+                frkGunnyProportion * 100
+              ).toFixed(1)}% of ${totalGunnyBags})`
+            );
+          }
+
+          // Proportional gunny weight allocation
+          if (totalRiceWeight > 0) {
+            const frkGunnyWeightProportion = frkWeight / totalRiceWeight;
+            acc.frkGunnyWeight += Math.round(
+              (rice.gunnyWeight || 0) * frkGunnyWeightProportion
+            );
+          }
+        }
+
+        return acc;
+      },
+      {
+        frkCount: 0,
+        frkRiceBags: 0,
+        frkRiceWeight: 0,
+        frkGunnyBags: 0,
+        frkGunnyWeight: 0,
+      }
+    );
+
+    console.log("Final FRK stats calculated:", frkStats); // Debug log
+
+    setStats((prev) => ({
+      ...prev,
+      ...frkStats,
+    }));
+  }, [riceDeposits]);
+
+  const fetchPaddyData = useCallback(async () => {
+    try {
+      const data = await getAllPaddy();
+      const paddyArray = data.data || data;
+      console.log("Paddy data fetched:", paddyArray); // Debug log
+      setPaddyData(paddyArray);
+    } catch (error) {
+      console.error("Error fetching paddy data:", error);
+    }
+  }, []);
 
   // Fetch rice deposit data
   useEffect(() => {
     fetchRiceData();
     fetchRiceStats();
     fetchPaddyData();
-  }, []);
+  }, [fetchRiceData, fetchRiceStats, fetchPaddyData]);
 
   // Refetch data when branch changes
   useEffect(() => {
@@ -118,7 +372,7 @@ const RiceManagement = () => {
       fetchRiceStats();
       fetchPaddyData();
     }
-  }, [currentBranchId]);
+  }, [currentBranchId, fetchRiceData, fetchRiceStats, fetchPaddyData]);
 
   // Clear success message after 5 seconds
   useEffect(() => {
@@ -130,39 +384,28 @@ const RiceManagement = () => {
     }
   }, [successMessage]);
 
-  const fetchRiceData = async () => {
-    try {
-      setLoading(true);
-      const data = await riceDepositService.getAllRiceDeposits();
-      setRiceDeposits(data);
-    } catch (error) {
-      console.error("Error fetching rice deposit data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRiceStats = async () => {
-    try {
-      const data = await riceDepositService.getRiceDepositStats();
-      setStats(data);
-    } catch (error) {
-      console.error("Error fetching rice deposit stats:", error);
-    }
-  };
-
-  const fetchPaddyData = async () => {
-    try {
-      const data = await getAllPaddy();
-      setPaddyData(data.data || data);
-    } catch (error) {
-      console.error("Error fetching paddy data:", error);
-    }
-  };
-
   // Calculate rice comparison statistics
-  const calculateRiceComparison = () => {
-    const actualRiceOutput = stats.totalRiceWeight || 0;
+  const calculateRiceComparison = useCallback(() => {
+    // Separate regular rice production from FRK rice deposits
+    const regularRiceWeight = riceDeposits.reduce((total, rice) => {
+      return total + ((rice.depositWeight || 0) - (rice.depositWeightFrk || 0));
+    }, 0);
+
+    const frkRiceWeight = riceDeposits.reduce((total, rice) => {
+      return total + (rice.depositWeightFrk || 0);
+    }, 0);
+
+    const totalActualRiceOutput = regularRiceWeight + frkRiceWeight;
+
+    const regularRiceBags = riceDeposits.reduce((total, rice) => {
+      return total + ((rice.riceBag || 0) - (rice.riceBagFrk || 0));
+    }, 0);
+
+    const frkRiceBags = riceDeposits.reduce((total, rice) => {
+      return total + (rice.riceBagFrk || 0);
+    }, 0);
+
+    const totalActualRiceBags = regularRiceBags + frkRiceBags;
 
     // Calculate expected rice output (67% of total paddy weight)
     const totalPaddyWeight = paddyData.reduce((total, paddy) => {
@@ -171,15 +414,20 @@ const RiceManagement = () => {
 
     const expectedRiceOutput = totalPaddyWeight * 0.67;
     const expectedByproducts = totalPaddyWeight * 0.33;
-    const actualByproducts = Math.max(0, totalPaddyWeight - actualRiceOutput);
-    const difference = actualRiceOutput - expectedRiceOutput;
+    const actualByproducts = Math.max(0, totalPaddyWeight - regularRiceWeight);
+    const difference = totalActualRiceOutput - expectedRiceOutput;
     const efficiency =
       expectedRiceOutput > 0
-        ? (actualRiceOutput / expectedRiceOutput) * 100
+        ? (regularRiceWeight / expectedRiceOutput) * 100
         : 0;
 
     setRiceComparison({
-      actualRiceOutput,
+      actualRiceOutput: totalActualRiceOutput,
+      regularRiceOutput: regularRiceWeight,
+      frkRiceOutput: frkRiceWeight,
+      totalRiceBags: totalActualRiceBags,
+      regularRiceBags: regularRiceBags,
+      frkRiceBags: frkRiceBags,
       expectedRiceOutput,
       expectedByproducts,
       actualByproducts,
@@ -187,46 +435,40 @@ const RiceManagement = () => {
       efficiency,
       difference,
     });
-  };
+  }, [paddyData, riceDeposits]);
 
-  // Update comparison when stats or paddy data changes
+  // Calculate FRK stats when rice deposits change
   useEffect(() => {
-    if (stats.totalRiceWeight !== undefined && paddyData.length > 0) {
+    if (riceDeposits.length > 0) {
+      calculateFrkStats();
+    }
+  }, [riceDeposits, calculateFrkStats]);
+
+  // Calculate variety summary when rice deposits change
+  useEffect(() => {
+    calculateVarietySummary();
+  }, [riceDeposits, calculateVarietySummary]);
+
+  // Update comparison when stats, paddy data, or rice deposits change
+  useEffect(() => {
+    if (paddyData.length > 0 || riceDeposits.length > 0) {
       calculateRiceComparison();
     }
-  }, [stats, paddyData]);
+  }, [stats, paddyData, riceDeposits, calculateRiceComparison]);
 
   // Rice CRUD operations
   const openRiceModal = (rice = null) => {
     setEditingRice(rice);
-    setRiceForm(
-      rice
-        ? {
-            ...initialRiceForm,
-            ...rice,
-            gunny: { ...initialRiceForm.gunny, ...rice.gunny },
-            gunnyUsedFromPaddy: {
-              ...initialRiceForm.gunnyUsedFromPaddy,
-              ...rice.gunnyUsedFromPaddy,
-            },
-          }
-        : initialRiceForm
-    );
 
-    // Set selected paddy if editing
-    if (rice && rice.paddyReference) {
-      const paddyRecord = paddyData.find(
-        (paddy) => paddy._id === rice.paddyReference
-      );
-      setSelectedPaddy(paddyRecord);
-      setUsedGunnyFromPaddy(
-        rice.gunnyUsedFromPaddy || { nb: 0, onb: 0, ss: 0, swp: 0 }
-      );
-    } else {
-      setSelectedPaddy(null);
-      setUsedGunnyFromPaddy({ nb: 0, onb: 0, ss: 0, swp: 0 });
-    }
+    const formData = rice
+      ? {
+          ...initialRiceForm,
+          ...rice,
+          gunny: { ...initialRiceForm.gunny, ...rice.gunny },
+        }
+      : { ...initialRiceForm };
 
+    setRiceForm(formData);
     setShowRiceModal(true);
   };
 
@@ -234,8 +476,6 @@ const RiceManagement = () => {
     setShowRiceModal(false);
     setEditingRice(null);
     setRiceForm(initialRiceForm);
-    setSelectedPaddy(null);
-    setUsedGunnyFromPaddy({ nb: 0, onb: 0, ss: 0, swp: 0 });
     setErrorMessage(null);
   };
 
@@ -258,90 +498,79 @@ const RiceManagement = () => {
     }
   };
 
-  const handlePaddySelection = (paddyId) => {
-    const selectedPaddyRecord = paddyData.find(
-      (paddy) => paddy._id === paddyId
-    );
-    setSelectedPaddy(selectedPaddyRecord);
-    setRiceForm({
-      ...riceForm,
-      paddyReference: paddyId,
-    });
-    // Reset gunny usage when paddy changes
-    setUsedGunnyFromPaddy({ nb: 0, onb: 0, ss: 0, swp: 0 });
-  };
-
-  const handleGunnyUsageChange = (grade, value) => {
-    const newUsedGunny = {
-      ...usedGunnyFromPaddy,
-      [grade]: parseInt(value) || 0,
-    };
-    setUsedGunnyFromPaddy(newUsedGunny);
-
-    // Update the form with the new gunny usage
-    setRiceForm({
-      ...riceForm,
-      gunnyUsedFromPaddy: newUsedGunny,
-    });
-  };
-
   const handleFilesChange = (files) => {
     setSelectedFiles(files);
   };
 
-  const openInvoiceModal = (rice) => {
-    setSelectedRiceForInvoice(rice);
-    setShowInvoiceModal(true);
+  // Optional fields modal functions
+  const openOptionalFieldsModal = (rice) => {
+    setSelectedRiceForOptionalFields(rice);
+    setOptionalFieldsForm({
+      godownDate: rice.godownDate
+        ? new Date(rice.godownDate).toISOString().split("T")[0]
+        : "",
+      ackNo: rice.ackNo || "",
+      sampleNumber: rice.sampleNumber || "",
+    });
+    setShowOptionalFieldsModal(true);
   };
 
-  const closeInvoiceModal = () => {
-    setShowInvoiceModal(false);
-    setSelectedRiceForInvoice(null);
+  const closeOptionalFieldsModal = () => {
+    setShowOptionalFieldsModal(false);
+    setSelectedRiceForOptionalFields(null);
+    setOptionalFieldsForm({
+      godownDate: "",
+      ackNo: "",
+      sampleNumber: "",
+    });
   };
 
-  const handleGenerateInvoice = (invoiceData) => {
+  const handleOptionalFieldsFormChange = (e) => {
+    const { name, value } = e.target;
+    setOptionalFieldsForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const saveOptionalFields = async (e) => {
+    e.preventDefault();
+    if (!selectedRiceForOptionalFields) return;
+
+    setLoading(true);
     try {
-      setLoading(true);
+      const updateData = {
+        ...optionalFieldsForm,
+      };
 
-      // Update rice deposit with invoice information
+      await riceDepositService.updateRiceDeposit(
+        selectedRiceForOptionalFields._id,
+        updateData
+      );
+
+      // Update local state
       setRiceDeposits((prev) =>
         prev.map((rice) =>
-          rice._id === selectedRiceForInvoice._id
-            ? {
-                ...rice,
-                invoiceNumber: invoiceData.invoiceNumber,
-                invoiceGenerated: true,
-              }
+          rice._id === selectedRiceForOptionalFields._id
+            ? { ...rice, ...updateData }
             : rice
         )
       );
 
-      alert("Rice deposit invoice generated successfully!");
-      closeInvoiceModal();
+      const hasExistingDetails =
+        selectedRiceForOptionalFields.godownDate ||
+        selectedRiceForOptionalFields.ackNo ||
+        selectedRiceForOptionalFields.sampleNumber;
+
+      setSuccessMessage(
+        hasExistingDetails
+          ? "Optional details updated successfully!"
+          : "Optional details added successfully!"
+      );
+      closeOptionalFieldsModal();
     } catch (error) {
-      setErrorMessage("Error generating invoice: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const openPreviewModal = (rice) => {
-    setPreviewInvoiceData(rice);
-    setShowPreviewModal(true);
-  };
-
-  const closePreviewModal = () => {
-    setShowPreviewModal(false);
-    setPreviewInvoiceData(null);
-  };
-
-  const downloadInvoice = async (rice) => {
-    try {
-      setLoading(true);
-      // TODO: Implement actual PDF download
-      alert("Invoice download functionality coming soon!");
-    } catch (error) {
-      setErrorMessage("Error downloading invoice: " + error.message);
+      console.error("Error updating optional fields:", error);
+      setErrorMessage("Failed to add optional details. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -350,61 +579,33 @@ const RiceManagement = () => {
   const saveRice = async (e) => {
     e.preventDefault();
 
-    // Validate gunny stock availability
-    if (selectedPaddy && riceForm.paddyReference) {
-      const validationErrors = [];
-
-      // Check NB gunny availability
-      if (usedGunnyFromPaddy.nb > selectedPaddy.gunny?.nb) {
-        validationErrors.push(
-          `NB gunny: Requested ${usedGunnyFromPaddy.nb}, Available ${
-            selectedPaddy.gunny?.nb || 0
-          }`
-        );
-      }
-
-      // Check ONB gunny availability
-      if (usedGunnyFromPaddy.onb > selectedPaddy.gunny?.onb) {
-        validationErrors.push(
-          `ONB gunny: Requested ${usedGunnyFromPaddy.onb}, Available ${
-            selectedPaddy.gunny?.onb || 0
-          }`
-        );
-      }
-
-      // Check SS gunny availability
-      if (usedGunnyFromPaddy.ss > selectedPaddy.gunny?.ss) {
-        validationErrors.push(
-          `SS gunny: Requested ${usedGunnyFromPaddy.ss}, Available ${
-            selectedPaddy.gunny?.ss || 0
-          }`
-        );
-      }
-
-      // Check SWP gunny availability
-      if (usedGunnyFromPaddy.swp > selectedPaddy.gunny?.swp) {
-        validationErrors.push(
-          `SWP gunny: Requested ${usedGunnyFromPaddy.swp}, Available ${
-            selectedPaddy.gunny?.swp || 0
-          }`
-        );
-      }
-
-      if (validationErrors.length > 0) {
-        setErrorMessage(
-          "Insufficient gunny stock: " + validationErrors.join(", ")
-        );
-        return;
-      }
-    }
-
     try {
       setLoading(true);
+
+      // Prepare form data - ensure proper structure
+      const formData = {
+        ...riceForm,
+        // Ensure gunny object is properly structured
+        gunny: {
+          onb: parseInt(riceForm.gunny?.onb) || 0,
+          ss: parseInt(riceForm.gunny?.ss) || 0,
+          swp: parseInt(riceForm.gunny?.swp) || 0,
+        },
+      };
+
+      console.log("Saving rice deposit with data:", formData); // Debug log
+
       if (editingRice) {
-        await riceDepositService.updateRiceDeposit(editingRice._id, riceForm);
+        const result = await riceDepositService.updateRiceDeposit(
+          editingRice._id,
+          formData
+        );
+        console.log("Update result:", result); // Debug log
       } else {
-        await riceDepositService.createRiceDeposit(riceForm);
+        const result = await riceDepositService.createRiceDeposit(formData);
+        console.log("Create result:", result); // Debug log
       }
+
       // Show success message
       setSuccessMessage(
         editingRice
@@ -422,7 +623,8 @@ const RiceManagement = () => {
     } catch (error) {
       console.error("Error saving rice deposit:", error);
       setErrorMessage(
-        "Error saving rice deposit: " + (error.message || "Unknown error")
+        "Error saving rice deposit: " +
+          (error.response?.data?.message || error.message || "Unknown error")
       );
     } finally {
       setLoading(false);
@@ -533,17 +735,49 @@ const RiceManagement = () => {
       ],
     },
     {
-      label: "GODOWN",
+      label: "OPTIONAL DETAILS",
       columns: [
         {
-          key: "godownDate",
-          label: "DATE",
-          render: (value) => new Date(value).toLocaleDateString(),
-        },
-        {
-          key: "ackNo",
-          label: "ACK NO",
-          render: (value) => value,
+          key: "optionalDetails",
+          label: "DETAILS",
+          render: (value, row) => {
+            const hasOptionalFields =
+              row.godownDate || row.ackNo || row.sampleNumber;
+            if (hasOptionalFields) {
+              return (
+                <div className="space-y-1 text-xs">
+                  {row.godownDate && (
+                    <div>
+                      <span className="font-medium">Date:</span>{" "}
+                      {new Date(row.godownDate).toLocaleDateString()}
+                    </div>
+                  )}
+                  {row.ackNo && (
+                    <div>
+                      <span className="font-medium">ACK:</span> {row.ackNo}
+                    </div>
+                  )}
+                  {row.sampleNumber && (
+                    <div>
+                      <span className="font-medium">Sample:</span>{" "}
+                      {row.sampleNumber}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return (
+              <Button
+                onClick={() => openOptionalFieldsModal(row)}
+                variant="outline"
+                size="sm"
+                icon="plus"
+                className="text-xs py-1 px-2"
+              >
+                Godown Details
+              </Button>
+            );
+          },
         },
       ],
     },
@@ -578,29 +812,11 @@ const RiceManagement = () => {
       ],
     },
     {
-      label: "TOTAL RICE DEPOSIT",
-      columns: [
-        {
-          key: "totalRiceDeposit",
-          render: (value) => value || 0,
-        },
-      ],
-    },
-    {
-      label: "MOISTURE",
+      label: "MOISTURE %",
       columns: [
         {
           key: "moisture",
           render: (value) => value || 0,
-        },
-      ],
-    },
-    {
-      label: "SAMPLE NUMBER",
-      columns: [
-        {
-          key: "sampleNumber",
-          render: (value) => value || "N/A",
         },
       ],
     },
@@ -631,24 +847,6 @@ const RiceManagement = () => {
           key: "gunnyWeight",
           label: "WEIGHT",
           render: (value) => value || 0,
-        },
-      ],
-    },
-    {
-      label: "INVOICE",
-      columns: [
-        {
-          key: "invoiceNumber",
-          label: "INVOICE #",
-          render: (value) => (
-            <span
-              className={`font-medium ${
-                value ? "text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              {value || "Not Generated"}
-            </span>
-          ),
         },
       ],
     },
@@ -723,44 +921,43 @@ const RiceManagement = () => {
         )}
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+          {/* Overall Stats */}
           <div className="rounded-lg border border-border bg-muted p-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Total Records</p>
-              <p className="text-2xl font-bold text-foreground">{stats.count}</p>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-border bg-muted p-4">
-            <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Total ONB</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Records
+              </p>
               <p className="text-2xl font-bold text-foreground">
-                {stats.totalONB}
+                {stats.count}
               </p>
             </div>
           </div>
 
           <div className="rounded-lg border border-border bg-muted p-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Total SS</p>
-              <p className="text-2xl font-bold text-foreground">
-                {stats.totalSS}
+              <p className="text-sm font-medium text-muted-foreground">
+                Rice Bags
               </p>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-border bg-muted p-4">
-            <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Rice Bags</p>
               <p className="text-2xl font-bold text-foreground">
                 {stats.totalRiceBags}
               </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Manual:{" "}
+                {riceDeposits.reduce(
+                  (total, rice) =>
+                    total + ((rice.riceBag || 0) + (rice.riceBagFrk || 0)),
+                  0
+                )}
+              </p>
             </div>
           </div>
 
           <div className="rounded-lg border border-border bg-muted p-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Rice Weight</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Rice Weight
+              </p>
               <p className="text-2xl font-bold text-foreground">
                 {formatWeight(stats.totalRiceWeight)}
               </p>
@@ -769,18 +966,70 @@ const RiceManagement = () => {
 
           <div className="rounded-lg border border-border bg-muted p-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Total Rice</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Gunny Bags
+              </p>
               <p className="text-2xl font-bold text-foreground">
-                {stats.totalRiceDeposit}
+                {stats.totalGunnyBags}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Manual Total:{" "}
+                {riceDeposits.reduce(
+                  (total, rice) => total + (rice.gunnyBags || 0),
+                  0
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Individual:{" "}
+                {riceDeposits.reduce(
+                  (total, rice) =>
+                    total +
+                    ((rice.gunny?.onb || 0) +
+                      (rice.gunny?.ss || 0) +
+                      (rice.gunny?.swp || 0)),
+                  0
+                )}
               </p>
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-muted p-4">
+          {/* FRK Specific Stats */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Gunny Bags</p>
-              <p className="text-2xl font-bold text-foreground">
-                {stats.totalGunnyBags}
+              <p className="text-sm font-medium text-blue-600">FRK Records</p>
+              <p className="text-2xl font-bold text-blue-700">
+                {stats.frkCount}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="text-center">
+              <p className="text-sm font-medium text-blue-600">FRK Rice Bags</p>
+              <p className="text-2xl font-bold text-blue-700">
+                {stats.frkRiceBags}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="text-center">
+              <p className="text-sm font-medium text-blue-600">
+                FRK Rice Weight
+              </p>
+              <p className="text-2xl font-bold text-blue-700">
+                {formatWeight(stats.frkRiceWeight)}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="text-center">
+              <p className="text-sm font-medium text-blue-600">
+                FRK Gunny Bags
+              </p>
+              <p className="text-2xl font-bold text-blue-700">
+                {stats.frkGunnyBags}
               </p>
             </div>
           </div>
@@ -794,38 +1043,79 @@ const RiceManagement = () => {
                 Rice Output Analysis
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Actual vs Expected Rice Production (67% of paddy weight)
+                Paddy Rice Production (67%) + FRK Rice Deposits = Total Rice
+                Output
               </p>
             </div>
 
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Actual Rice Output */}
+              {/* Rice Production Breakdown */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                {/* Regular Rice from Paddy */}
                 <div className="text-center">
-                  <div className="bg-muted rounded-lg p-4 border border-border">
-                    <div className="text-2xl font-bold text-foreground mb-2">
-                      {formatWeight(riceComparison.actualRiceOutput)}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="text-xl font-bold text-green-700 mb-1">
+                      {formatWeight(riceComparison.regularRiceOutput || 0)}
                     </div>
-                    <div className="text-sm font-medium text-muted-foreground">
-                      Actual Rice Output
+                    <div className="text-sm font-medium text-green-600">
+                      Regular Rice
+                    </div>
+                    <div className="text-xs text-green-500 mt-1">
+                      From Paddy (67%)
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Total rice produced
+                      {riceComparison.regularRiceBags || 0} bags
                     </div>
                   </div>
                 </div>
 
-                {/* Expected Rice Output */}
+                {/* FRK Rice Additional */}
+                <div className="text-center">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="text-xl font-bold text-blue-700 mb-1">
+                      {formatWeight(riceComparison.frkRiceOutput || 0)}
+                    </div>
+                    <div className="text-sm font-medium text-blue-600">
+                      FRK Rice
+                    </div>
+                    <div className="text-xs text-blue-500 mt-1">
+                      Additional Deposits
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {riceComparison.frkRiceBags || 0} bags
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Rice Output */}
+                <div className="text-center">
+                  <div className="bg-primary/10 border border-primary rounded-lg p-4">
+                    <div className="text-2xl font-bold text-primary mb-1">
+                      {formatWeight(riceComparison.actualRiceOutput)}
+                    </div>
+                    <div className="text-sm font-medium text-primary">
+                      Total Rice Output
+                    </div>
+                    <div className="text-xs text-primary/70 mt-1">
+                      Regular + FRK
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {riceComparison.totalRiceBags || 0} bags
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expected vs Actual */}
                 <div className="text-center">
                   <div className="bg-muted rounded-lg p-4 border border-border">
-                    <div className="text-2xl font-bold text-foreground mb-2">
+                    <div className="text-xl font-bold text-foreground mb-1">
                       {formatWeight(riceComparison.expectedRiceOutput)}
                     </div>
                     <div className="text-sm font-medium text-muted-foreground">
-                      Expected Rice Output
+                      Expected (67%)
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      67% of total paddy weight
+                      From Paddy Only
                     </div>
                   </div>
                 </div>
@@ -833,53 +1123,48 @@ const RiceManagement = () => {
                 {/* Efficiency */}
                 <div className="text-center">
                   <div className="rounded-lg p-4 border border-border bg-muted">
-                    <div className="text-2xl font-bold mb-2 text-foreground">
+                    <div className="text-xl font-bold mb-1 text-foreground">
                       {riceComparison.efficiency.toFixed(1)}%
                     </div>
                     <div className="text-sm font-medium text-muted-foreground">
-                      Production Efficiency
+                      Paddy Efficiency
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Actual vs Expected
-                    </div>
-                  </div>
-                </div>
-
-                {/* Difference */}
-                <div className="text-center">
-                  <div className="rounded-lg p-4 border border-border bg-muted">
-                    <div className="text-2xl font-bold mb-2 text-foreground">
-                      {riceComparison.difference >= 0 ? "+" : ""}
-                      {formatWeight(riceComparison.difference)}
-                    </div>
-                    <div className="text-sm font-medium text-muted-foreground">
-                      Pending Rice
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Actual - Expected
+                      Regular vs Expected
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Additional Details */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                 <div className="bg-muted rounded-lg p-3">
                   <div className="font-medium text-foreground mb-1">
-                    Processing Summary
+                    Rice Production Summary
                   </div>
                   <div className="text-muted-foreground">
                     <div>
-                      • Total Paddy Weight:{" "}
-                      {formatWeight(riceComparison.totalPaddyWeight)}
+                      • Regular Rice:{" "}
+                      {formatWeight(riceComparison.regularRiceOutput || 0)}
+                      <span className="text-xs text-green-600">
+                        {" "}
+                        ({riceComparison.regularRiceBags || 0} bags)
+                      </span>
                     </div>
                     <div>
-                      • Expected Rice:{" "}
-                      {formatWeight(riceComparison.expectedRiceOutput)}
+                      • FRK Rice:{" "}
+                      {formatWeight(riceComparison.frkRiceOutput || 0)}
+                      <span className="text-xs text-blue-600">
+                        {" "}
+                        ({riceComparison.frkRiceBags || 0} bags)
+                      </span>
                     </div>
-                    <div>
-                      • Actual Rice:{" "}
-                      {formatWeight(riceComparison.actualRiceOutput)}
+                    <div className="font-medium">
+                      • Total: {formatWeight(riceComparison.actualRiceOutput)}
+                      <span className="text-xs">
+                        {" "}
+                        ({riceComparison.totalRiceBags || 0} bags)
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -889,10 +1174,17 @@ const RiceManagement = () => {
                     Efficiency Analysis
                   </div>
                   <div className="text-muted-foreground">
-                    <div>• Target Efficiency: 100%</div>
                     <div>
-                      • Current Efficiency:{" "}
-                      {riceComparison.efficiency.toFixed(1)}%
+                      • Paddy Weight:{" "}
+                      {formatWeight(riceComparison.totalPaddyWeight)}
+                    </div>
+                    <div>
+                      • Expected (67%):{" "}
+                      {formatWeight(riceComparison.expectedRiceOutput)}
+                    </div>
+                    <div>
+                      • Paddy Efficiency: {riceComparison.efficiency.toFixed(1)}
+                      %
                     </div>
                     <div>
                       • Status:{" "}
@@ -905,22 +1197,53 @@ const RiceManagement = () => {
                   </div>
                 </div>
 
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="font-medium text-blue-700 mb-1">
+                    FRK Rice Details
+                  </div>
+                  <div className="text-blue-600">
+                    <div>• FRK Records: {stats.frkCount}</div>
+                    <div>• FRK Rice Bags: {stats.frkRiceBags}</div>
+                    <div>
+                      • FRK Rice Weight: {formatWeight(stats.frkRiceWeight)}
+                    </div>
+                    <div>• FRK Gunny: {stats.frkGunnyBags} bags</div>
+                  </div>
+                </div>
+
                 <div className="bg-muted rounded-lg p-3">
                   <div className="font-medium text-foreground mb-1">
-                    Production Insights
+                    FRK Impact Analysis
                   </div>
                   <div className="text-muted-foreground">
-                    <div>• Processing Ratio: 67% rice, 33% by-products</div>
+                    <div>• Base Production: 67% from paddy</div>
                     <div>
-                      • By-products:{" "}
-                      {formatWeight(riceComparison.totalPaddyWeight * 0.33)}
+                      • FRK Addition: +
+                      {formatWeight(riceComparison.frkRiceOutput || 0)}
                     </div>
-                    <div>• Total Records: {stats.count}</div>
+                    <div>
+                      • Total Increase:{" "}
+                      {riceComparison.frkRiceOutput > 0 &&
+                      riceComparison.expectedRiceOutput > 0
+                        ? `+${(
+                            (riceComparison.frkRiceOutput /
+                              riceComparison.expectedRiceOutput) *
+                            100
+                          ).toFixed(1)}%`
+                        : "0%"}
+                    </div>
+                    <div>
+                      • FRK Contribution:{" "}
+                      {stats.frkCount > 0
+                        ? `${((stats.frkCount / stats.count) * 100).toFixed(
+                            1
+                          )}%`
+                        : "0%"}{" "}
+                      of records
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Rice Output Calculations removed per request */}
             </div>
           </div>
         </div>
@@ -946,10 +1269,16 @@ const RiceManagement = () => {
                   startDate={dateRange.startDate}
                   endDate={dateRange.endDate}
                   onStartDateChange={(e) =>
-                    setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                    setDateRange((prev) => ({
+                      ...prev,
+                      startDate: e.target.value,
+                    }))
                   }
                   onEndDateChange={(e) =>
-                    setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                    setDateRange((prev) => ({
+                      ...prev,
+                      endDate: e.target.value,
+                    }))
                   }
                   startDateLabel="Date From"
                   endDateLabel="Date To"
@@ -1039,15 +1368,11 @@ const RiceManagement = () => {
                       </h5>
                       <div className="grid grid-cols-2 gap-4 text-sm w-full">
                         <div>
-                          <span className="text-muted-foreground">Rice Bags:</span>
+                          <span className="text-muted-foreground">
+                            Rice Bags:
+                          </span>
                           <span className="ml-1 font-medium text-foreground">
                             {rice.riceBag || 0}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Total Rice:</span>
-                          <span className="ml-1 font-medium text-foreground">
-                            {rice.totalRiceDeposit || 0}
                           </span>
                         </div>
                       </div>
@@ -1060,39 +1385,28 @@ const RiceManagement = () => {
                       </h5>
                       <div className="grid grid-cols-3 gap-4 text-sm w-full">
                         <div className="text-center">
-                          <div className="font-medium text-muted-foreground">ONB</div>
+                          <div className="font-medium text-muted-foreground">
+                            ONB
+                          </div>
                           <div className="text-foreground">
                             {rice.gunny?.onb || 0}
                           </div>
-                          {rice.gunnyUsedFromPaddy?.nb > 0 && (
-                            <div className="text-xs text-muted-foreground">
-                              (from {rice.gunnyUsedFromPaddy.nb} NB)
-                            </div>
-                          )}
                         </div>
                         <div className="text-center">
-                          <div className="font-medium text-muted-foreground">SS</div>
+                          <div className="font-medium text-muted-foreground">
+                            SS
+                          </div>
                           <div className="text-foreground">
                             {rice.gunny?.ss || 0}
                           </div>
-                          {rice.gunnyUsedFromPaddy?.onb > 0 && (
-                            <div className="text-xs text-muted-foreground">
-                              (from {rice.gunnyUsedFromPaddy.onb} ONB)
-                            </div>
-                          )}
                         </div>
                         <div className="text-center">
-                          <div className="font-medium text-muted-foreground">SWP</div>
+                          <div className="font-medium text-muted-foreground">
+                            SWP
+                          </div>
                           <div className="text-foreground">
                             {rice.gunny?.swp || 0}
                           </div>
-                          {(rice.gunnyUsedFromPaddy?.ss > 0 ||
-                            rice.gunnyUsedFromPaddy?.swp > 0) && (
-                            <div className="text-xs text-muted-foreground">
-                              (from {rice.gunnyUsedFromPaddy?.ss || 0} SS +{" "}
-                              {rice.gunnyUsedFromPaddy?.swp || 0} SWP)
-                            </div>
-                          )}
                         </div>
                       </div>
                       <div className="mt-2 pt-2 border-t border-border">
@@ -1112,54 +1426,54 @@ const RiceManagement = () => {
                 </div>
               </div>
             )}
-            actions={(rice) => [
-              <Button
-                key="edit"
-                onClick={() => openRiceModal(rice)}
-                variant="info"
-                icon="edit"
-              >
-                Edit
-              </Button>,
-              rice.invoiceNumber ? (
-                <>
-                  <Button
-                    key="preview-invoice"
-                    onClick={() => openPreviewModal(rice)}
-                    variant="info"
-                    icon="eye"
-                    className="mr-1"
-                  >
-                    Preview
-                  </Button>
-                  <Button
-                    key="download-invoice"
-                    onClick={() => downloadInvoice(rice)}
-                    variant="success"
-                    icon="download"
-                  >
-                    Download
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  key="generate-invoice"
-                  onClick={() => openInvoiceModal(rice)}
-                  variant="primary"
-                  icon="document-text"
+            actions={(rice) =>
+              [
+                <UIButton
+                  key="edit"
+                  onClick={() => openRiceModal(rice)}
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 px-2 gap-1"
                 >
-                  Generate Invoice
-                </Button>
-              ),
-              <Button
-                key="delete"
-                onClick={() => deleteRice(rice._id)}
-                variant="danger"
-                icon="delete"
-              >
-                Delete
-              </Button>,
-            ]}
+                  <Icon name="edit" className="h-4 w-4" />
+                  <span className="hidden sm:inline">Edit</span>
+                </UIButton>,
+                // Add/Edit Details button
+                !(rice.godownDate || rice.ackNo || rice.sampleNumber) ? (
+                  <UIButton
+                    key="add-details"
+                    onClick={() => openOptionalFieldsModal(rice)}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2 gap-1"
+                  >
+                    <Icon name="plus" className="h-4 w-4" />
+                    <span className="hidden sm:inline">Add Details</span>
+                  </UIButton>
+                ) : (
+                  <UIButton
+                    key="edit-details"
+                    onClick={() => openOptionalFieldsModal(rice)}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2 gap-1"
+                  >
+                    <Icon name="edit" className="h-4 w-4" />
+                    <span className="hidden sm:inline">Edit Details</span>
+                  </UIButton>
+                ),
+                <UIButton
+                  key="delete"
+                  onClick={() => deleteRice(rice._id)}
+                  variant="destructive"
+                  size="sm"
+                  className="h-8 px-2 gap-1"
+                >
+                  <Icon name="delete" className="h-4 w-4" />
+                  <span className="hidden sm:inline">Delete</span>
+                </UIButton>,
+              ].filter(Boolean)
+            }
           />
         </div>
 
@@ -1199,7 +1513,7 @@ const RiceManagement = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredRiceDeposits.map((rice, index) => (
+                {filteredRiceDeposits.map((rice) => (
                   <div
                     key={rice._id}
                     className="border border-border rounded-lg overflow-hidden"
@@ -1310,28 +1624,85 @@ const RiceManagement = () => {
                               {rice.variety}
                             </span>
                           </div>
-                          <div>
-                            <span className="font-medium text-muted-foreground">
-                              Ack No:
-                            </span>
-                            <span className="ml-2 text-foreground">
-                              {rice.ackNo}
-                            </span>
+                          {(rice.godownDate ||
+                            rice.ackNo ||
+                            rice.sampleNumber) && (
+                            <div className="border-t border-border pt-2 mt-2">
+                              <span className="font-medium text-muted-foreground text-sm">
+                                Optional Details:
+                              </span>
+                              <div className="mt-1 space-y-1">
+                                {rice.godownDate && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-muted-foreground">
+                                      Godown Date:
+                                    </span>
+                                    <span className="ml-2 text-foreground">
+                                      {new Date(
+                                        rice.godownDate
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                )}
+                                {rice.ackNo && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-muted-foreground">
+                                      ACK No:
+                                    </span>
+                                    <span className="ml-2 text-foreground">
+                                      {rice.ackNo}
+                                    </span>
+                                  </div>
+                                )}
+                                {rice.sampleNumber && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-muted-foreground">
+                                      Sample:
+                                    </span>
+                                    <span className="ml-2 text-foreground">
+                                      {rice.sampleNumber}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Add/Edit Details Button for Mobile */}
+                          <div className="mt-2">
+                            {!(
+                              rice.godownDate ||
+                              rice.ackNo ||
+                              rice.sampleNumber
+                            ) ? (
+                              <Button
+                                onClick={() => openOptionalFieldsModal(rice)}
+                                variant="outline"
+                                size="sm"
+                                icon="plus"
+                                className="text-xs"
+                              >
+                                Add Optional Details
+                              </Button>
+                            ) : (
+                              <Button
+                                onClick={() => openOptionalFieldsModal(rice)}
+                                variant="outline"
+                                size="sm"
+                                icon="edit"
+                                className="text-xs"
+                              >
+                                Edit Optional Details
+                              </Button>
+                            )}
                           </div>
+
                           <div>
                             <span className="font-medium text-muted-foreground">
                               Rice Bags:
                             </span>
                             <span className="ml-2 text-foreground">
                               {rice.riceBag || 0}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-muted-foreground">
-                              Total Rice:
-                            </span>
-                            <span className="ml-2 text-foreground">
-                              {rice.totalRiceDeposit || 0}
                             </span>
                           </div>
                           <div>
@@ -1348,17 +1719,6 @@ const RiceManagement = () => {
                             </span>
                             <span className="ml-2 text-foreground">
                               {rice.gunny?.ss || 0}
-                            </span>
-                          </div>
-                          <div>
-                            <span
-                              className={`ml-2 font-medium ${
-                                rice.invoiceNumber
-                                  ? "text-foreground"
-                                  : "text-muted-foreground"
-                              }`}
-                            >
-                              {rice.invoiceNumber || "Not Generated"}
                             </span>
                           </div>
                         </div>
@@ -1417,130 +1777,159 @@ const RiceManagement = () => {
               onChange={handleRiceFormChange}
               required
             />
-            <FormInput
+            <FormSelect
               label="Variety"
               name="variety"
-              type="text"
               value={riceForm.variety}
               onChange={handleRiceFormChange}
+              options={[
+                { value: "A", label: "Variety A" },
+                { value: "C", label: "Variety C" },
+              ]}
+              placeholder="Select Variety"
               required
-            />
-            <FormInput
-              label="Godown Date"
-              name="godownDate"
-              type="date"
-              value={riceForm.godownDate}
-              onChange={handleRiceFormChange}
-              required
-            />
-            <FormInput
-              label="Acknowledgment No"
-              name="ackNo"
-              type="text"
-              value={riceForm.ackNo}
-              onChange={handleRiceFormChange}
-              required
-            />
-            <FormInput
-              label="Sample Number"
-              name="sampleNumber"
-              type="text"
-              value={riceForm.sampleNumber}
-              onChange={handleRiceFormChange}
             />
           </div>
 
-          {/* Paddy Reference Selection */}
+          {/* Variety Summary Display */}
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Select Paddy Record *
-                <span className="text-destructive ml-1">*</span>
+                Rice Production by Variety Summary
               </label>
-              <select
-                name="paddyReference"
-                value={riceForm.paddyReference}
-                onChange={(e) => handlePaddySelection(e.target.value)}
-                className="block w-full border border-input bg-background text-foreground placeholder:text-muted-foreground rounded-md shadow-sm focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm"
-                required
-              >
-                <option value="">Select a paddy record...</option>
-                {paddyData.map((paddy) => (
-                  <option key={paddy._id} value={paddy._id}>
-                    {paddy.issueMemo} - {paddy.lorryNumber} - {paddy.paddyFrom}{" "}
-                    - Variety {paddy.paddyVariety}
-                  </option>
-                ))}
-              </select>
-            </div>
+              {varietySummary.length > 0 ? (
+                <div className="bg-muted border border-border rounded-lg p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {varietySummary.map((variety, index) => {
+                      const isSelected = riceForm.variety === variety.variety;
+                      return (
+                        <div
+                          key={index}
+                          className={`border rounded-lg p-3 transition-all duration-200 ${
+                            isSelected
+                              ? "bg-primary/10 border-primary shadow-md ring-2 ring-primary/20"
+                              : "bg-background border-border hover:border-muted-foreground/50"
+                          }`}
+                        >
+                          <div className="text-center">
+                            <h4
+                              className={`text-sm font-semibold mb-2 ${
+                                isSelected ? "text-primary" : "text-foreground"
+                              }`}
+                            >
+                              Variety {variety.variety}
+                              {isSelected && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary text-primary-foreground">
+                                  Selected
+                                </span>
+                              )}
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="text-center">
+                                  <span className="text-muted-foreground">
+                                    Expected Rice
+                                  </span>
+                                  <div className="font-bold text-blue-600">
+                                    {variety.expectedRiceWeight.toFixed(0)} kg
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <span className="text-muted-foreground">
+                                    Actual Rice
+                                  </span>
+                                  <div className="font-bold text-green-600">
+                                    {variety.actualRiceWeight.toFixed(0)} kg
+                                  </div>
+                                </div>
+                              </div>
 
-            {/* Selected Paddy Details */}
-            {selectedPaddy && (
-              <div className="bg-muted border border-border rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-foreground mb-2">
-                  Selected Paddy Details
-                </h4>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground font-medium">
-                      Issue Memo:
-                    </span>
-                    <span className="ml-2 text-foreground">
-                      {selectedPaddy.issueMemo}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground font-medium">
-                      Lorry Number:
-                    </span>
-                    <span className="ml-2 text-foreground">
-                      {selectedPaddy.lorryNumber}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground font-medium">
-                      Paddy From:
-                    </span>
-                    <span className="ml-2 text-foreground">
-                      {selectedPaddy.paddyFrom}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground font-medium">Variety:</span>
-                    <span className="ml-2 text-foreground">
-                      Variety {selectedPaddy.paddyVariety}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground font-medium">
-                      Available ONB:
-                    </span>
-                    <span className="ml-2 text-foreground">
-                      {selectedPaddy.gunny?.onb || 0}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground font-medium">
-                      Available SS:
-                    </span>
-                    <span className="ml-2 text-foreground">
-                      {selectedPaddy.gunny?.ss || 0}
-                    </span>
+                              <div className="text-center border-t pt-2">
+                                <span className="text-xs text-muted-foreground">
+                                  Pending Rice
+                                </span>
+                                <div
+                                  className={`text-sm font-bold ${
+                                    variety.pendingRiceWeight > 0
+                                      ? "text-orange-600"
+                                      : variety.pendingRiceWeight < 0
+                                      ? "text-red-600"
+                                      : "text-gray-500"
+                                  }`}
+                                >
+                                  {variety.pendingRiceWeight > 0 ? "+" : ""}
+                                  {variety.pendingRiceWeight.toFixed(0)} kg
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 text-xs border-t pt-2">
+                                <div className="text-center">
+                                  <span className="text-muted-foreground">
+                                    Total Expected Gunny
+                                  </span>
+                                  <div className="font-bold text-blue-600">
+                                    {variety.totalExpectedGunny} bags
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <span className="text-muted-foreground">
+                                    Total Actual Gunny
+                                  </span>
+                                  <div className="font-bold text-green-600">
+                                    {variety.totalActualGunny} bags
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="text-center">
+                                <span className="text-xs text-muted-foreground">
+                                  Total Pending Gunny
+                                </span>
+                                <div
+                                  className={`text-sm font-bold ${
+                                    variety.totalPendingGunny > 0
+                                      ? "text-orange-600"
+                                      : variety.totalPendingGunny < 0
+                                      ? "text-red-600"
+                                      : "text-gray-500"
+                                  }`}
+                                >
+                                  {variety.totalPendingGunny > 0 ? "+" : ""}
+                                  {variety.totalPendingGunny} bags
+                                </div>
+                              </div>
+
+                              <div className="text-center border-t pt-2">
+                                <span className="text-xs text-muted-foreground">
+                                  Efficiency
+                                </span>
+                                <div
+                                  className={`text-sm font-bold ${
+                                    variety.efficiency >= 100
+                                      ? "text-green-600"
+                                      : variety.efficiency >= 90
+                                      ? "text-yellow-600"
+                                      : "text-red-600"
+                                  }`}
+                                >
+                                  {variety.efficiency.toFixed(1)}%
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <div className="mt-3 pt-3 border-t border-border">
-                  <div className="text-center">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Total Available Gunny (ONB + SS)
-                    </span>
-                    <div className="text-lg font-bold text-foreground">
-                      {(selectedPaddy.gunny?.onb || 0) +
-                        (selectedPaddy.gunny?.ss || 0)}
-                    </div>
-                  </div>
+              ) : (
+                <div className="bg-muted border border-border rounded-lg p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No paddy or rice data available for variety analysis
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Rice Bag Details */}
@@ -1578,14 +1967,6 @@ const RiceManagement = () => {
               min="0"
             />
             <FormInput
-              label="Total Rice Deposit"
-              name="totalRiceDeposit"
-              type="number"
-              value={riceForm.totalRiceDeposit}
-              onChange={handleRiceFormChange}
-              min="0"
-            />
-            <FormInput
               label="Moisture"
               name="moisture"
               type="number"
@@ -1593,316 +1974,46 @@ const RiceManagement = () => {
               onChange={handleRiceFormChange}
               min="0"
             />
-            <FormInput
-              label="Bill Rate (₹/kg)"
-              name="billRate"
-              type="number"
-              value={riceForm.billRate}
-              onChange={handleRiceFormChange}
-              min="0"
-              step="0.01"
-              placeholder="Enter rate per kg for bill calculation"
-            />
           </div>
 
-          {/* Bill Calculation Preview */}
-          {riceForm.billRate && riceForm.billRate > 0 && (
+          {/* Gunny Details - Simplified */}
+          <div className="space-y-4">
             <div className="bg-muted border border-border rounded-lg p-4">
               <h4 className="text-sm font-semibold text-foreground mb-3">
-                Bill Calculation Preview
+                Rice Output Gunny
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground font-medium">
-                    Total Rice Weight:
-                  </span>
-                  <span className="ml-2 text-foreground">
-                    {formatWeight(
-                      (riceForm.depositWeight || 0) +
-                        (riceForm.depositWeightFrk || 0)
-                    )}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-medium">Bill Rate:</span>
-                  <span className="ml-2 text-foreground">
-                    ₹{parseFloat(riceForm.billRate).toFixed(2)}/kg
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-medium">
-                    Calculated Bill Amount:
-                  </span>
-                  <span className="ml-2 text-foreground font-bold">
-                    ₹
-                    {((riceForm.depositWeight || 0) +
-                      (riceForm.depositWeightFrk || 0)) *
-                      parseFloat(riceForm.billRate || 0)}
-                  </span>
-                </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Enter the gunny bag quantities for rice output.
+              </p>
+
+              <div className="grid grid-cols-3 gap-4">
+                <FormInput
+                  label="ONB Bags"
+                  name="gunny.onb"
+                  type="number"
+                  value={riceForm.gunny.onb}
+                  onChange={handleRiceFormChange}
+                  min="0"
+                />
+                <FormInput
+                  label="SS Bags"
+                  name="gunny.ss"
+                  type="number"
+                  value={riceForm.gunny.ss}
+                  onChange={handleRiceFormChange}
+                  min="0"
+                />
+                <FormInput
+                  label="SWP Bags"
+                  name="gunny.swp"
+                  type="number"
+                  value={riceForm.gunny.swp}
+                  onChange={handleRiceFormChange}
+                  min="0"
+                />
               </div>
             </div>
-          )}
-
-          {/* Gunny Downgrade Details */}
-          {selectedPaddy && (
-            <div className="space-y-4">
-              <div className="bg-muted border border-border rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-foreground mb-3">
-                  Gunny Downgrade System
-                </h4>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Select how many gunny bags to use from each grade. They will
-                  be downgraded in rice output:
-                  <br />• NB → ONB | ONB → SS | SS → SWP | SWP → SWP
-                </p>
-
-                {/* Validation Summary */}
-                {(() => {
-                  const hasShortage =
-                    usedGunnyFromPaddy.nb > (selectedPaddy.gunny?.nb || 0) ||
-                    usedGunnyFromPaddy.onb > (selectedPaddy.gunny?.onb || 0) ||
-                    usedGunnyFromPaddy.ss > (selectedPaddy.gunny?.ss || 0) ||
-                    usedGunnyFromPaddy.swp > (selectedPaddy.gunny?.swp || 0);
-
-                  if (hasShortage) {
-                    return (
-                      <div className="bg-muted border border-border rounded-lg p-3 mb-4">
-                        <div className="flex items-center">
-                          <svg
-                            className="w-4 h-4 text-muted-foreground mr-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                            />
-                          </svg>
-                          <span className="text-sm font-medium text-foreground">
-                            Insufficient Gunny Stock
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Some gunny grades have insufficient stock. Please
-                          reduce the requested amounts or select a different
-                          paddy record.
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="bg-muted border border-border rounded-lg p-3 mb-4">
-                      <div className="flex items-center">
-                        <svg
-                          className="w-4 h-4 text-muted-foreground mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        <span className="text-sm font-medium text-foreground">
-                          Sufficient Gunny Stock
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        All requested gunny amounts are within available stock
-                        limits.
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* NB to ONB */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Use NB (→ ONB)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={selectedPaddy.gunny?.nb || 0}
-                      value={usedGunnyFromPaddy.nb}
-                      onChange={(e) =>
-                        handleGunnyUsageChange("nb", e.target.value)
-                      }
-                      className={`block w-full border rounded-md shadow-sm focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm ${
-                        usedGunnyFromPaddy.nb > (selectedPaddy.gunny?.nb || 0)
-                          ? "border-destructive focus:ring-destructive focus:border-destructive"
-                          : "border-input"
-                      }`}
-                      placeholder="0"
-                    />
-                    <p
-                      className={`text-xs mt-1 ${
-                        usedGunnyFromPaddy.nb > (selectedPaddy.gunny?.nb || 0)
-                          ? "text-destructive font-medium"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      Available: {selectedPaddy.gunny?.nb || 0}
-                      {usedGunnyFromPaddy.nb > (selectedPaddy.gunny?.nb || 0) &&
-                        ` (Shortage: ${
-                          usedGunnyFromPaddy.nb - (selectedPaddy.gunny?.nb || 0)
-                        })`}
-                    </p>
-                  </div>
-
-                  {/* ONB to SS */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Use ONB (→ SS)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={selectedPaddy.gunny?.onb || 0}
-                      value={usedGunnyFromPaddy.onb}
-                      onChange={(e) =>
-                        handleGunnyUsageChange("onb", e.target.value)
-                      }
-                      className={`block w-full border rounded-md shadow-sm focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm ${
-                        usedGunnyFromPaddy.onb > (selectedPaddy.gunny?.onb || 0)
-                          ? "border-destructive focus:ring-destructive focus:border-destructive"
-                          : "border-input"
-                      }`}
-                      placeholder="0"
-                    />
-                    <p
-                      className={`text-xs mt-1 ${
-                        usedGunnyFromPaddy.onb > (selectedPaddy.gunny?.onb || 0)
-                          ? "text-destructive font-medium"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      Available: {selectedPaddy.gunny?.onb || 0}
-                      {usedGunnyFromPaddy.onb >
-                        (selectedPaddy.gunny?.onb || 0) &&
-                        ` (Shortage: ${
-                          usedGunnyFromPaddy.onb -
-                          (selectedPaddy.gunny?.onb || 0)
-                        })`}
-                    </p>
-                  </div>
-
-                  {/* SS to SWP */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Use SS (→ SWP)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={selectedPaddy.gunny?.ss || 0}
-                      value={usedGunnyFromPaddy.ss}
-                      onChange={(e) =>
-                        handleGunnyUsageChange("ss", e.target.value)
-                      }
-                      className={`block w-full border rounded-md shadow-sm focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm ${
-                        usedGunnyFromPaddy.ss > (selectedPaddy.gunny?.ss || 0)
-                          ? "border-destructive focus:ring-destructive focus:border-destructive"
-                          : "border-input"
-                      }`}
-                      placeholder="0"
-                    />
-                    <p
-                      className={`text-xs mt-1 ${
-                        usedGunnyFromPaddy.ss > (selectedPaddy.gunny?.ss || 0)
-                          ? "text-destructive font-medium"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      Available: {selectedPaddy.gunny?.ss || 0}
-                      {usedGunnyFromPaddy.ss > (selectedPaddy.gunny?.ss || 0) &&
-                        ` (Shortage: ${
-                          usedGunnyFromPaddy.ss - (selectedPaddy.gunny?.ss || 0)
-                        })`}
-                    </p>
-                  </div>
-
-                  {/* SWP stays SWP */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Use SWP (→ SWP)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={selectedPaddy.gunny?.swp || 0}
-                      value={usedGunnyFromPaddy.swp}
-                      onChange={(e) =>
-                        handleGunnyUsageChange("swp", e.target.value)
-                      }
-                      className={`block w-full border rounded-md shadow-sm focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm ${
-                        usedGunnyFromPaddy.swp > (selectedPaddy.gunny?.swp || 0)
-                          ? "border-destructive focus:ring-destructive focus:border-destructive"
-                          : "border-input"
-                      }`}
-                      placeholder="0"
-                    />
-                    <p
-                      className={`text-xs mt-1 ${
-                        usedGunnyFromPaddy.swp > (selectedPaddy.gunny?.swp || 0)
-                          ? "text-destructive font-medium"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      Available: {selectedPaddy.gunny?.swp || 0}
-                      {usedGunnyFromPaddy.swp >
-                        (selectedPaddy.gunny?.swp || 0) &&
-                        ` (Shortage: ${
-                          usedGunnyFromPaddy.swp -
-                          (selectedPaddy.gunny?.swp || 0)
-                        })`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Result Preview */}
-                <div className="mt-4 pt-4 border-t border-border">
-                  <h5 className="text-sm font-semibold text-foreground mb-2">
-                    Rice Output Gunny Preview
-                  </h5>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div className="text-center">
-                      <div className="font-medium text-muted-foreground">ONB</div>
-                      <div className="text-lg font-bold text-foreground">
-                        {usedGunnyFromPaddy.nb}
-                      </div>
-                      <div className="text-xs text-muted-foreground">(from NB)</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-muted-foreground">SS</div>
-                      <div className="text-lg font-bold text-foreground">
-                        {usedGunnyFromPaddy.onb}
-                      </div>
-                      <div className="text-xs text-muted-foreground">(from ONB)</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-muted-foreground">SWP</div>
-                      <div className="text-lg font-bold text-foreground">
-                        {usedGunnyFromPaddy.ss + usedGunnyFromPaddy.swp}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        (from SS + SWP)
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
 
           {/* Gunny Summary */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1938,25 +2049,74 @@ const RiceManagement = () => {
         </form>
       </DialogBox>
 
-      {/* Invoice Template Modal */}
-      <InvoiceTemplate
-        record={selectedRiceForInvoice}
-        show={showInvoiceModal}
-        onClose={closeInvoiceModal}
-        onGenerate={handleGenerateInvoice}
-        type="rice"
-        title="Generate Rice Deposit Invoice"
-      />
+      {/* Optional Fields Modal */}
+      <DialogBox
+        show={showOptionalFieldsModal}
+        onClose={closeOptionalFieldsModal}
+        title={
+          selectedRiceForOptionalFields &&
+          (selectedRiceForOptionalFields.godownDate ||
+            selectedRiceForOptionalFields.ackNo ||
+            selectedRiceForOptionalFields.sampleNumber)
+            ? "Edit Optional Details"
+            : "Add Optional Details"
+        }
+        size="md"
+      >
+        <form onSubmit={saveOptionalFields} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <FormInput
+              label="Godown Date"
+              name="godownDate"
+              type="date"
+              value={optionalFieldsForm.godownDate}
+              onChange={handleOptionalFieldsFormChange}
+              placeholder="Select godown date"
+            />
+            <FormInput
+              label="Acknowledgment Number"
+              name="ackNo"
+              type="text"
+              value={optionalFieldsForm.ackNo}
+              onChange={handleOptionalFieldsFormChange}
+              placeholder="Enter ACK number"
+            />
+            <FormInput
+              label="Sample Number"
+              name="sampleNumber"
+              type="text"
+              value={optionalFieldsForm.sampleNumber}
+              onChange={handleOptionalFieldsFormChange}
+              placeholder="Enter sample number"
+            />
+          </div>
 
-      {/* Preview Invoice Modal */}
-      <PreviewInvoice
-        invoiceData={previewInvoiceData}
-        show={showPreviewModal}
-        onClose={closePreviewModal}
-        onDownload={downloadInvoice}
-        type="rice"
-        title="Rice Deposit Invoice Preview"
-      />
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button
+              type="button"
+              onClick={closeOptionalFieldsModal}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={loading}
+              disabled={loading}
+            >
+              {loading
+                ? "Saving..."
+                : selectedRiceForOptionalFields &&
+                  (selectedRiceForOptionalFields.godownDate ||
+                    selectedRiceForOptionalFields.ackNo ||
+                    selectedRiceForOptionalFields.sampleNumber)
+                ? "Update Details"
+                : "Save Details"}
+            </Button>
+          </div>
+        </form>
+      </DialogBox>
     </div>
   );
 };

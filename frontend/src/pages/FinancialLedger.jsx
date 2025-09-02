@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import TableFilters from "../components/common/TableFilters";
 import BranchFilter from "../components/common/BranchFilter";
@@ -10,6 +10,7 @@ import FormSelect from "../components/common/FormSelect";
 import DialogBox from "../components/common/DialogBox";
 import FileUpload from "../components/common/FileUpload";
 import DateRangeFilter from "../components/common/DateRangeFilter";
+import VendorSelector from "../components/common/VendorSelector";
 import financialService from "../services/financialService";
 import { Button as UIButton } from "../components/ui/button";
 import Icon from "../components/common/Icon";
@@ -36,7 +37,8 @@ const FinancialLedger = () => {
     amount: 0,
     paymentMethod: "cash",
     reference: "",
-    vendor: "",
+    vendor_id: "", // Changed from vendor to vendor_id to match VendorSelector
+    vendor_details: null, // Store vendor details for display
     customer: "",
     status: "completed",
     remarks: "",
@@ -50,21 +52,7 @@ const FinancialLedger = () => {
   const [previewFile, setPreviewFile] = useState(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  useEffect(() => {
-    fetchTransactionData();
-  }, [currentBranchId]);
-
-  // Debug effect to monitor form state changes
-  useEffect(() => {
-    console.log("🔄 Form state changed:", transactionForm);
-  }, [transactionForm]);
-
-  // Debug effect to monitor editingTransaction state
-  useEffect(() => {
-    console.log("✏️ Editing transaction changed:", editingTransaction);
-  }, [editingTransaction]);
-
-  const fetchTransactionData = async () => {
+  const fetchTransactionData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -77,37 +65,54 @@ const FinancialLedger = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentBranchId]);
+
+  useEffect(() => {
+    fetchTransactionData();
+  }, [fetchTransactionData]);
 
   const openTransactionModal = (transaction = null) => {
-    console.log(
-      "🔧 openTransactionModal called with:",
-      transaction ? "EDIT" : "ADD"
-    );
-    if (transaction) {
-      console.log(
-        "📋 Original transaction data:",
-        JSON.stringify(transaction, null, 2)
-      );
-    }
     setEditingTransaction(transaction);
     if (transaction) {
       // Format the date for the HTML date input (YYYY-MM-DD)
       const formattedDate = new Date(transaction.transactionDate)
         .toISOString()
         .split("T")[0];
+
       const formData = {
         ...initialTransactionForm,
         ...transaction,
         transactionDate: formattedDate,
       };
-      console.log(
-        "📝 Setting form data for EDIT:",
-        JSON.stringify(formData, null, 2)
-      );
+
+      // Handle vendor data extraction - simplified approach
+      let extractedVendorId = "";
+      let extractedVendorDetails = null;
+
+      // Check if vendor_id is a populated object with _id
+      if (
+        transaction.vendor_id &&
+        typeof transaction.vendor_id === "object" &&
+        transaction.vendor_id._id
+      ) {
+        extractedVendorId = transaction.vendor_id._id;
+        extractedVendorDetails = transaction.vendor_id;
+      }
+      // Check if vendor_id is a string ID
+      else if (
+        transaction.vendor_id &&
+        typeof transaction.vendor_id === "string"
+      ) {
+        extractedVendorId = transaction.vendor_id;
+        extractedVendorDetails = null;
+      }
+
+      // Update form data with extracted vendor information
+      formData.vendor_id = extractedVendorId;
+      formData.vendor_details = extractedVendorDetails;
+
       setTransactionForm(formData);
     } else {
-      console.log("📝 Setting initial form data for ADD");
       setTransactionForm(initialTransactionForm);
     }
     setShowTransactionModal(true);
@@ -348,7 +353,8 @@ const FinancialLedger = () => {
       transaction.category?.toLowerCase().includes(q) ||
       transaction.transactionType?.toLowerCase().includes(q) ||
       transaction.reference?.toLowerCase().includes(q) ||
-      transaction.vendor?.toLowerCase().includes(q) ||
+      transaction.vendor_id?.vendorName?.toLowerCase().includes(q) ||
+      transaction.vendor_id?.vendorCode?.toLowerCase().includes(q) ||
       transaction.customer?.toLowerCase().includes(q);
 
     // Date range filter
@@ -636,13 +642,14 @@ const FinancialLedger = () => {
                         {transaction.reference}
                       </span>
                     </div>
-                    {transaction.vendor && (
+                    {transaction.vendor_id && (
                       <div className="flex items-center">
                         <span className="w-24 text-sm font-medium text-muted-foreground">
                           Vendor:
                         </span>
                         <span className="text-foreground font-medium">
-                          {transaction.vendor}
+                          {transaction.vendor_id.vendorCode} -{" "}
+                          {transaction.vendor_id.vendorName}
                         </span>
                       </div>
                     )}
@@ -995,13 +1002,74 @@ const FinancialLedger = () => {
               ]}
               icon="check-circle"
             />
-            <FormInput
-              label="Vendor"
-              name="vendor"
-              value={transactionForm.vendor}
-              onChange={handleTransactionFormChange}
-              icon="building"
+            <VendorSelector
+              name="vendor_id"
+              value={
+                typeof transactionForm.vendor_id === "string"
+                  ? transactionForm.vendor_id
+                  : ""
+              }
+              onChange={(value, vendorDetails) => {
+                // Update both vendor_id and vendor_details
+                setTransactionForm((prev) => ({
+                  ...prev,
+                  vendor_id: value,
+                  vendor_details: vendorDetails,
+                }));
+              }}
+              placeholder="Select Vendor"
+              required={false}
+              showVendorType={true}
+              vendorType={null}
+              status="active"
+              showCreateOption={false}
             />
+
+            {/* Show selected vendor details */}
+            {transactionForm.vendor_details &&
+              typeof transactionForm.vendor_details === "object" &&
+              transactionForm.vendor_details.vendorCode && (
+                <div className="mt-2 p-3 bg-green-50 rounded-md border border-green-200">
+                  <div className="text-sm text-green-800">
+                    <div className="font-medium mb-1">Selected Vendor:</div>
+                    <div className="text-xs space-y-1">
+                      <div>
+                        <strong>Code:</strong>{" "}
+                        {transactionForm.vendor_details.vendorCode}
+                      </div>
+                      <div>
+                        <strong>Name:</strong>{" "}
+                        {transactionForm.vendor_details.vendorName}
+                      </div>
+                      <div>
+                        <strong>Type:</strong>{" "}
+                        {transactionForm.vendor_details.vendorType?.replace(
+                          "_",
+                          " "
+                        )}
+                      </div>
+                      <div>
+                        <strong>Contact:</strong>{" "}
+                        {transactionForm.vendor_details.contactPerson}
+                      </div>
+                      <div>
+                        <strong>Phone:</strong>{" "}
+                        {transactionForm.vendor_details.phone}
+                      </div>
+                      {transactionForm.vendor_details.outstandingBalance >
+                        0 && (
+                        <div>
+                          <strong className="text-red-600">Outstanding:</strong>{" "}
+                          <span className="text-red-600">
+                            ₹
+                            {transactionForm.vendor_details.outstandingBalance?.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             <FormInput
               label="Customer"
               name="customer"

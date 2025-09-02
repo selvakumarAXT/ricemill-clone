@@ -48,10 +48,10 @@ const financialTransactionSchema = new mongoose.Schema({
     trim: true,
     maxLength: [100, 'Reference cannot be more than 100 characters'],
   },
-  vendor: {
-    type: String,
-    trim: true,
-    maxLength: [200, 'Vendor name cannot be more than 200 characters'],
+  vendor_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor',
+    required: false,
   },
   customer: {
     type: String,

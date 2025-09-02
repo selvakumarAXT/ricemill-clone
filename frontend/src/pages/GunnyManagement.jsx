@@ -12,6 +12,7 @@ import GunnyEntryDetails from "../components/common/GunnyEntryDetails";
 import PaddyEntryDetails from "../components/common/PaddyEntryDetails";
 import FileUpload from "../components/common/FileUpload";
 import DateRangeFilter from "../components/common/DateRangeFilter";
+import VendorSelector from "../components/common/VendorSelector";
 import gunnyService from "../services/gunnyService";
 import gunnyAggregationService from "../services/gunnyAggregationService";
 import branchService from "../services/branchService";
@@ -22,13 +23,15 @@ import Icon from "../components/common/Icon";
 
 const GunnyManagement = () => {
   const { user } = useSelector((state) => state.auth);
-  const { currentBranchId, availableBranches } = useSelector((state) => state.branch);
+  const { currentBranchId, availableBranches } = useSelector(
+    (state) => state.branch
+  );
   const [gunnyRecords, setGunnyRecords] = useState([]);
   const [allGunnyData, setAllGunnyData] = useState({
     paddyRecords: [],
     riceRecords: [],
 
-    gunnyRecords: []
+    gunnyRecords: [],
   });
   const [loading, setLoading] = useState(false);
   const [aggregatedLoading, setAggregatedLoading] = useState(false);
@@ -36,10 +39,9 @@ const GunnyManagement = () => {
   const [currentBranchName, setCurrentBranchName] = useState("");
   const [editingGunny, setEditingGunny] = useState(null);
   const [gunnyFilter, setGunnyFilter] = useState("");
-  const [branchFilter, setBranchFilter] = useState("");
   const [dateRange, setDateRange] = useState({
-    startDate: '',
-    endDate: ''
+    startDate: "",
+    endDate: "",
   });
   const [expandedGunny, setExpandedGunny] = useState(null);
   const [selectedSource, setSelectedSource] = useState("all");
@@ -50,7 +52,7 @@ const GunnyManagement = () => {
     totalSWP: 0,
     totalBags: 0,
     totalWeight: 0,
-    count: 0
+    count: 0,
   });
   const [aggregatedStats, setAggregatedStats] = useState({
     totalRecords: 0,
@@ -63,14 +65,10 @@ const GunnyManagement = () => {
     bySource: {
       paddy: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
       rice: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
-      
-      gunny: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 }
-    }
+
+      gunny: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
+    },
   });
-
-
-
-
 
   const initialGunnyForm = {
     issueDate: "",
@@ -78,6 +76,7 @@ const GunnyManagement = () => {
     lorryNumber: "",
     paddyFrom: "",
     paddyVariety: "",
+    vendor_id: "", // Added vendor field
     gunny: {
       nb: 0,
       onb: 0,
@@ -99,16 +98,16 @@ const GunnyManagement = () => {
     fetchGunnyData();
     fetchGunnyStats();
     fetchAllGunnyData();
-    
+
     // Fetch available branches if not already loaded
     if (availableBranches.length === 0) {
       const fetchBranches = async () => {
         try {
           const branches = await branchService.getAllBranches();
           // You might need to dispatch this to Redux if you have a setAvailableBranches action
-          console.log('Available branches loaded:', branches);
+          console.log("Available branches loaded:", branches);
         } catch (error) {
-          console.error('Error fetching available branches:', error);
+          console.error("Error fetching available branches:", error);
         }
       };
       fetchBranches();
@@ -117,25 +116,25 @@ const GunnyManagement = () => {
 
   // Fetch branch name when branch ID changes
   const fetchBranchName = async (branchId) => {
-    if (branchId && branchId !== 'all') {
-      console.log('Current user:', user);
-      console.log('Current branch ID:', branchId);
-      
+    if (branchId && branchId !== "all") {
+      console.log("Current user:", user);
+      console.log("Current branch ID:", branchId);
+
       // For now, let's use a hardcoded mapping to test the format
       // In production, this should come from the database
       const branchNameMap = {
-        '688768191ce21366b297cc8a': 'Madurai',
-        '688767e41ce21366b297cc45': 'Chennai'
+        "688768191ce21366b297cc8a": "Madurai",
+        "688767e41ce21366b297cc45": "Chennai",
       };
-      
+
       const millCodeMap = {
-        '688768191ce21366b297cc8a': 'MA00228891S',
-        '688767e41ce21366b297cc45': 'CH00228891S'
+        "688768191ce21366b297cc8a": "MA00228891S",
+        "688767e41ce21366b297cc45": "CH00228891S",
       };
-      
-      const branchName = branchNameMap[branchId] || 'Branch';
+
+      const branchName = branchNameMap[branchId] || "Branch";
       const millCode = millCodeMap[branchId] || branchId;
-      
+
       // Store both name and mill code
       setCurrentBranchName(`${branchName} (${millCode})`);
     } else {
@@ -164,10 +163,12 @@ const GunnyManagement = () => {
       setLoading(true);
       const data = await gunnyService.getAllGunny();
       // Format the data for frontend display
-      const formattedData = data.map(gunny => gunnyService.formatGunnyResponse(gunny));
+      const formattedData = data.map((gunny) =>
+        gunnyService.formatGunnyResponse(gunny)
+      );
       setGunnyRecords(formattedData);
     } catch (error) {
-      console.error('Error fetching gunny data:', error);
+      console.error("Error fetching gunny data:", error);
     } finally {
       setLoading(false);
     }
@@ -178,7 +179,7 @@ const GunnyManagement = () => {
       const data = await gunnyService.getGunnyStats();
       setStats(data);
     } catch (error) {
-      console.error('Error fetching gunny stats:', error);
+      console.error("Error fetching gunny stats:", error);
     }
   };
 
@@ -189,7 +190,7 @@ const GunnyManagement = () => {
       setAllGunnyData(data);
       setAggregatedStats(data.summary);
     } catch (error) {
-      console.error('Error fetching all gunny data:', error);
+      console.error("Error fetching all gunny data:", error);
     } finally {
       setAggregatedLoading(false);
     }
@@ -247,7 +248,11 @@ const GunnyManagement = () => {
     try {
       setLoading(true);
       if (editingGunny) {
-        await gunnyService.updateGunny(editingGunny._id, gunnyForm, selectedFiles);
+        await gunnyService.updateGunny(
+          editingGunny._id,
+          gunnyForm,
+          selectedFiles
+        );
       } else {
         await gunnyService.createGunny(gunnyForm, selectedFiles);
       }
@@ -257,7 +262,7 @@ const GunnyManagement = () => {
       // Clear selected files after successful save
       setSelectedFiles([]);
     } catch (error) {
-      console.error('Error saving gunny:', error);
+      console.error("Error saving gunny:", error);
     } finally {
       setLoading(false);
     }
@@ -267,26 +272,28 @@ const GunnyManagement = () => {
     if (window.confirm("Are you sure you want to delete this gunny record?")) {
       try {
         setLoading(true);
-        console.log('Attempting to delete gunny with ID:', gunnyId);
-        
+        console.log("Attempting to delete gunny with ID:", gunnyId);
+
         // Log the current user context
-        console.log('Current user:', user);
-        console.log('Current branch ID:', currentBranchId);
-        
+        console.log("Current user:", user);
+        console.log("Current branch ID:", currentBranchId);
+
         const result = await gunnyService.deleteGunny(gunnyId);
-        console.log('Delete result:', result);
-        
+        console.log("Delete result:", result);
+
         // Show success message
-        alert('Gunny record deleted successfully!');
-        
+        alert("Gunny record deleted successfully!");
+
         // Refresh data
         fetchGunnyData();
         fetchGunnyStats();
         fetchAllGunnyData();
       } catch (error) {
-        console.error('Error deleting gunny:', error);
+        console.error("Error deleting gunny:", error);
         // Show error message to user
-        alert(`Error deleting gunny record: ${error.message || 'Unknown error'}`);
+        alert(
+          `Error deleting gunny record: ${error.message || "Unknown error"}`
+        );
       } finally {
         setLoading(false);
       }
@@ -299,13 +306,13 @@ const GunnyManagement = () => {
       ...allGunnyData.paddyRecords,
       ...allGunnyData.riceRecords,
 
-      ...allGunnyData.gunnyRecords
+      ...allGunnyData.gunnyRecords,
     ];
 
     // Filter by branch
     let filteredRecords = allRecords;
-    if (currentBranchId && currentBranchId !== 'all') {
-      filteredRecords = allRecords.filter(record => {
+    if (currentBranchId && currentBranchId !== "all") {
+      filteredRecords = allRecords.filter((record) => {
         const recordBranchId = record.branch_id?._id || record.branch_id;
         return recordBranchId === currentBranchId;
       });
@@ -313,36 +320,45 @@ const GunnyManagement = () => {
 
     // Filter by source
     if (selectedSource !== "all") {
-      filteredRecords = filteredRecords.filter(record => record.recordType === selectedSource);
+      filteredRecords = filteredRecords.filter(
+        (record) => record.recordType === selectedSource
+      );
     }
 
     // Filter by text search
     if (gunnyFilter) {
       const q = gunnyFilter.toLowerCase();
-      filteredRecords = filteredRecords.filter(record => {
+      filteredRecords = filteredRecords.filter((record) => {
         return (
           record.issueMemo?.toLowerCase().includes(q) ||
           record.lorryNumber?.toLowerCase().includes(q) ||
           record.paddyFrom?.toLowerCase().includes(q) ||
           record.month?.toLowerCase().includes(q) ||
-          record.source?.toLowerCase().includes(q)
+          record.source?.toLowerCase().includes(q) ||
+          record.vendor_id?.vendorName?.toLowerCase().includes(q) ||
+          record.vendor_id?.vendorCode?.toLowerCase().includes(q)
         );
       });
     }
 
     // Filter by date range
     if (dateRange.startDate || dateRange.endDate) {
-      filteredRecords = filteredRecords.filter(record => {
-        const recordDate = new Date(record.issueDate || record.date || record.createdAt);
+      filteredRecords = filteredRecords.filter((record) => {
+        const recordDate = new Date(
+          record.issueDate || record.date || record.createdAt
+        );
         let matchesDate = true;
-        
+
         if (dateRange.startDate) {
-          matchesDate = matchesDate && recordDate >= new Date(dateRange.startDate);
+          matchesDate =
+            matchesDate && recordDate >= new Date(dateRange.startDate);
         }
         if (dateRange.endDate) {
-          matchesDate = matchesDate && recordDate <= new Date(dateRange.endDate + 'T23:59:59.999Z');
+          matchesDate =
+            matchesDate &&
+            recordDate <= new Date(dateRange.endDate + "T23:59:59.999Z");
         }
-        
+
         return matchesDate;
       });
     }
@@ -353,7 +369,7 @@ const GunnyManagement = () => {
   // Calculate filtered statistics based on current filters
   const filteredStats = useMemo(() => {
     const filteredRecords = getAllRecords();
-    
+
     const stats = {
       totalRecords: filteredRecords.length,
       totalNB: 0,
@@ -366,15 +382,15 @@ const GunnyManagement = () => {
         paddy: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
         rice: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
 
-        gunny: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 }
-      }
+        gunny: { count: 0, nb: 0, onb: 0, ss: 0, swp: 0, bags: 0, weight: 0 },
+      },
     };
 
     // Calculate totals from filtered records
-    filteredRecords.forEach(record => {
+    filteredRecords.forEach((record) => {
       const gunny = record.gunny || {};
       const paddy = record.paddy || {};
-      
+
       stats.totalNB += gunny.nb || 0;
       stats.totalONB += gunny.onb || 0;
       stats.totalSS += gunny.ss || 0;
@@ -410,111 +426,202 @@ const GunnyManagement = () => {
       // New fields for gunny lifecycle
       gunnyEntry: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
       gunnyUsed: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
-      gunnyAvailable: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 }
+      gunnyAvailable: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
+      // FRK gunny tracking
+      frkGunny: { nb: 0, onb: 0, ss: 0, swp: 0, total: 0 },
     };
 
     // Filter records by current branch
-    const branchFilteredPaddy = currentBranchId && currentBranchId !== 'all' 
-      ? allGunnyData.paddyRecords.filter(record => {
-          const recordBranchId = record.branch_id?._id || record.branch_id;
-          return recordBranchId === currentBranchId;
-        })
-      : allGunnyData.paddyRecords;
+    const branchFilteredPaddy =
+      currentBranchId && currentBranchId !== "all"
+        ? allGunnyData.paddyRecords.filter((record) => {
+            const recordBranchId = record.branch_id?._id || record.branch_id;
+            return recordBranchId === currentBranchId;
+          })
+        : allGunnyData.paddyRecords;
 
-    const branchFilteredRice = currentBranchId && currentBranchId !== 'all' 
-      ? allGunnyData.riceRecords.filter(record => {
-          const recordBranchId = record.branch_id?._id || record.branch_id;
-          return recordBranchId === currentBranchId;
-        })
-      : allGunnyData.riceRecords;
+    const branchFilteredRice =
+      currentBranchId && currentBranchId !== "all"
+        ? allGunnyData.riceRecords.filter((record) => {
+            const recordBranchId = record.branch_id?._id || record.branch_id;
+            return recordBranchId === currentBranchId;
+          })
+        : allGunnyData.riceRecords;
 
-
-
-    const branchFilteredDirect = currentBranchId && currentBranchId !== 'all' 
-      ? allGunnyData.gunnyRecords.filter(record => {
-          const recordBranchId = record.branch_id?._id || record.branch_id;
-          return recordBranchId === currentBranchId;
-        })
-      : allGunnyData.gunnyRecords;
+    const branchFilteredDirect =
+      currentBranchId && currentBranchId !== "all"
+        ? allGunnyData.gunnyRecords.filter((record) => {
+            const recordBranchId = record.branch_id?._id || record.branch_id;
+            return recordBranchId === currentBranchId;
+          })
+        : allGunnyData.gunnyRecords;
 
     // Calculate total gunny from paddy records (GUNNY ENTRY - Import)
-    branchFilteredPaddy.forEach(paddy => {
+    branchFilteredPaddy.forEach((paddy) => {
       const gunny = paddy.gunny || {};
       stats.totalPaddyGunny.nb += gunny.nb || 0;
       stats.totalPaddyGunny.onb += gunny.onb || 0;
       stats.totalPaddyGunny.ss += gunny.ss || 0;
       stats.totalPaddyGunny.swp += gunny.swp || 0;
-      
+
       // Gunny Entry = Paddy Gunny (Import)
       stats.gunnyEntry.nb += gunny.nb || 0;
       stats.gunnyEntry.onb += gunny.onb || 0;
       stats.gunnyEntry.ss += gunny.ss || 0;
       stats.gunnyEntry.swp += gunny.swp || 0;
     });
-    stats.totalPaddyGunny.total = stats.totalPaddyGunny.nb + stats.totalPaddyGunny.onb + 
-                                  stats.totalPaddyGunny.ss + stats.totalPaddyGunny.swp;
-    stats.gunnyEntry.total = stats.gunnyEntry.nb + stats.gunnyEntry.onb + 
-                             stats.gunnyEntry.ss + stats.gunnyEntry.swp;
+    stats.totalPaddyGunny.total =
+      stats.totalPaddyGunny.nb +
+      stats.totalPaddyGunny.onb +
+      stats.totalPaddyGunny.ss +
+      stats.totalPaddyGunny.swp;
+    stats.gunnyEntry.total =
+      stats.gunnyEntry.nb +
+      stats.gunnyEntry.onb +
+      stats.gunnyEntry.ss +
+      stats.gunnyEntry.swp;
 
     // Calculate total gunny used in rice records (GUNNY USED - Export)
-    branchFilteredRice.forEach(rice => {
+    branchFilteredRice.forEach((rice) => {
+      // Regular gunny used (from gunnyUsedFromPaddy - legacy field)
       const gunnyUsed = rice.gunnyUsedFromPaddy || {};
       stats.totalRiceGunny.nb += gunnyUsed.nb || 0;
       stats.totalRiceGunny.onb += gunnyUsed.onb || 0;
       stats.totalRiceGunny.ss += gunnyUsed.ss || 0;
       stats.totalRiceGunny.swp += gunnyUsed.swp || 0;
-      
-      // Gunny Used = Rice Gunny Used (Export)
-      stats.gunnyUsed.nb += gunnyUsed.nb || 0;
-      stats.gunnyUsed.onb += gunnyUsed.onb || 0;
-      stats.gunnyUsed.ss += gunnyUsed.ss || 0;
-      stats.gunnyUsed.swp += gunnyUsed.swp || 0;
-    });
-    stats.totalRiceGunny.total = stats.totalRiceGunny.nb + stats.totalRiceGunny.onb + 
-                                 stats.totalRiceGunny.ss + stats.totalRiceGunny.swp;
-    stats.gunnyUsed.total = stats.gunnyUsed.nb + stats.gunnyUsed.onb + 
-                            stats.gunnyUsed.ss + stats.gunnyUsed.swp;
 
-    
+      // Also add gunny from rice.gunny (current gunny usage)
+      const riceGunny = rice.gunny || {};
+      stats.totalRiceGunny.onb += riceGunny.onb || 0;
+      stats.totalRiceGunny.ss += riceGunny.ss || 0;
+      stats.totalRiceGunny.swp += riceGunny.swp || 0;
+
+      // Gunny Used = Total gunny used in rice deposits
+      stats.gunnyUsed.nb += gunnyUsed.nb || 0;
+      stats.gunnyUsed.onb += (gunnyUsed.onb || 0) + (riceGunny.onb || 0);
+      stats.gunnyUsed.ss += (gunnyUsed.ss || 0) + (riceGunny.ss || 0);
+      stats.gunnyUsed.swp += (gunnyUsed.swp || 0) + (riceGunny.swp || 0);
+
+      // Track FRK gunny separately if there's FRK rice
+      const frkBags = rice.riceBagFrk || 0;
+      const regularBags = rice.riceBag || 0;
+      const totalRiceBags = regularBags + frkBags;
+
+      if (frkBags > 0 && totalRiceBags > 0) {
+        // Calculate FRK proportion of gunny
+        const frkProportion = frkBags / totalRiceBags;
+
+        stats.frkGunny.onb += Math.round((riceGunny.onb || 0) * frkProportion);
+        stats.frkGunny.ss += Math.round((riceGunny.ss || 0) * frkProportion);
+        stats.frkGunny.swp += Math.round((riceGunny.swp || 0) * frkProportion);
+      }
+    });
+
+    stats.totalRiceGunny.total =
+      stats.totalRiceGunny.nb +
+      stats.totalRiceGunny.onb +
+      stats.totalRiceGunny.ss +
+      stats.totalRiceGunny.swp;
+    stats.gunnyUsed.total =
+      stats.gunnyUsed.nb +
+      stats.gunnyUsed.onb +
+      stats.gunnyUsed.ss +
+      stats.gunnyUsed.swp;
+    stats.frkGunny.total =
+      stats.frkGunny.onb + stats.frkGunny.ss + stats.frkGunny.swp;
 
     // Calculate total direct gunny records
-    branchFilteredDirect.forEach(gunny => {
+    branchFilteredDirect.forEach((gunny) => {
       const gunnyData = gunny.gunny || {};
       stats.totalDirectGunny.nb += gunnyData.nb || 0;
       stats.totalDirectGunny.onb += gunnyData.onb || 0;
       stats.totalDirectGunny.ss += gunnyData.ss || 0;
       stats.totalDirectGunny.swp += gunnyData.swp || 0;
     });
-    stats.totalDirectGunny.total = stats.totalDirectGunny.nb + stats.totalDirectGunny.onb + 
-                                   stats.totalDirectGunny.ss + stats.totalDirectGunny.swp;
+    stats.totalDirectGunny.total =
+      stats.totalDirectGunny.nb +
+      stats.totalDirectGunny.onb +
+      stats.totalDirectGunny.ss +
+      stats.totalDirectGunny.swp;
 
-    // Calculate balance gunny (total available - total used)
-    stats.balanceGunny.nb = stats.totalPaddyGunny.nb - stats.totalRiceGunny.nb;
-    stats.balanceGunny.onb = stats.totalPaddyGunny.onb - stats.totalRiceGunny.onb;
-    stats.balanceGunny.ss = stats.totalPaddyGunny.ss - stats.totalRiceGunny.ss;
-    stats.balanceGunny.swp = stats.totalPaddyGunny.swp - stats.totalRiceGunny.swp;
-    stats.balanceGunny.total = stats.balanceGunny.nb + stats.balanceGunny.onb + 
-                               stats.balanceGunny.ss + stats.balanceGunny.swp;
+    // Calculate balance gunny: (Paddy Income + FRK Income) - (Rice Consumption + Direct Gunny Consumption)
+    // Income: Paddy + FRK
+    // Outgoing: Rice + Direct Gunny
+    stats.balanceGunny.nb =
+      stats.totalPaddyGunny.nb +
+      stats.frkGunny.nb -
+      (stats.totalRiceGunny.nb + stats.totalDirectGunny.nb);
+    stats.balanceGunny.onb =
+      stats.totalPaddyGunny.onb +
+      stats.frkGunny.onb -
+      (stats.totalRiceGunny.onb + stats.totalDirectGunny.onb);
+    stats.balanceGunny.ss =
+      stats.totalPaddyGunny.ss +
+      stats.frkGunny.ss -
+      (stats.totalRiceGunny.ss + stats.totalDirectGunny.ss);
+    stats.balanceGunny.swp =
+      stats.totalPaddyGunny.swp +
+      stats.frkGunny.swp -
+      (stats.totalRiceGunny.swp + stats.totalDirectGunny.swp);
+    stats.balanceGunny.total =
+      stats.balanceGunny.nb +
+      stats.balanceGunny.onb +
+      stats.balanceGunny.ss +
+      stats.balanceGunny.swp;
 
-    // Calculate gunny available (Gunny Entry - Gunny Used)
-    stats.gunnyAvailable.nb = stats.gunnyEntry.nb - stats.gunnyUsed.nb;
-    stats.gunnyAvailable.onb = stats.gunnyEntry.onb - stats.gunnyUsed.onb;
-    stats.gunnyAvailable.ss = stats.gunnyEntry.ss - stats.gunnyUsed.ss;
-    stats.gunnyAvailable.swp = stats.gunnyEntry.swp - stats.gunnyUsed.swp;
-    stats.gunnyAvailable.total = stats.gunnyAvailable.nb + stats.gunnyAvailable.onb + 
-                                 stats.gunnyAvailable.ss + stats.gunnyAvailable.swp;
+    // Calculate gunny available: (Paddy Entry + FRK Income) - (Rice Used + Direct Gunny Used)
+    stats.gunnyAvailable.nb =
+      stats.gunnyEntry.nb + stats.frkGunny.nb - stats.gunnyUsed.nb;
+    stats.gunnyAvailable.onb =
+      stats.gunnyEntry.onb + stats.frkGunny.onb - stats.gunnyUsed.onb;
+    stats.gunnyAvailable.ss =
+      stats.gunnyEntry.ss + stats.frkGunny.ss - stats.gunnyUsed.ss;
+    stats.gunnyAvailable.swp =
+      stats.gunnyEntry.swp + stats.frkGunny.swp - stats.gunnyUsed.swp;
+    stats.gunnyAvailable.total =
+      stats.gunnyAvailable.nb +
+      stats.gunnyAvailable.onb +
+      stats.gunnyAvailable.ss +
+      stats.gunnyAvailable.swp;
 
-    // Calculate utilization rate (percentage used)
-    stats.utilizationRate.nb = stats.totalPaddyGunny.nb > 0 ? 
-      ((stats.totalRiceGunny.nb / stats.totalPaddyGunny.nb) * 100) : 0;
-    stats.utilizationRate.onb = stats.totalPaddyGunny.onb > 0 ? 
-      ((stats.totalRiceGunny.onb / stats.totalPaddyGunny.onb) * 100) : 0;
-    stats.utilizationRate.ss = stats.totalPaddyGunny.ss > 0 ? 
-      ((stats.totalRiceGunny.ss / stats.totalPaddyGunny.ss) * 100) : 0;
-    stats.utilizationRate.swp = stats.totalPaddyGunny.swp > 0 ? 
-      ((stats.totalRiceGunny.swp / stats.totalPaddyGunny.swp) * 100) : 0;
-    stats.utilizationRate.total = stats.totalPaddyGunny.total > 0 ? 
-      ((stats.totalRiceGunny.total / stats.totalPaddyGunny.total) * 100) : 0;
+    // Calculate utilization rate: Used / (Paddy Income + FRK Income) * 100
+    const totalIncomeNb = stats.totalPaddyGunny.nb + stats.frkGunny.nb;
+    const totalIncomeOnb = stats.totalPaddyGunny.onb + stats.frkGunny.onb;
+    const totalIncomeSs = stats.totalPaddyGunny.ss + stats.frkGunny.ss;
+    const totalIncomeSwp = stats.totalPaddyGunny.swp + stats.frkGunny.swp;
+    const totalIncomeAll =
+      totalIncomeNb + totalIncomeOnb + totalIncomeSs + totalIncomeSwp;
+
+    stats.utilizationRate.nb =
+      totalIncomeNb > 0
+        ? ((stats.totalRiceGunny.nb + stats.totalDirectGunny.nb) /
+            totalIncomeNb) *
+          100
+        : 0;
+    stats.utilizationRate.onb =
+      totalIncomeOnb > 0
+        ? ((stats.totalRiceGunny.onb + stats.totalDirectGunny.onb) /
+            totalIncomeOnb) *
+          100
+        : 0;
+    stats.utilizationRate.ss =
+      totalIncomeSs > 0
+        ? ((stats.totalRiceGunny.ss + stats.totalDirectGunny.ss) /
+            totalIncomeSs) *
+          100
+        : 0;
+    stats.utilizationRate.swp =
+      totalIncomeSwp > 0
+        ? ((stats.totalRiceGunny.swp + stats.totalDirectGunny.swp) /
+            totalIncomeSwp) *
+          100
+        : 0;
+    stats.utilizationRate.total =
+      totalIncomeAll > 0
+        ? ((stats.totalRiceGunny.total + stats.totalDirectGunny.total) /
+            totalIncomeAll) *
+          100
+        : 0;
 
     return stats;
   }, [allGunnyData, currentBranchId]);
@@ -523,47 +630,77 @@ const GunnyManagement = () => {
   const filteredGunnyRecords = gunnyRecords.filter((gunny) => {
     // Text search filter
     const q = gunnyFilter.toLowerCase();
-    const matchesText = !gunnyFilter || (
+    const matchesText =
+      !gunnyFilter ||
       gunny.issueMemo?.toLowerCase().includes(q) ||
       gunny.lorryNumber?.toLowerCase().includes(q) ||
-      gunny.paddyFrom?.toLowerCase().includes(q)
-    );
+      gunny.paddyFrom?.toLowerCase().includes(q) ||
+      gunny.vendor_id?.vendorName?.toLowerCase().includes(q) ||
+      gunny.vendor_id?.vendorCode?.toLowerCase().includes(q);
 
     return matchesText;
   });
 
   // Table columns for comprehensive gunny records
   const comprehensiveColumns = [
-    { key: "source", label: "Source", render: (value) => (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
-        {value}
-      </span>
-    )},
-            { key: "branch", label: "Branch", render: (value, record) => {
-          if (currentBranchId === 'all') {
-            const branchName = record.branch_id?.name || record.branch?.name;
-            const branchId = record.branch_id?._id || record.branch_id;
-            return branchName ? `${branchName} (${branchId})` : (branchId || 'N/A');
-          }
-          return currentBranchName || 'Current Branch';
-        }},
+    {
+      key: "source",
+      label: "Source",
+      render: (value) => (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: "branch",
+      label: "Branch",
+      render: (value, record) => {
+        if (currentBranchId === "all") {
+          const branchName = record.branch_id?.name || record.branch?.name;
+          const branchId = record.branch_id?._id || record.branch_id;
+          return branchName ? `${branchName} (${branchId})` : branchId || "N/A";
+        }
+        return currentBranchName || "Current Branch";
+      },
+    },
     { key: "displayDate", label: "Date" },
-    { key: "issueMemo", label: "Memo/Details", render: (value, record) => {
-      if (record.recordType === 'rice') return `Month: ${record.month}`;
+    {
+      key: "issueMemo",
+      label: "Memo/Details",
+      render: (value, record) => {
+        if (record.recordType === "rice") return `Month: ${record.month}`;
 
-      return value || 'N/A';
-    }},
-    { key: "lorryNumber", label: "Lorry/Vehicle", render: (value, record) => {
-      if (record.recordType === 'rice') return 'N/A';
-      return value || 'N/A';
-    }},
-    { key: "paddyFrom", label: "Source/Variety", render: (value, record) => {
-      if (record.recordType === 'rice') return 'N/A';
-      return value || 'N/A';
-    }},
-    { 
-      key: "gunny", 
-      label: "Gunny Details", 
+        return value || "N/A";
+      },
+    },
+    {
+      key: "lorryNumber",
+      label: "Lorry/Vehicle",
+      render: (value, record) => {
+        if (record.recordType === "rice") return "N/A";
+        return value || "N/A";
+      },
+    },
+    {
+      key: "paddyFrom",
+      label: "Source/Variety",
+      render: (value, record) => {
+        if (record.recordType === "rice") return "N/A";
+        return value || "N/A";
+      },
+    },
+    {
+      key: "vendor_id",
+      label: "Vendor",
+      render: (vendor, record) => {
+        if (record.recordType === "rice") return "N/A";
+        return vendor ? `${vendor.vendorCode} - ${vendor.vendorName}` : "N/A";
+      },
+    },
+    {
+      key: "gunny",
+      label: "Gunny Details",
       render: (gunny) => (
         <div className="text-xs">
           <div className="flex justify-between">
@@ -583,13 +720,13 @@ const GunnyManagement = () => {
             <span>{gunny?.swp || 0}</span>
           </div>
         </div>
-      )
+      ),
     },
-    { 
-      key: "paddy", 
-      label: "Paddy Details", 
+    {
+      key: "paddy",
+      label: "Paddy Details",
       render: (paddy, record) => {
-        if (record.recordType === 'rice') {
+        if (record.recordType === "rice") {
           return <span className="text-muted-foreground text-xs">N/A</span>;
         }
         return (
@@ -604,21 +741,35 @@ const GunnyManagement = () => {
             </div>
           </div>
         );
-      }
+      },
     },
-    { key: "createdBy", label: "Created By", render: (user) => user?.name || "N/A" },
+    {
+      key: "createdBy",
+      label: "Created By",
+      render: (user) => user?.name || "N/A",
+    },
   ];
 
   // Table columns for gunny records (original)
   const gunnyColumns = [
-    { key: "issueDate", label: "Issue Date", render: (value) => new Date(value).toLocaleDateString() },
+    {
+      key: "issueDate",
+      label: "Issue Date",
+      render: (value) => new Date(value).toLocaleDateString(),
+    },
     { key: "issueMemo", label: "Issue Memo" },
     { key: "lorryNumber", label: "Lorry Number" },
     { key: "paddyFrom", label: "Paddy From" },
     { key: "paddyVariety", label: "Paddy Variety" },
-    { 
-      key: "gunny", 
-      label: "Gunny Details", 
+    {
+      key: "vendor_id",
+      label: "Vendor",
+      render: (vendor) =>
+        vendor ? `${vendor.vendorCode} - ${vendor.vendorName}` : "N/A",
+    },
+    {
+      key: "gunny",
+      label: "Gunny Details",
       render: (gunny) => (
         <div className="text-xs">
           <div>NB: {gunny.nb}</div>
@@ -626,26 +777,31 @@ const GunnyManagement = () => {
           <div>SS: {gunny.ss}</div>
           <div>SWP: {gunny.swp}</div>
         </div>
-      )
+      ),
     },
-    { 
-      key: "paddy", 
-      label: "Paddy Details", 
+    {
+      key: "paddy",
+      label: "Paddy Details",
       render: (paddy) => (
         <div className="text-xs">
           <div>Bags: {paddy.bags}</div>
           <div>Weight: {formatWeight(paddy.weight)}</div>
         </div>
-      )
+      ),
     },
-    { key: "createdBy", label: "Created By", render: (user) => user?.name || "N/A" }
+    {
+      key: "createdBy",
+      label: "Created By",
+      render: (user) => user?.name || "N/A",
+    },
   ];
 
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <LoadingSpinner />
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <LoadingSpinner />
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-background">
@@ -656,9 +812,11 @@ const GunnyManagement = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Gunny Management
             </h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage gunny records and track inventory</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+              Manage gunny records and track inventory
+            </p>
           </div>
-          {currentBranchId && currentBranchId !== 'all' && (
+          {currentBranchId && currentBranchId !== "all" && (
             <div className="flex justify-center sm:justify-start">
               <UIButton
                 onClick={() => openGunnyModal()}
@@ -678,8 +836,18 @@ const GunnyManagement = () => {
         <div className="bg-card rounded-2xl shadow-lg border border-border p-4 sm:p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center">
-              <svg className="w-5 h-5 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <svg
+                className="w-5 h-5 mr-2 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
               </svg>
               Comprehensive Gunny Statistics (All Sources) - Balance Included
             </h3>
@@ -701,45 +869,134 @@ const GunnyManagement = () => {
               </UIButton>
             </div>
           </div>
-          
+
           {/* Overall Totals */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 mb-6">
             <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total Records</h4>
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalRecords}</p>
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                Total Records
+              </h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
+                {filteredStats.totalRecords}
+              </p>
             </div>
             <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total NB</h4>
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalNB}</p>
-              <p className="text-xs text-muted-foreground">Balance: {gunnyBalanceStats.balanceGunny.nb}</p>
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                Total NB
+              </h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
+                {gunnyBalanceStats.totalPaddyGunny.nb +
+                  gunnyBalanceStats.frkGunny.nb}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Balance: {gunnyBalanceStats.balanceGunny.nb}
+              </p>
+              <p className="text-xs text-blue-500">
+                (Paddy: {gunnyBalanceStats.totalPaddyGunny.nb}, FRK:{" "}
+                {gunnyBalanceStats.frkGunny.nb})
+              </p>
             </div>
             <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total ONB</h4>
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalONB}</p>
-              <p className="text-xs text-muted-foreground">Balance: {gunnyBalanceStats.balanceGunny.onb}</p>
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                Total ONB
+              </h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
+                {gunnyBalanceStats.totalPaddyGunny.onb +
+                  gunnyBalanceStats.frkGunny.onb}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Balance: {gunnyBalanceStats.balanceGunny.onb}
+              </p>
+              <p className="text-xs text-blue-500">
+                (Paddy: {gunnyBalanceStats.totalPaddyGunny.onb}, FRK:{" "}
+                {gunnyBalanceStats.frkGunny.onb})
+              </p>
             </div>
             <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total SS</h4>
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalSS}</p>
-              <p className="text-xs text-muted-foreground">Balance: {gunnyBalanceStats.balanceGunny.ss}</p>
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                Total SS
+              </h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
+                {gunnyBalanceStats.totalPaddyGunny.ss +
+                  gunnyBalanceStats.frkGunny.ss}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Balance: {gunnyBalanceStats.balanceGunny.ss}
+              </p>
+              <p className="text-xs text-blue-500">
+                (Paddy: {gunnyBalanceStats.totalPaddyGunny.ss}, FRK:{" "}
+                {gunnyBalanceStats.frkGunny.ss})
+              </p>
             </div>
             <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total SWP</h4>
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalSWP}</p>
-              <p className="text-xs text-muted-foreground">Balance: {gunnyBalanceStats.balanceGunny.swp}</p>
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                Total SWP
+              </h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
+                {gunnyBalanceStats.totalPaddyGunny.swp +
+                  gunnyBalanceStats.frkGunny.swp}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Balance: {gunnyBalanceStats.balanceGunny.swp}
+              </p>
+              <p className="text-xs text-blue-500">
+                (Paddy: {gunnyBalanceStats.totalPaddyGunny.swp}, FRK:{" "}
+                {gunnyBalanceStats.frkGunny.swp})
+              </p>
             </div>
             <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total Bags</h4>
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{filteredStats.totalBags}</p>
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                Total Bags
+              </h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
+                {filteredStats.totalBags}
+              </p>
             </div>
             <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total Weight</h4>
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{formatWeight(filteredStats.totalWeight)}</p>
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                Total Weight
+              </h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
+                {formatWeight(filteredStats.totalWeight)}
+              </p>
             </div>
             <div className="bg-muted p-3 sm:p-4 rounded-lg border border-border text-center">
-              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Total Balance</h4>
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{gunnyBalanceStats.balanceGunny.nb + gunnyBalanceStats.balanceGunny.onb}</p>
-              <p className="text-xs text-muted-foreground">NB+ONB: {((gunnyBalanceStats.totalRiceGunny.nb + gunnyBalanceStats.totalRiceGunny.onb) / (gunnyBalanceStats.totalPaddyGunny.nb + gunnyBalanceStats.totalPaddyGunny.onb) * 100).toFixed(1)}% Used</p>
+              <h4 className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                Total Balance
+              </h4>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
+                {gunnyBalanceStats.balanceGunny.total}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                All Types: {gunnyBalanceStats.utilizationRate.total.toFixed(1)}%
+                Used
+              </p>
+              <p className="text-xs text-blue-500">
+                Income:{" "}
+                {gunnyBalanceStats.totalPaddyGunny.total +
+                  gunnyBalanceStats.frkGunny.total}
+                , Used:{" "}
+                {gunnyBalanceStats.totalRiceGunny.total +
+                  gunnyBalanceStats.totalDirectGunny.total}
+              </p>
+            </div>
+            <div className="bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-200 text-center">
+              <h4 className="text-xs sm:text-sm font-medium text-blue-600 mb-1">
+                FRK Gunny
+              </h4>
+              <p className="text-lg sm:text-2xl font-bold text-blue-700">
+                {gunnyBalanceStats.frkGunny.total}
+              </p>
+              <p className="text-xs text-blue-500">
+                {gunnyBalanceStats.gunnyUsed.total > 0
+                  ? (
+                      (gunnyBalanceStats.frkGunny.total /
+                        gunnyBalanceStats.gunnyUsed.total) *
+                      100
+                    ).toFixed(1)
+                  : "0.0"}
+                % of Used
+              </p>
             </div>
           </div>
 
@@ -753,28 +1010,40 @@ const GunnyManagement = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Records:</span>
-                  <span className="font-medium">{filteredStats.bySource.paddy.count}</span>
+                  <span className="font-medium">
+                    {filteredStats.bySource.paddy.count}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">NB:</span>
-                  <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.nb}</span>
+                  <span className="font-medium">
+                    {gunnyBalanceStats.totalPaddyGunny.nb}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ONB:</span>
-                  <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.onb}</span>
+                  <span className="font-medium">
+                    {gunnyBalanceStats.totalPaddyGunny.onb}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">SS:</span>
-                  <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.ss}</span>
+                  <span className="font-medium">
+                    {gunnyBalanceStats.totalPaddyGunny.ss}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">SWP:</span>
-                  <span className="font-medium">{gunnyBalanceStats.totalPaddyGunny.swp}</span>
+                  <span className="font-medium">
+                    {gunnyBalanceStats.totalPaddyGunny.swp}
+                  </span>
                 </div>
                 <div className="pt-2 border-t border-border">
                   <div className="flex justify-between font-semibold">
                     <span className="text-foreground">Total:</span>
-                    <span className="text-foreground">{gunnyBalanceStats.totalPaddyGunny.total}</span>
+                    <span className="text-foreground">
+                      {gunnyBalanceStats.totalPaddyGunny.total}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -788,54 +1057,106 @@ const GunnyManagement = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Records:</span>
-                  <span className="font-medium">{filteredStats.bySource.rice.count}</span>
+                  <span className="font-medium">
+                    {filteredStats.bySource.rice.count}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">NB Used:</span>
-                  <span className="font-medium">{filteredStats.bySource.rice.nb || 0}</span>
+                  <span className="font-medium">
+                    {filteredStats.bySource.rice.nb || 0}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ONB Used:</span>
-                  <span className="font-medium">{filteredStats.bySource.rice.onb || 0}</span>
+                  <span className="font-medium">
+                    {filteredStats.bySource.rice.onb || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">SS Used:</span>
+                  <span className="font-medium">
+                    {filteredStats.bySource.rice.ss || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">SWP Used:</span>
+                  <span className="font-medium">
+                    {filteredStats.bySource.rice.swp || 0}
+                  </span>
                 </div>
                 <div className="pt-2 border-t border-border">
                   <div className="flex justify-between font-semibold">
                     <span className="text-foreground">Total Used Gunnys:</span>
-                    <span className="text-foreground">{(filteredStats.bySource.rice.nb || 0) + (filteredStats.bySource.rice.onb || 0)}</span>
+                    <span className="text-foreground">
+                      {(filteredStats.bySource.rice.nb || 0) +
+                        (filteredStats.bySource.rice.onb || 0) +
+                        (filteredStats.bySource.rice.ss || 0) +
+                        (filteredStats.bySource.rice.swp || 0)}
+                    </span>
                   </div>
                 </div>
                 <div className="pt-1 border-t border-border">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Rice NB:</span>
-                    <span className="font-medium">{filteredStats.bySource.rice.nb || 0}</span>
+                    <span className="font-medium">
+                      {filteredStats.bySource.rice.nb || 0}
+                    </span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Rice ONB:</span>
-                    <span className="font-medium">{filteredStats.bySource.rice.onb || 0}</span>
+                    <span className="font-medium">
+                      {filteredStats.bySource.rice.onb || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Rice SS:</span>
+                    <span className="font-medium">
+                      {filteredStats.bySource.rice.ss || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Rice SWP:</span>
+                    <span className="font-medium">
+                      {filteredStats.bySource.rice.swp || 0}
+                    </span>
                   </div>
                 </div>
                 <div className="pt-2 border-t border-border">
                   <div className="flex justify-between font-semibold">
                     <span className="text-foreground">Total Used:</span>
-                    <span className="text-foreground">{gunnyBalanceStats.totalRiceGunny.total}</span>
+                    <span className="text-foreground">
+                      {gunnyBalanceStats.totalRiceGunny.total}
+                    </span>
                   </div>
                 </div>
                 <div className="pt-2 border-t border-border">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Utilization Rate (NB+ONB):</span>
+                    <span className="text-muted-foreground">
+                      Utilization Rate (NB+ONB):
+                    </span>
                     <span className="font-medium text-foreground">
                       {(() => {
-                        const riceUsed = (filteredStats.bySource.rice.nb || 0) + (filteredStats.bySource.rice.onb || 0);
-                        const paddyAvailable = gunnyBalanceStats.totalPaddyGunny.nb + gunnyBalanceStats.totalPaddyGunny.onb;
-                        return paddyAvailable > 0 ? ((riceUsed / paddyAvailable) * 100).toFixed(1) : '0.0';
-                      })()}%
+                        const riceUsed =
+                          (filteredStats.bySource.rice.nb || 0) +
+                          (filteredStats.bySource.rice.onb || 0);
+                        const paddyAvailable =
+                          gunnyBalanceStats.totalPaddyGunny.nb +
+                          gunnyBalanceStats.totalPaddyGunny.onb;
+                        return paddyAvailable > 0
+                          ? ((riceUsed / paddyAvailable) * 100).toFixed(1)
+                          : "0.0";
+                      })()}
+                      %
                     </span>
                   </div>
                 </div>
                 <div className="pt-2 border-t border-border">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Rice Output:</span>
-                    <span className="font-medium text-foreground">{filteredStats.bySource.rice.weight || 0} kg</span>
+                    <span className="font-medium text-foreground">
+                      {filteredStats.bySource.rice.weight || 0} kg
+                    </span>
                   </div>
                 </div>
               </div>
@@ -849,36 +1170,46 @@ const GunnyManagement = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Records:</span>
-                  <span className="font-medium">{filteredStats.bySource.gunny.count}</span>
+                  <span className="font-medium">
+                    {filteredStats.bySource.gunny.count}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">NB:</span>
-                  <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.nb}</span>
+                  <span className="font-medium">
+                    {gunnyBalanceStats.totalDirectGunny.nb}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ONB:</span>
-                  <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.onb}</span>
+                  <span className="font-medium">
+                    {gunnyBalanceStats.totalDirectGunny.onb}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">SS:</span>
-                  <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.ss}</span>
+                  <span className="font-medium">
+                    {gunnyBalanceStats.totalDirectGunny.ss}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">SWP:</span>
-                  <span className="font-medium">{gunnyBalanceStats.totalDirectGunny.swp}</span>
+                  <span className="font-medium">
+                    {gunnyBalanceStats.totalDirectGunny.swp}
+                  </span>
                 </div>
                 <div className="pt-2 border-t border-border">
                   <div className="flex justify-between font-semibold">
                     <span className="text-foreground">Total:</span>
-                    <span className="text-foreground">{gunnyBalanceStats.totalDirectGunny.total}</span>
+                    <span className="text-foreground">
+                      {gunnyBalanceStats.totalDirectGunny.total}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-
 
         {/* Branch Filter Summary */}
         {/* {currentBranchId && (
@@ -903,13 +1234,19 @@ const GunnyManagement = () => {
         {/* Desktop Table View - Comprehensive Gunny Data */}
         <div className="hidden lg:block bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
           <div className="px-6 py-4 border-b border-border bg-muted">
-            <h3 className="text-lg font-semibold text-foreground">Comprehensive Gunny Records (All Sources)</h3>
-            <p className="text-sm text-muted-foreground mt-1">Total: {getAllRecords().length} records</p>
-          {/* Filters moved inside table header */}
-          <div className="mt-4">
-            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
-              <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Search</label>
+            <h3 className="text-lg font-semibold text-foreground">
+              Comprehensive Gunny Records (All Sources)
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Total: {getAllRecords().length} records
+            </p>
+            {/* Filters moved inside table header */}
+            <div className="mt-4">
+              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-center">
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Search
+                  </label>
                   <TableFilters
                     searchValue={gunnyFilter}
                     searchPlaceholder="Search by memo, lorry number, or source..."
@@ -918,7 +1255,9 @@ const GunnyManagement = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Source</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Source
+                  </label>
                   <select
                     value={selectedSource}
                     onChange={(e) => setSelectedSource(e.target.value)}
@@ -931,21 +1270,33 @@ const GunnyManagement = () => {
                   </select>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Branch</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Branch
+                  </label>
                   <BranchFilter
-                    value={currentBranchId || ''}
+                    value={currentBranchId || ""}
                     onChange={(value) => {
-                      console.log('Branch changed in Gunny Management:', value);
+                      console.log("Branch changed in Gunny Management:", value);
                       // The data will be refetched automatically by the useEffect
                     }}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                   <DateRangeFilter
+                  <DateRangeFilter
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
-                    onStartDateChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                    onEndDateChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                    onStartDateChange={(e) =>
+                      setDateRange((prev) => ({
+                        ...prev,
+                        startDate: e.target.value,
+                      }))
+                    }
+                    onEndDateChange={(e) =>
+                      setDateRange((prev) => ({
+                        ...prev,
+                        endDate: e.target.value,
+                      }))
+                    }
                     startDateLabel="Issue Date From"
                     endDateLabel="Issue Date To"
                   />
@@ -956,7 +1307,9 @@ const GunnyManagement = () => {
           {aggregatedLoading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner />
-              <span className="ml-3 text-muted-foreground">Loading comprehensive gunny data...</span>
+              <span className="ml-3 text-muted-foreground">
+                Loading comprehensive gunny data...
+              </span>
             </div>
           ) : (
             <TableList
@@ -982,82 +1335,134 @@ const GunnyManagement = () => {
                 >
                   <Icon name="delete" className="h-4 w-4" />
                   <span className="hidden sm:inline">Delete</span>
-                </UIButton>
+                </UIButton>,
               ]}
               renderDetail={(record) => (
                 <div className="p-6 bg-muted border-l-4 border-primary">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <div className="flex items-center">
-                        <span className="w-24 text-sm font-medium text-muted-foreground">Source:</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground`}>
+                        <span className="w-24 text-sm font-medium text-muted-foreground">
+                          Source:
+                        </span>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground`}
+                        >
                           {record.source}
                         </span>
                       </div>
                       <div className="flex items-center">
-                        <span className="w-24 text-sm font-medium text-muted-foreground">Date:</span>
-                        <span className="text-foreground font-medium">{record.displayDate}</span>
+                        <span className="w-24 text-sm font-medium text-muted-foreground">
+                          Date:
+                        </span>
+                        <span className="text-foreground font-medium">
+                          {record.displayDate}
+                        </span>
                       </div>
-                      {record.recordType === 'gunny' && (
+                      {record.recordType === "gunny" && (
                         <>
                           <div className="flex items-center">
-                            <span className="w-24 text-sm font-medium text-muted-foreground">Issue Memo:</span>
-                            <span className="text-foreground font-medium">{record.issueMemo}</span>
+                            <span className="w-24 text-sm font-medium text-muted-foreground">
+                              Issue Memo:
+                            </span>
+                            <span className="text-foreground font-medium">
+                              {record.issueMemo}
+                            </span>
                           </div>
                           <div className="flex items-center">
-                            <span className="w-24 text-sm font-medium text-muted-foreground">Lorry Number:</span>
-                            <span className="text-foreground font-medium">{record.lorryNumber}</span>
+                            <span className="w-24 text-sm font-medium text-muted-foreground">
+                              Lorry Number:
+                            </span>
+                            <span className="text-foreground font-medium">
+                              {record.lorryNumber}
+                            </span>
                           </div>
                           <div className="flex items-center">
-                            <span className="w-24 text-sm font-medium text-muted-foreground">Paddy From:</span>
-                            <span className="text-foreground font-medium">{record.paddyFrom}</span>
+                            <span className="w-24 text-sm font-medium text-muted-foreground">
+                              Paddy From:
+                            </span>
+                            <span className="text-foreground font-medium">
+                              {record.paddyFrom}
+                            </span>
                           </div>
                         </>
                       )}
-                      {record.recordType === 'rice' && (
+                      {record.recordType === "rice" && (
                         <div className="flex items-center">
-                          <span className="w-24 text-sm font-medium text-muted-foreground">Month:</span>
-                          <span className="text-foreground font-medium">{record.month}</span>
+                          <span className="w-24 text-sm font-medium text-muted-foreground">
+                            Month:
+                          </span>
+                          <span className="text-foreground font-medium">
+                            {record.month}
+                          </span>
                         </div>
                       )}
-
                     </div>
                     <div className="space-y-3">
                       {/* Gunny Summary */}
                       <div className="p-3 bg-card rounded-lg border border-border w-full">
-                        <h5 className="text-sm font-semibold text-foreground mb-2">Gunny Summary</h5>
+                        <h5 className="text-sm font-semibold text-foreground mb-2">
+                          Gunny Summary
+                        </h5>
                         <div className="grid grid-cols-4 gap-2 text-xs w-full">
                           <div className="text-center">
-                            <div className="font-medium text-muted-foreground">NB</div>
-                            <div className="text-foreground">{record.gunny?.nb || 0}</div>
+                            <div className="font-medium text-muted-foreground">
+                              NB
+                            </div>
+                            <div className="text-foreground">
+                              {record.gunny?.nb || 0}
+                            </div>
                           </div>
                           <div className="text-center">
-                            <div className="font-medium text-muted-foreground">ONB</div>
-                            <div className="text-foreground">{record.gunny?.onb || 0}</div>
+                            <div className="font-medium text-muted-foreground">
+                              ONB
+                            </div>
+                            <div className="text-foreground">
+                              {record.gunny?.onb || 0}
+                            </div>
                           </div>
                           <div className="text-center">
-                            <div className="font-medium text-muted-foreground">SS</div>
-                            <div className="text-foreground">{record.gunny?.ss || 0}</div>
+                            <div className="font-medium text-muted-foreground">
+                              SS
+                            </div>
+                            <div className="text-foreground">
+                              {record.gunny?.ss || 0}
+                            </div>
                           </div>
                           <div className="text-center">
-                            <div className="font-medium text-muted-foreground">SWP</div>
-                            <div className="text-foreground">{record.gunny?.swp || 0}</div>
+                            <div className="font-medium text-muted-foreground">
+                              SWP
+                            </div>
+                            <div className="text-foreground">
+                              {record.gunny?.swp || 0}
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Paddy Summary (only for gunny and paddy records) */}
-                      {(record.recordType === 'gunny' || record.recordType === 'paddy') && (
+                      {(record.recordType === "gunny" ||
+                        record.recordType === "paddy") && (
                         <div className="p-3 bg-card rounded-lg border border-border w-full">
-                          <h5 className="text-sm font-semibold text-foreground mb-2">Paddy Summary</h5>
+                          <h5 className="text-sm font-semibold text-foreground mb-2">
+                            Paddy Summary
+                          </h5>
                           <div className="grid grid-cols-2 gap-2 text-xs w-full">
                             <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground truncate">Bags:</span>
-                              <span className="font-medium text-foreground ml-2">{record.paddy?.bags || 0}</span>
+                              <span className="text-muted-foreground truncate">
+                                Bags:
+                              </span>
+                              <span className="font-medium text-foreground ml-2">
+                                {record.paddy?.bags || 0}
+                              </span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground truncate">Weight:</span>
-                              <span className="font-medium text-foreground ml-2">{formatWeight(record.paddy?.weight || 0)}</span>
+                              <span className="text-muted-foreground truncate">
+                                Weight:
+                              </span>
+                              <span className="font-medium text-foreground ml-2">
+                                {formatWeight(record.paddy?.weight || 0)}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -1073,61 +1478,103 @@ const GunnyManagement = () => {
         {/* Mobile Table View - Comprehensive Gunny Data */}
         <div className="lg:hidden bg-card rounded-2xl shadow-lg border border-border overflow-hidden mb-6">
           <div className="px-4 py-4 border-b border-border bg-muted">
-            <h3 className="text-lg font-semibold text-foreground">All Gunny Records</h3>
-            <p className="text-sm text-muted-foreground mt-1">Total: {getAllRecords().length} records from all sources</p>
+            <h3 className="text-lg font-semibold text-foreground">
+              All Gunny Records
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Total: {getAllRecords().length} records from all sources
+            </p>
           </div>
-          
+
           <div className="p-4">
             {getAllRecords().length === 0 ? (
               <div className="text-center py-8">
-                <svg className="mx-auto h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                <svg
+                  className="mx-auto h-12 w-12 text-muted-foreground"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-foreground">No gunny records found</h3>
-                <p className="mt-1 text-sm text-muted-foreground">No gunny data available from any management module.</p>
+                <h3 className="mt-2 text-sm font-medium text-foreground">
+                  No gunny records found
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  No gunny data available from any management module.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {getAllRecords().map((record, index) => (
-                  <div key={`${record.recordType}-${record._id || index}`} className="border border-border rounded-lg overflow-hidden">
+                  <div
+                    key={`${record.recordType}-${record._id || index}`}
+                    className="border border-border rounded-lg overflow-hidden"
+                  >
                     <div className="bg-card p-3">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground`}>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground`}
+                            >
                               {record.source}
                             </span>
-                                    {currentBranchId === 'all' && (
-          <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
-            {(() => {
-              const branchName = record.branch_id?.name || record.branch?.name;
-              const branchId = record.branch_id?._id || record.branch_id;
-              return branchName ? `${branchName} (${branchId})` : (branchId || 'N/A');
-            })()}
-          </span>
-        )}
-        {currentBranchId !== 'all' && (
-          <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
-            {currentBranchName || currentBranchId}
-          </span>
-        )}
+                            {currentBranchId === "all" && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
+                                {(() => {
+                                  const branchName =
+                                    record.branch_id?.name ||
+                                    record.branch?.name;
+                                  const branchId =
+                                    record.branch_id?._id || record.branch_id;
+                                  return branchName
+                                    ? `${branchName} (${branchId})`
+                                    : branchId || "N/A";
+                                })()}
+                              </span>
+                            )}
+                            {currentBranchId !== "all" && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
+                                {currentBranchName || currentBranchId}
+                              </span>
+                            )}
                           </div>
                           <div className="font-medium text-foreground">
-                            {record.recordType === 'rice' ? `Month: ${record.month}` :
-                             record.issueMemo || 'N/A'}
+                            {record.recordType === "rice"
+                              ? `Month: ${record.month}`
+                              : record.issueMemo || "N/A"}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {record.recordType === 'gunny' ? record.lorryNumber : 'N/A'}
+                            {record.recordType === "gunny"
+                              ? record.lorryNumber
+                              : "N/A"}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {record.displayDate} • {record.recordType === 'gunny' ? record.paddyFrom : 'N/A'}
+                            {record.displayDate} •{" "}
+                            {record.recordType === "gunny"
+                              ? record.paddyFrom
+                              : "N/A"}
                           </div>
                         </div>
                         <div className="text-xs text-right">
-                          <div className="font-medium text-foreground">NB: {record.gunny?.nb || 0}</div>
-                          <div className="font-medium text-foreground">ONB: {record.gunny?.onb || 0}</div>
-                          <div className="font-medium text-foreground">SS: {record.gunny?.ss || 0}</div>
-                          <div className="font-medium text-foreground">SWP: {record.gunny?.swp || 0}</div>
+                          <div className="font-medium text-foreground">
+                            NB: {record.gunny?.nb || 0}
+                          </div>
+                          <div className="font-medium text-foreground">
+                            ONB: {record.gunny?.onb || 0}
+                          </div>
+                          <div className="font-medium text-foreground">
+                            SS: {record.gunny?.ss || 0}
+                          </div>
+                          <div className="font-medium text-foreground">
+                            SWP: {record.gunny?.swp || 0}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1141,34 +1588,64 @@ const GunnyManagement = () => {
         {/* Original Gunny Management Records */}
         <div className="bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
           <div className="px-4 py-4 border-b border-border bg-muted">
-            <h3 className="text-lg font-semibold text-foreground">Gunny Management Records</h3>
-            <p className="text-sm text-muted-foreground mt-1">Total: {filteredGunnyRecords.length} records</p>
+            <h3 className="text-lg font-semibold text-foreground">
+              Gunny Management Records
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Total: {filteredGunnyRecords.length} records
+            </p>
           </div>
-          
+
           <div className="p-4">
             {filteredGunnyRecords.length === 0 ? (
               <div className="text-center py-8">
-                <svg className="mx-auto h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                <svg
+                  className="mx-auto h-12 w-12 text-muted-foreground"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-foreground">No gunny records</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Get started by creating a new gunny record.</p>
+                <h3 className="mt-2 text-sm font-medium text-foreground">
+                  No gunny records
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Get started by creating a new gunny record.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredGunnyRecords.map((gunny) => (
-                  <div key={gunny._id} className="border border-border rounded-lg overflow-hidden">
+                  <div
+                    key={gunny._id}
+                    className="border border-border rounded-lg overflow-hidden"
+                  >
                     {/* Mobile Table Row */}
-                    <div 
+                    <div
                       className="bg-card p-3 cursor-pointer hover:bg-muted transition-colors"
-                      onClick={() => setExpandedGunny(expandedGunny === gunny._id ? null : gunny._id)}
+                      onClick={() =>
+                        setExpandedGunny(
+                          expandedGunny === gunny._id ? null : gunny._id
+                        )
+                      }
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="font-medium text-foreground">{gunny.issueMemo}</div>
-                          <div className="text-sm text-muted-foreground">{gunny.lorryNumber}</div>
+                          <div className="font-medium text-foreground">
+                            {gunny.issueMemo}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {gunny.lorryNumber}
+                          </div>
                           <div className="text-xs text-muted-foreground">
-                            {new Date(gunny.issueDate).toLocaleDateString()} • {gunny.paddyFrom}
+                            {new Date(gunny.issueDate).toLocaleDateString()} •{" "}
+                            {gunny.paddyFrom}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -1196,15 +1673,20 @@ const GunnyManagement = () => {
                             <Icon name="delete" className="h-4 w-4" />
                             <span className="hidden sm:inline">Delete</span>
                           </UIButton>
-                          <svg 
+                          <svg
                             className={`w-4 h-4 text-muted-foreground transition-transform ${
-                              expandedGunny === gunny._id ? 'rotate-180' : ''
+                              expandedGunny === gunny._id ? "rotate-180" : ""
                             }`}
-                            fill="none" 
-                            stroke="currentColor" 
+                            fill="none"
+                            stroke="currentColor"
                             viewBox="0 0 24 24"
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
                           </svg>
                         </div>
                       </div>
@@ -1222,45 +1704,77 @@ const GunnyManagement = () => {
                             </span>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Source:</span>
-                            <span className="ml-1 font-medium text-foreground">{gunny.paddyFrom}</span>
+                            <span className="text-muted-foreground">
+                              Source:
+                            </span>
+                            <span className="ml-1 font-medium text-foreground">
+                              {gunny.paddyFrom}
+                            </span>
                           </div>
                         </div>
 
                         {/* Gunny Summary */}
                         <div className="mb-3 p-3 bg-card rounded-lg border border-border w-full">
-                          <h5 className="text-sm font-semibold text-foreground mb-2">Gunny Summary</h5>
+                          <h5 className="text-sm font-semibold text-foreground mb-2">
+                            Gunny Summary
+                          </h5>
                           <div className="grid grid-cols-4 gap-1 text-xs w-full">
                             <div className="text-center">
-                              <div className="font-medium text-muted-foreground truncate">NB</div>
-                              <div className="text-foreground truncate">{gunny.gunny?.nb || 0}</div>
+                              <div className="font-medium text-muted-foreground truncate">
+                                NB
+                              </div>
+                              <div className="text-foreground truncate">
+                                {gunny.gunny?.nb || 0}
+                              </div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-muted-foreground truncate">ONB</div>
-                              <div className="text-foreground truncate">{gunny.gunny?.onb || 0}</div>
+                              <div className="font-medium text-muted-foreground truncate">
+                                ONB
+                              </div>
+                              <div className="text-foreground truncate">
+                                {gunny.gunny?.onb || 0}
+                              </div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-muted-foreground truncate">SS</div>
-                              <div className="text-foreground truncate">{gunny.gunny?.ss || 0}</div>
+                              <div className="font-medium text-muted-foreground truncate">
+                                SS
+                              </div>
+                              <div className="text-foreground truncate">
+                                {gunny.gunny?.ss || 0}
+                              </div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-muted-foreground truncate">SWP</div>
-                              <div className="text-foreground truncate">{gunny.gunny?.swp || 0}</div>
+                              <div className="font-medium text-muted-foreground truncate">
+                                SWP
+                              </div>
+                              <div className="text-foreground truncate">
+                                {gunny.gunny?.swp || 0}
+                              </div>
                             </div>
                           </div>
                         </div>
 
                         {/* Paddy Summary */}
                         <div className="p-3 bg-card rounded-lg border border-border w-full">
-                          <h5 className="text-sm font-semibold text-foreground mb-2">Paddy Summary</h5>
+                          <h5 className="text-sm font-semibold text-foreground mb-2">
+                            Paddy Summary
+                          </h5>
                           <div className="grid grid-cols-2 gap-2 text-xs w-full">
                             <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground truncate">Bags:</span>
-                              <span className="font-medium text-foreground ml-2">{gunny.paddy?.bags || 0}</span>
+                              <span className="text-muted-foreground truncate">
+                                Bags:
+                              </span>
+                              <span className="font-medium text-foreground ml-2">
+                                {gunny.paddy?.bags || 0}
+                              </span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground truncate">Weight:</span>
-                              <span className="font-medium text-foreground ml-2">{formatWeight(gunny.paddy?.weight || 0)}</span>
+                              <span className="text-muted-foreground truncate">
+                                Weight:
+                              </span>
+                              <span className="font-medium text-foreground ml-2">
+                                {formatWeight(gunny.paddy?.weight || 0)}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -1329,8 +1843,29 @@ const GunnyManagement = () => {
                 name="paddyVariety"
                 value={gunnyForm.paddyVariety}
                 onChange={handleGunnyFormChange}
-                options={PADDY_VARIETIES.map(variety => ({ value: variety, label: variety }))}
+                options={PADDY_VARIETIES.map((variety) => ({
+                  value: variety,
+                  label: variety,
+                }))}
                 required
+              />
+              <VendorSelector
+                value={gunnyForm.vendor_id}
+                onChange={(value) =>
+                  handleGunnyFormChange({
+                    target: { name: "vendor_id", value },
+                  })
+                }
+                placeholder="Select Vendor"
+                required
+                showVendorType={true}
+                vendorType={null}
+                status="active"
+                showCreateOption={true}
+                onVendorCreate={() => {
+                  // You can add logic here to redirect to vendor management or open vendor creation modal
+                  console.log("Create new vendor option selected");
+                }}
               />
             </div>
           </fieldset>
@@ -1358,12 +1893,10 @@ const GunnyManagement = () => {
             maxSize={10}
             showPreview={true}
           />
-
-
         </form>
       </DialogBox>
     </div>
   );
 };
 
-export default GunnyManagement; 
+export default GunnyManagement;
