@@ -1057,11 +1057,11 @@ const RiceManagement = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 {/* Regular Rice from Paddy */}
                 <div className="text-center">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="text-xl font-bold text-green-700 mb-1">
+                  <div className="bg-primary/10 border border-primary rounded-lg p-4">
+                    <div className="text-2xl font-bold text-primary mb-1">
                       {formatWeight(riceComparison.regularRiceOutput || 0)}
                     </div>
-                    <div className="text-sm font-medium text-green-600">
+                    <div className="text-sm font-medium text-primary">
                       Regular Rice
                     </div>
                     <div className="text-xs text-green-500 mt-1">
@@ -1075,14 +1075,14 @@ const RiceManagement = () => {
 
                 {/* FRK Rice Additional */}
                 <div className="text-center">
-                  <div className="bg-accent/50 border border-accent rounded-lg p-4">
-                    <div className="text-xl font-bold text-blue-700 mb-1">
+                  <div className="bg-primary/10 border border-primary rounded-lg p-4">
+                    <div className="text-2xl font-bold text-primary mb-1">
                       {formatWeight(riceComparison.frkRiceOutput || 0)}
                     </div>
-                    <div className="text-sm font-medium text-muted-foreground">
+                    <div className="text-sm font-medium text-primary">
                       FRK Rice
                     </div>
-                    <div className="text-xs text-blue-500 mt-1">
+                    <div className="text-xs text-green-500 mt-1">
                       Additional Deposits
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -1093,7 +1093,7 @@ const RiceManagement = () => {
 
                 {/* Total Rice Output */}
                 <div className="text-center">
-                  <div className="bg-primary/10 border border-primary rounded-lg p-4">
+                  <div className="bg-primary/10 border border-primary rounded-lg p-4 h-32 flex flex-col justify-center">
                     <div className="text-2xl font-bold text-primary mb-1">
                       {formatWeight(riceComparison.actualRiceOutput)}
                     </div>
@@ -1111,14 +1111,14 @@ const RiceManagement = () => {
 
                 {/* Expected vs Actual */}
                 <div className="text-center">
-                  <div className="bg-muted rounded-lg p-4 border border-border">
-                    <div className="text-xl font-bold text-foreground mb-1">
+                  <div className="bg-primary/10 border border-primary rounded-lg p-4 h-32 flex flex-col justify-center">
+                    <div className="text-xl font-bold text-primary mb-1">
                       {formatWeight(riceComparison.expectedRiceOutput)}
                     </div>
-                    <div className="text-sm font-medium text-muted-foreground">
+                    <div className="text-sm font-medium text-primary">
                       Expected (67%)
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-xs text-primary/70 mt-1">
                       From Paddy Only
                     </div>
                   </div>
@@ -1126,14 +1126,14 @@ const RiceManagement = () => {
 
                 {/* Efficiency */}
                 <div className="text-center">
-                  <div className="rounded-lg p-4 border border-border bg-muted">
-                    <div className="text-xl font-bold mb-1 text-foreground">
+                  <div className="bg-primary/10 border border-primary rounded-lg p-4 h-32 flex flex-col justify-center">
+                    <div className="text-xl font-bold mb-1 text-primary">
                       {riceComparison.efficiency.toFixed(1)}%
                     </div>
-                    <div className="text-sm font-medium text-muted-foreground">
+                    <div className="text-sm font-medium text-primary">
                       Paddy Efficiency
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-xs text-primary/70 mt-1">
                       Regular vs Expected
                     </div>
                   </div>
@@ -1201,11 +1201,11 @@ const RiceManagement = () => {
                   </div>
                 </div>
 
-                <div className="bg-accent/50 border border-accent rounded-lg p-3">
-                  <div className="font-medium text-blue-700 mb-1">
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="font-medium text-foreground mb-1">
                     FRK Rice Details
                   </div>
-                  <div className="text-blue-600">
+                  <div className="text-muted-foreground">
                     <div>• FRK Records: {stats.frkCount}</div>
                     <div>• FRK Rice Bags: {stats.frkRiceBags}</div>
                     <div>

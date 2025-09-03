@@ -911,7 +911,7 @@ const QCDataEntry = () => {
         >
           {/* Auto-population Section */}
           {!editingQc && (
-            <div className="bg-accent/50 border border-accent rounded-lg p-4 mb-4">
+            <div className="bg-primary/10 border border-primary rounded-lg p-4 mb-4">
               <h4 className="text-sm font-semibold text-accent-foreground mb-3">
                 🚀 Auto-Populate from Rice Data
               </h4>
