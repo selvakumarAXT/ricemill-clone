@@ -99,7 +99,7 @@ export const documentService = {
       console.log('Uploading to module:', documentData.module || 'documents');
       console.log('FormData entries:', Array.from(formData.entries()));
 
-             const uploadResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/uploads/upload/${documentData.module || 'documents'}`, {
+             const uploadResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/uploads/upload/${documentData.module || 'documents'}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

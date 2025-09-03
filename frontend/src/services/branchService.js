@@ -1,6 +1,5 @@
 import { createAxiosInstance } from '../utils/apiUtils';
 
-const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/branches`;
 
 const branchService = {
   // Get all branches (super admin only)
