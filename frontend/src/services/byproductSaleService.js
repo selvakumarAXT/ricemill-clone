@@ -1,6 +1,6 @@
 import apiUtils from '../utils/apiUtils';
 
-const BASE_URL = '/api/byproducts';
+const BASE_URL = '/byproducts';
 
 // Get all byproduct sales with pagination and filters
 export const getAllByproductSales = async (params = {}) => {

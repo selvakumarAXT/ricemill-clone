@@ -42,7 +42,7 @@ export const vendorService = {
         });
         
         // Add files
-        files.forEach((file, index) => {
+        files.forEach((file,i) => {
           formData.append('documents', file);
         });
         

@@ -1,6 +1,5 @@
 import { createAxiosInstance } from '../utils/apiUtils';
 
-const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/users`;
 
 const userService = {
   // Get all users, optionally filtered by branch_id (for superadmin)
